@@ -42,8 +42,8 @@ def check(
     
     # Check SDK
     try:
-        import fluxloop_sdk
-        sdk_version = fluxloop_sdk.__version__
+        import fluxloop
+        sdk_version = fluxloop.__version__
         status_table.add_row(
             "SDK",
             "[green]✓ Installed[/green]",
@@ -58,8 +58,8 @@ def check(
     
     # Check collector connectivity
     try:
-        from fluxloop_sdk import get_config
-        from fluxloop_sdk.client import FluxLoopClient
+        from fluxloop import get_config
+        from fluxloop.client import FluxLoopClient
         
         config = get_config()
         client = FluxLoopClient()

@@ -6,7 +6,7 @@ from typing import Iterable, List
 
 import typer
 
-from schemas.config import VariationStrategy
+from fluxloop.schemas import VariationStrategy
 
 
 def parse_variation_strategies(values: Iterable[str]) -> List[VariationStrategy]:

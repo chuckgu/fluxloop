@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fluxloop-sdk"
+name = "fluxloop"
 version = "0.1.0"
 description = "FluxLoop SDK for agent instrumentation and tracing"
 authors = [
@@ -56,7 +56,7 @@ Issues = "https://github.com/fluxloop/fluxloop/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fluxloop_sdk*"]
+include = ["fluxloop*"]
 exclude = ["tests*"]
 
 [tool.ruff]
@@ -72,4 +72,4 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-addopts = "-v --cov=fluxloop_sdk --cov-report=html --cov-report=term"
+addopts = "-v --cov=fluxloop --cov-report=html --cov-report=term"

@@ -14,7 +14,7 @@ from .constants import locate_config_file
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
-from schemas.config import ExperimentConfig
+from fluxloop.schemas import ExperimentConfig
 
 
 def load_experiment_config(config_file: Path) -> ExperimentConfig:

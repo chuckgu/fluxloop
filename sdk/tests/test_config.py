@@ -4,7 +4,7 @@ import os
 import pytest
 from unittest.mock import patch
 
-from fluxloop_sdk.config import SDKConfig, configure, get_config, reset_config
+from fluxloop.config import SDKConfig, configure, get_config, reset_config
 
 
 class TestSDKConfig:

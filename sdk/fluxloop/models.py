@@ -55,7 +55,7 @@ class ObservationData(BaseModel):
     
     # LLM specific
     model: Optional[str] = None
-    model_parameters: Optional[Dict[str, Any]] = None
+    llm_parameters: Optional[Dict[str, Any]] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None

@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tupl
 
 import httpx
 
-from schemas.config import (
+from fluxloop.schemas import (
     ExperimentConfig,
     InputGenerationMode,
     LLMGeneratorConfig,

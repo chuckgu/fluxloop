@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-import fluxloop_sdk as fluxloop
-from fluxloop_sdk.models import ObservationType
+import fluxloop 
+from fluxloop.models import ObservationType
 
 
 class TestAgentDecorator:

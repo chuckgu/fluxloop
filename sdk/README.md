@@ -5,7 +5,7 @@ Python SDK for instrumenting and tracing AI agent executions.
 ## Installation
 
 ```bash
-pip install fluxloop-sdk
+pip install fluxloop
 ```
 
 ## Quick Start
@@ -13,7 +13,7 @@ pip install fluxloop-sdk
 ### Basic Usage
 
 ```python
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 # Configure the SDK (optional, uses environment variables by default)
 fluxloop.configure(
@@ -42,7 +42,7 @@ def web_search(query: str) -> list:
 ### Context Manager
 
 ```python
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 # Use context manager for explicit tracing
 with fluxloop.instrument("my_workflow") as ctx:
@@ -74,7 +74,7 @@ export FLUXLOOP_ENVIRONMENT=production
 ### Programmatic Configuration
 
 ```python
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 fluxloop.configure(
     collector_url="http://localhost:8000",
@@ -178,13 +178,13 @@ pytest
 
 ```bash
 # Formatting
-black fluxloop_sdk tests
+black fluxloop tests
 
 # Linting
-ruff fluxloop_sdk tests
+ruff fluxloop tests
 
 # Type checking
-mypy fluxloop_sdk
+mypy fluxloop
 ```
 
 ## License

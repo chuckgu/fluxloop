@@ -12,7 +12,7 @@ from fluxloop_cli.input_generator import (
 )
 from fluxloop_cli.runner import ExperimentRunner
 from fluxloop_cli.validators import parse_variation_strategies
-from schemas.config import ExperimentConfig, InputGenerationMode, RunnerConfig
+from fluxloop.schemas import ExperimentConfig, InputGenerationMode, RunnerConfig
 
 
 @pytest.fixture

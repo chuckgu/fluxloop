@@ -113,8 +113,8 @@ def configure(**kwargs) -> SDKConfig:
         Updated configuration
         
     Example:
-        >>> import fluxloop_sdk
-        >>> fluxloop_sdk.configure(
+        >>> import fluxloop
+        >>> fluxloop.configure(
         ...     collector_url="https://api.fluxloop.dev",
         ...     api_key="your-api-key"
         ... )

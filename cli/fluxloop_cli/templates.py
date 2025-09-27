@@ -115,7 +115,7 @@ import random
 import time
 from typing import Any, Dict
 
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 
 @fluxloop.agent(name="SimpleAgent")

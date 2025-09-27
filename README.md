@@ -44,7 +44,7 @@ This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCo
    Add the `@fluxloop.agent` decorator to your agent's entry point function.
    ```python
    # examples/simple_agent.py
-   import fluxloop_sdk as fluxloop
+   import fluxloop 
    
    @fluxloop.agent
    def my_agent(prompt: str) -> str:

@@ -3,8 +3,8 @@
 import pytest
 from uuid import uuid4
 
-import fluxloop_sdk as fluxloop
-from fluxloop_sdk.context import FluxLoopContext, get_current_context
+import fluxloop 
+from fluxloop.context import FluxLoopContext, get_current_context
 
 
 class TestFluxLoopContext:

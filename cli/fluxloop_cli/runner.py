@@ -5,20 +5,16 @@ Runner modules for executing experiments and agents.
 import asyncio
 import importlib
 import json
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import fluxloop_sdk as fluxloop
-from rich.console import Console
+import fluxloop 
 import yaml
 
-# Add shared schemas to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
-
-from schemas.config import ExperimentConfig, PersonaConfig
+from fluxloop.schemas import ExperimentConfig, PersonaConfig
+from rich.console import Console
 
 console = Console()
 

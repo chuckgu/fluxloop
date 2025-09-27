@@ -149,7 +149,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ### Simple Agent
 
 ```python
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 @fluxloop.agent(name="MyAgent")
 def run(input_text: str) -> str:
@@ -167,7 +167,7 @@ def process_input(text: str) -> str:
 
 ```python
 import asyncio
-import fluxloop_sdk as fluxloop
+import fluxloop 
 
 @fluxloop.agent()
 async def run(input_text: str) -> str:

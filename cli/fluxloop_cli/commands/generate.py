@@ -13,7 +13,7 @@ from ..input_generator import GenerationSettings, generate_inputs
 from ..llm_generator import DEFAULT_STRATEGIES
 from ..validators import parse_variation_strategies
 from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
-from schemas.config import InputGenerationMode, VariationStrategy
+from fluxloop.schemas import InputGenerationMode, VariationStrategy
 
 app = typer.Typer()
 console = Console()

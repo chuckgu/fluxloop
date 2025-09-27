@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Sequence
 
 import yaml
 
-from schemas.config import (
+from fluxloop.schemas import (
     ExperimentConfig,
     InputGenerationMode,
     PersonaConfig,

@@ -3,11 +3,11 @@
 import json
 from pathlib import Path
 
-import fluxloop_sdk as fluxloop
-from fluxloop_sdk.buffer import EventBuffer
-from fluxloop_sdk.context import FluxLoopContext
-from fluxloop_sdk.models import ObservationData, ObservationType
-from fluxloop_sdk.config import reset_config
+import fluxloop 
+from fluxloop.buffer import EventBuffer
+from fluxloop.context import FluxLoopContext
+from fluxloop.models import ObservationData, ObservationType
+from fluxloop.config import reset_config
 
 
 def _create_buffer(tmp_dir: Path, **config_kwargs) -> EventBuffer:
