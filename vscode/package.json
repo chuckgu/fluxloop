@@ -1,0 +1,196 @@
+{
+  "name": "fluxloop",
+  "displayName": "FluxLoop",
+  "description": "AI Agent Simulation and Observability",
+  "version": "0.1.0",
+  "publisher": "fluxloop",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Testing",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "simulation",
+    "testing",
+    "observability"
+  ],
+  "icon": "resources/icon.png",
+  "activationEvents": [
+    "workspaceContains:fluxloop.yaml",
+    "workspaceContains:fluxloop.yml",
+    "onCommand:fluxloop.init",
+    "onCommand:fluxloop.runExperiment"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fluxloop.init",
+        "title": "Initialize FluxLoop Project",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.runExperiment",
+        "title": "Run Experiment",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.runSingle",
+        "title": "Run Single Execution",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.showStatus",
+        "title": "Show Status",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.openConfig",
+        "title": "Open Configuration",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.selectEnvironment",
+        "title": "Select Execution Environment",
+        "category": "FluxLoop"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceFilename == fluxloop.yaml || resourceFilename == fluxloop.yml",
+          "command": "fluxloop.runExperiment",
+          "group": "fluxloop"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .py",
+          "command": "fluxloop.runSingle",
+          "group": "fluxloop"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fluxloop",
+          "title": "FluxLoop",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "fluxloop": [
+        {
+          "id": "fluxloop.experiments",
+          "name": "Experiments",
+          "icon": "$(beaker)",
+          "contextualTitle": "FluxLoop Experiments"
+        },
+        {
+          "id": "fluxloop.results",
+          "name": "Results",
+          "icon": "$(graph)",
+          "contextualTitle": "Experiment Results"
+        },
+        {
+          "id": "fluxloop.status",
+          "name": "Status",
+          "icon": "$(info)",
+          "contextualTitle": "System Status"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "FluxLoop",
+      "properties": {
+        "fluxloop.collectorUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "URL of the FluxLoop collector service"
+        },
+        "fluxloop.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for FluxLoop collector"
+        },
+        "fluxloop.defaultEnvironment": {
+          "type": "string",
+          "enum": [
+            "Local Python",
+            "Docker",
+            "Dev Container"
+          ],
+          "default": "Local Python",
+          "description": "Default execution environment"
+        },
+        "fluxloop.autoInstallCli": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically install FluxLoop CLI if not found"
+        },
+        "fluxloop.showOutputChannel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically show output channel when running experiments"
+        }
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "fluxloop",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The FluxLoop command to run"
+          },
+          "args": {
+            "type": "array",
+            "description": "Arguments for the command"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "@vscode/vsce": "^2.19.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "which": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fluxloop/fluxloop"
+  },
+  "license": "MIT"
+}

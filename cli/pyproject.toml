@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fluxloop-cli"
+version = "0.1.0"
+description = "FluxLoop CLI for running agent simulations"
+authors = [
+    {name = "FluxLoop Team", email = "team@fluxloop.dev"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "typer[all]>=0.9.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "httpx>=0.24.0",
+    "rich>=13.0",
+    "python-dotenv>=1.0.0",
+    "fluxloop-sdk>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "black>=23.0",
+]
+
+openai = [
+    "openai>=1.0.0",
+]
+
+anthropic = [
+    "anthropic>=0.7.0",
+]
+
+[project.scripts]
+fluxloop = "fluxloop_cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/fluxloop/fluxloop"
+Documentation = "https://docs.fluxloop.dev"
+Repository = "https://github.com/fluxloop/fluxloop"
+Issues = "https://github.com/fluxloop/fluxloop/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fluxloop_cli*"]
+exclude = ["tests*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --cov=fluxloop_cli --cov-report=html --cov-report=term"

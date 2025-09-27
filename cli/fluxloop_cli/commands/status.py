@@ -1,0 +1,202 @@
+"""
+Status command for checking system and experiment status.
+"""
+
+from pathlib import Path
+from typing import Optional
+
+import typer
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+app = typer.Typer()
+console = Console()
+
+
+@app.command()
+def check(
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Show detailed information",
+    ),
+):
+    """
+    Check FluxLoop system status.
+    
+    Verifies:
+    - SDK installation
+    - Collector connectivity
+    - Configuration validity
+    """
+    console.print("[bold]FluxLoop Status Check[/bold]\n")
+    
+    status_table = Table(show_header=False)
+    status_table.add_column("Component", style="cyan")
+    status_table.add_column("Status")
+    status_table.add_column("Details", style="dim")
+    
+    # Check SDK
+    try:
+        import fluxloop_sdk
+        sdk_version = fluxloop_sdk.__version__
+        status_table.add_row(
+            "SDK",
+            "[green]✓ Installed[/green]",
+            f"Version {sdk_version}"
+        )
+    except ImportError:
+        status_table.add_row(
+            "SDK",
+            "[red]✗ Not installed[/red]",
+            "Run: pip install fluxloop-sdk"
+        )
+    
+    # Check collector connectivity
+    try:
+        from fluxloop_sdk import get_config
+        from fluxloop_sdk.client import FluxLoopClient
+        
+        config = get_config()
+        client = FluxLoopClient()
+        
+        # Try to connect (this would need a health endpoint)
+        status_table.add_row(
+            "Collector",
+            "[yellow]? Unknown[/yellow]",
+            f"URL: {config.collector_url}"
+        )
+    except Exception as e:
+        status_table.add_row(
+            "Collector",
+            "[red]✗ Error[/red]",
+            str(e) if verbose else "Connection failed"
+        )
+    
+    # Check for configuration file
+    config_file = Path("fluxloop.yaml")
+    if config_file.exists():
+        status_table.add_row(
+            "Config",
+            "[green]✓ Found[/green]",
+            str(config_file)
+        )
+    else:
+        status_table.add_row(
+            "Config",
+            "[yellow]- Not found[/yellow]",
+            "Run: fluxloop init project"
+        )
+    
+    # Check environment
+    import os
+    if os.getenv("FLUXLOOP_API_KEY"):
+        status_table.add_row(
+            "API Key",
+            "[green]✓ Set[/green]",
+            "****" + os.getenv("FLUXLOOP_API_KEY")[-4:] if verbose else "Configured"
+        )
+    else:
+        status_table.add_row(
+            "API Key",
+            "[yellow]- Not set[/yellow]",
+            "Set FLUXLOOP_API_KEY in .env"
+        )
+    
+    console.print(status_table)
+    
+    # Show recommendations
+    recommendations = []
+    if not config_file.exists():
+        recommendations.append("Initialize a project: [cyan]fluxloop init project[/cyan]")
+    if not os.getenv("FLUXLOOP_API_KEY"):
+        recommendations.append("Set up API key in .env file")
+    
+    if recommendations:
+        console.print("\n[bold]Recommendations:[/bold]")
+        for rec in recommendations:
+            console.print(f"  • {rec}")
+
+
+@app.command()
+def experiments(
+    output_dir: Path = typer.Option(
+        Path("./experiments"),
+        "--output",
+        "-o",
+        help="Directory containing experiment results",
+    ),
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-l",
+        help="Number of experiments to show",
+    ),
+):
+    """
+    List recent experiments and their results.
+    """
+    if not output_dir.exists():
+        console.print(f"[yellow]No experiments found in:[/yellow] {output_dir}")
+        console.print("\nRun an experiment first: [cyan]fluxloop run experiment[/cyan]")
+        return
+    
+    # Find experiment directories
+    exp_dirs = sorted(
+        [d for d in output_dir.iterdir() if d.is_dir()],
+        key=lambda x: x.stat().st_mtime,
+        reverse=True
+    )[:limit]
+    
+    if not exp_dirs:
+        console.print("[yellow]No experiments found[/yellow]")
+        return
+    
+    console.print(f"[bold]Recent Experiments[/bold] (showing {len(exp_dirs)} of {len(list(output_dir.iterdir()))})\n")
+    
+    for exp_dir in exp_dirs:
+        # Try to load summary
+        summary_file = exp_dir / "summary.json"
+        if summary_file.exists():
+            import json
+            summary = json.loads(summary_file.read_text())
+            
+            # Create mini table for each experiment
+            exp_panel = Panel(
+                f"[cyan]Name:[/cyan] {summary.get('name', 'Unknown')}\n"
+                f"[cyan]Date:[/cyan] {summary.get('date', 'Unknown')}\n"
+                f"[cyan]Runs:[/cyan] {summary.get('total_runs', 0)}\n"
+                f"[cyan]Success Rate:[/cyan] {summary.get('success_rate', 0)*100:.1f}%\n"
+                f"[cyan]Avg Duration:[/cyan] {summary.get('avg_duration_ms', 0):.0f}ms",
+                title=f"[bold]{exp_dir.name}[/bold]",
+                border_style="blue",
+            )
+            console.print(exp_panel)
+        else:
+            console.print(f"📁 {exp_dir.name} [dim](no summary available)[/dim]")
+        
+        console.print()  # Add spacing
+
+
+@app.command()
+def traces(
+    experiment_id: Optional[str] = typer.Argument(
+        None,
+        help="Experiment ID to show traces for",
+    ),
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-l",
+        help="Number of traces to show",
+    ),
+):
+    """
+    List recent traces from experiments.
+    """
+    # This would connect to the collector service
+    console.print("[yellow]Trace viewing requires collector service[/yellow]")
+    console.print("\nThis feature will be available when the collector is running.")
+    console.print("For now, check the experiment output directories for trace data.")
