@@ -18,13 +18,13 @@ cd my-agent-project
 ```
 
 This creates:
-- `fluxloop.yaml` - Experiment configuration
+- `setting.yaml` - Experiment configuration
 - `.env` - Environment variables
 - `examples/` - Sample agent code
 
 ### 2. Configure Your Experiment
 
-Edit `fluxloop.yaml` to define:
+Edit `setting.yaml` to define:
 - Number of iterations
 - User personas
 - Input variations
@@ -56,7 +56,7 @@ Run experiments and simulations.
 
 ```bash
 # Run full experiment from config
-fluxloop run experiment --config fluxloop.yaml
+fluxloop run experiment --config setting.yaml
 
 # Run single agent execution
 fluxloop run single my_agent.main "Test input"
@@ -100,7 +100,7 @@ fluxloop config validate
 
 ## Configuration
 
-### Experiment Configuration (fluxloop.yaml)
+### Experiment Configuration (setting.yaml)
 
 ```yaml
 name: my_experiment
@@ -217,7 +217,7 @@ fluxloop run experiment --docker
 ### Generating Inputs
 
 ```bash
-fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
+fluxloop generate inputs --config setting.yaml --output inputs/generated.yaml
 ```
 
 - `--dry-run` prints a summary without writing a file

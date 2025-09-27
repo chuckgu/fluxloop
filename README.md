@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="fluxloop_logo_tr.png" alt="FluxLoop Logo" width="400"/>
+</p>
+
 # FluxLoop OSS
 
 <p align="center">
@@ -46,8 +50,13 @@ This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCo
    def my_agent(prompt: str) -> str:
      return f"Response to: {prompt}"
    ```
-4. **Run an experiment:**
-   Configure `fluxloop.yaml` and run your first simulation.
+4. **Configure & set credentials:**
+   ```bash
+   fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
+   ```
+   This updates the project `.env` and `setting.yaml` so LLM-backed generation can run immediately.
+5. **Run an experiment:**
+   Configure `setting.yaml` (created during init) and run your first simulation.
    ```bash
    fluxloop run experiment
    ```
@@ -57,13 +66,13 @@ This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCo
 Use the CLI to scaffold inputs for review before running an experiment:
 
 ```bash
-fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
+fluxloop generate inputs --config setting.yaml --output inputs/generated.yaml
 ```
 
 Switch to LLM-backed generation for richer datasets:
 
 ```bash
-fluxloop generate inputs --mode llm --strategy persona_based --output inputs/llm.yaml
+fluxloop generate inputs --config setting.yaml --mode llm --strategy persona_based --output inputs/llm.yaml
 ```
 
 Open the generated file, review or edit the inputs, then point your experiment
@@ -76,7 +85,7 @@ commented out) if you want to run exclusively from the reviewed dataset.
 After your inputs are ready, execute the full simulation:
 
 ```bash
-fluxloop run experiment --config fluxloop.yaml
+fluxloop run experiment --config setting.yaml
 ```
 
 This command will:
@@ -86,8 +95,8 @@ This command will:
 - optionally forward data to a collector if you enable it
 - emit generation metadata (mode, provider, strategies) alongside outputs when using LLM mode
 
-Review the generated artifacts in the `experiments/` directory to inspect
-individual runs or aggregate summaries.
+Review the generated artifacts in the `experiments/` directory (relative to your project root) to inspect
+individual runs or aggregate summaries. FluxLoop automatically resolves relative paths using the configuration file location, so outputs stay inside the project workspace even when you launch commands from elsewhere.
 
 Check out our full documentation and examples to learn more.
 
