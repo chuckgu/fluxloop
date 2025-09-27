@@ -105,6 +105,10 @@ def experiment(
     summary.add_row("Iterations", str(config.iterations))
     summary.add_row("Personas", str(len(config.personas)))
     summary.add_row("Variations", str(config.variation_count))
+    summary.add_row(
+        "Input Source",
+        "external file" if config.has_external_inputs() else "base_inputs",
+    )
     summary.add_row("Total Runs", str(total_runs))
     summary.add_row("Output", config.output_directory)
     

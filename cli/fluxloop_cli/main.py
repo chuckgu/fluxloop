@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from . import __version__
-from .commands import init, run, status, config
+from .commands import init, run, status, config, generate
 
 # Create the main Typer app
 app = typer.Typer(
@@ -29,6 +29,7 @@ app.add_typer(init.app, name="init", help="Initialize a new FluxLoop project")
 app.add_typer(run.app, name="run", help="Run simulations and experiments")
 app.add_typer(status.app, name="status", help="Check status and view results")
 app.add_typer(config.app, name="config", help="Manage configuration")
+app.add_typer(generate.app, name="generate", help="Generate input datasets")
 
 
 def version_callback(value: bool):

@@ -1,5 +1,5 @@
 """CLI commands."""
 
-from . import init, run, status, config
+from . import init, run, status, config, generate
 
-__all__ = ["init", "run", "status", "config"]
+__all__ = ["init", "run", "status", "config", "generate"]

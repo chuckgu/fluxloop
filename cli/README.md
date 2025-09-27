@@ -214,6 +214,18 @@ fluxloop run experiment --parallel-runs 4
 fluxloop run experiment --docker
 ```
 
+### Generating Inputs
+
+```bash
+fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
+```
+
+- `--dry-run` prints a summary without writing a file
+- `--overwrite` allows replacing an existing file
+- `--limit` restricts how many entries are created
+
+### Running Experiments
+
 ## Development
 
 ### Running Tests

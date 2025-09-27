@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import fluxloop_sdk as fluxloop
 from rich.console import Console
+import yaml
 
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
@@ -77,7 +78,7 @@ class ExperimentRunner:
         agent_func = self._load_agent()
         
         # Generate all variations
-        variations = await self._generate_variations()
+        variations = await self._load_inputs()
         
         # Run iterations
         for iteration in range(self.config.iterations):
@@ -128,20 +129,69 @@ class ExperimentRunner:
         except (ImportError, AttributeError) as e:
             raise RuntimeError(f"Failed to load agent: {e}")
     
-    async def _generate_variations(self) -> List[Dict[str, Any]]:
-        """Generate input variations."""
-        variations = []
-        
-        for base_input in self.config.base_inputs:
-            # For now, just use base inputs
-            # TODO: Implement actual variation generation with LLM
-            for i in range(self.config.variation_count):
+    async def _load_inputs(self) -> List[Dict[str, Any]]:
+        """Load input variations from configuration."""
+        if self.config.has_external_inputs():
+            return self._load_external_inputs()
+
+        variations: List[Dict[str, Any]] = []
+        for index, base_input in enumerate(self.config.base_inputs):
+            count = max(1, self.config.variation_count)
+            for offset in range(count):
                 variations.append({
                     "input": base_input.get("input"),
                     "metadata": base_input,
-                    "variation_index": i,
+                    "variation_index": (index * count) + offset,
+                    "source": "base_inputs",
                 })
-        
+
+        return variations
+
+    def _load_external_inputs(self) -> List[Dict[str, Any]]:
+        """Load variations from an external file."""
+        inputs_path = Path(self.config.inputs_file)  # type: ignore[arg-type]
+        if not inputs_path.exists():
+            raise FileNotFoundError(f"Inputs file not found: {inputs_path}")
+
+        with open(inputs_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        if not data:
+            raise ValueError(f"Inputs file is empty: {inputs_path}")
+
+        # Support either top-level list or dict with "inputs"
+        entries: List[Dict[str, Any]]
+        if isinstance(data, dict) and "inputs" in data:
+            entries = data["inputs"]
+        elif isinstance(data, list):
+            entries = data
+        else:
+            raise ValueError(
+                "Inputs file must be a list of inputs or a mapping containing an 'inputs' list"
+            )
+
+        variations: List[Dict[str, Any]] = []
+        for index, item in enumerate(entries):
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"Input entry at index {index} must be a mapping, got {type(item).__name__}"
+                )
+
+            input_value = item.get("input")
+            if not input_value:
+                raise ValueError(f"Input entry at index {index} is missing required 'input' field")
+
+            variations.append({
+                "input": input_value,
+                "metadata": item.get("metadata", item),
+                "variation_index": item.get("variation_index", index),
+                "source": "external_file",
+                "source_index": index,
+            })
+
+        if not variations:
+            raise ValueError(f"Inputs file {inputs_path} did not contain any inputs")
+
         return variations
     
     async def _run_single(
