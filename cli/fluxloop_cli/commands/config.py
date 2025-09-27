@@ -4,12 +4,17 @@ Config command for managing configuration.
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import typer
+import yaml
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.table import Table
+
+from ..config_loader import load_experiment_config
+from ..templates import create_env_file, create_gitignore, create_sample_agent
+from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
 
 app = typer.Typer()
 console = Console()
@@ -18,7 +23,7 @@ console = Console()
 @app.command()
 def show(
     config_file: Path = typer.Option(
-        Path("fluxloop.yaml"),
+        DEFAULT_CONFIG_PATH,
         "--file",
         "-f",
         help="Configuration file to show",
@@ -32,22 +37,22 @@ def show(
     """
     Show current configuration.
     """
-    if not config_file.exists():
+    resolved_path = locate_config_file(config_file)
+    if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
-    
-    content = config_file.read_text()
-    
+
+    content = resolved_path.read_text()
+
     if format == "json":
         # Convert YAML to JSON
-        import yaml
         import json
         data = yaml.safe_load(content)
         content = json.dumps(data, indent=2)
         lexer = "json"
     else:
         lexer = "yaml"
-    
+
     syntax = Syntax(content, lexer, theme="monokai", line_numbers=True)
     console.print(syntax)
 
@@ -63,7 +68,7 @@ def set(
         help="Value to set",
     ),
     config_file: Path = typer.Option(
-        Path("fluxloop.yaml"),
+        DEFAULT_CONFIG_PATH,
         "--file",
         "-f",
         help="Configuration file to update",
@@ -76,16 +81,15 @@ def set(
     - fluxloop config set iterations 20
     - fluxloop config set runner.timeout 300
     """
-    if not config_file.exists():
+    resolved_path = locate_config_file(config_file)
+    if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
-    
-    import yaml
-    
+
     # Load configuration
-    with open(config_file) as f:
-        config = yaml.safe_load(f)
-    
+    with open(resolved_path) as f:
+        config = yaml.safe_load(f) or {}
+
     # Parse key path
     keys = key.split(".")
     current = config
@@ -115,9 +119,9 @@ def set(
             parsed_value = value
     
     current[final_key] = parsed_value
-    
+
     # Save configuration
-    with open(config_file, "w") as f:
+    with open(resolved_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
     console.print(f"[green]✓[/green] Set {key} = {parsed_value}")
@@ -185,9 +189,90 @@ def env(
 
 
 @app.command()
+def set_llm(
+    provider: str = typer.Argument(..., help="LLM provider identifier (e.g., openai, anthropic, gemini)"),
+    api_key: str = typer.Argument(..., help="API key or token for the provider"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Default model to use"),
+    overwrite_env: bool = typer.Option(False, "--overwrite-env", help="Overwrite existing key in .env"),
+    config_file: Path = typer.Option(DEFAULT_CONFIG_PATH, "--file", "-f", help="Configuration file to update"),
+    env_file: Path = typer.Option(Path(".env"), "--env-file", help="Path to environment file"),
+):
+    """Configure LLM provider credentials and defaults."""
+
+    supported_providers: Dict[str, Dict[str, str]] = {
+        "openai": {
+            "env_var": "OPENAI_API_KEY",
+            "model": "gpt-4o-mini",
+        },
+        "anthropic": {
+            "env_var": "ANTHROPIC_API_KEY",
+            "model": "claude-3-haiku-20240307",
+        },
+        "gemini": {
+            "env_var": "GEMINI_API_KEY",
+            "model": "gemini-1.5-flash",
+        },
+    }
+
+    normalized_provider = provider.lower()
+    if normalized_provider not in supported_providers:
+        available = ", ".join(sorted(supported_providers.keys()))
+        console.print(
+            f"[red]Error:[/red] Unsupported provider '{provider}'. Available: {available}"
+        )
+        raise typer.Exit(1)
+
+    provider_info = supported_providers[normalized_provider]
+    env_var = provider_info["env_var"]
+
+    # Update .env file
+    env_path = env_file
+    env_contents: Dict[str, str] = {}
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            env_contents[key.strip()] = value.strip()
+
+    if env_var in env_contents and not overwrite_env:
+        console.print(
+            f"[yellow]Warning:[/yellow] {env_var} already set. Use --overwrite-env to replace it."
+        )
+    else:
+        env_contents[env_var] = api_key
+        env_lines = [f"{key}={value}" for key, value in env_contents.items()]
+        env_path.write_text("\n".join(env_lines) + "\n")
+        console.print(f"[green]✓[/green] Saved {env_var} to {env_path}")
+
+    # Update configuration file
+    resolved_cfg = locate_config_file(config_file)
+    with open(resolved_cfg) as f:
+        config = yaml.safe_load(f) or {}
+
+    input_generation = config.setdefault("input_generation", {})
+    input_generation["mode"] = "llm"
+
+    llm_config = input_generation.setdefault("llm", {})
+    llm_config["enabled"] = True
+    llm_config["provider"] = normalized_provider
+    if model:
+        llm_config["model"] = model
+    else:
+        llm_config.setdefault("model", provider_info["model"])
+
+    with open(resolved_cfg, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    console.print(
+        f"[green]✓[/green] Updated {config_file} with provider='{normalized_provider}' model='{llm_config['model']}'"
+    )
+
+
+@app.command()
 def validate(
     config_file: Path = typer.Option(
-        Path("fluxloop.yaml"),
+        DEFAULT_CONFIG_PATH,
         "--file",
         "-f",
         help="Configuration file to validate",
@@ -196,13 +281,10 @@ def validate(
     """
     Validate configuration file.
     """
-    if not config_file.exists():
+    resolved_path = locate_config_file(config_file)
+    if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
-    
-    from ..config_loader import load_experiment_config
-    
-    console.print(f"Validating: [cyan]{config_file}[/cyan]\n")
     
     try:
         config = load_experiment_config(config_file)

@@ -9,6 +9,8 @@ from typing import Any, Dict, List
 import yaml
 from pydantic import ValidationError
 
+from .constants import locate_config_file
+
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
@@ -18,31 +20,22 @@ from schemas.config import ExperimentConfig
 def load_experiment_config(config_file: Path) -> ExperimentConfig:
     """
     Load and validate experiment configuration from YAML file.
-    
-    Args:
-        config_file: Path to configuration file
-        
-    Returns:
-        Validated ExperimentConfig object
-        
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If configuration is invalid
     """
-    if not config_file.exists():
+    resolved_path = locate_config_file(config_file)
+    if not resolved_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_file}")
-    
+
     # Load YAML
-    with open(config_file) as f:
+    with open(resolved_path) as f:
         data = yaml.safe_load(f)
-    
+
     if not data:
         raise ValueError("Configuration file is empty")
-    
+
     # Validate and create config object
     try:
         config = ExperimentConfig(**data)
-        config.set_source_dir(config_file.parent)
+        config.set_source_dir(resolved_path.parent)
         resolved_input_count = _resolve_input_count(config)
         config.set_resolved_input_count(resolved_input_count)
     except ValidationError as e:
@@ -52,11 +45,11 @@ def load_experiment_config(config_file: Path) -> ExperimentConfig:
             loc = ".".join(str(x) for x in error["loc"])
             msg = error["msg"]
             errors.append(f"  - {loc}: {msg}")
-        
+
         raise ValueError(
             f"Invalid configuration:\n" + "\n".join(errors)
         )
-    
+
     return config
 
 

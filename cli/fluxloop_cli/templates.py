@@ -207,7 +207,6 @@ ENV/
 .venv/
 
 # FluxLoop
-experiments/
 traces/
 *.trace
 *.log

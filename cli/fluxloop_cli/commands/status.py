@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
+from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
+
 app = typer.Typer()
 console = Console()
 
@@ -76,12 +78,12 @@ def check(
         )
     
     # Check for configuration file
-    config_file = Path("fluxloop.yaml")
-    if config_file.exists():
+    resolved_config = locate_config_file(DEFAULT_CONFIG_PATH)
+    if resolved_config.exists():
         status_table.add_row(
             "Config",
             "[green]✓ Found[/green]",
-            str(config_file)
+            str(resolved_config)
         )
     else:
         status_table.add_row(
@@ -109,7 +111,7 @@ def check(
     
     # Show recommendations
     recommendations = []
-    if not config_file.exists():
+    if not resolved_config.exists():
         recommendations.append("Initialize a project: [cyan]fluxloop init project[/cyan]")
     if not os.getenv("FLUXLOOP_API_KEY"):
         recommendations.append("Set up API key in .env file")

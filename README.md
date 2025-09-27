@@ -60,6 +60,12 @@ Use the CLI to scaffold inputs for review before running an experiment:
 fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
 ```
 
+Switch to LLM-backed generation for richer datasets:
+
+```bash
+fluxloop generate inputs --mode llm --strategy persona_based --output inputs/llm.yaml
+```
+
 Open the generated file, review or edit the inputs, then point your experiment
 configuration at it via the `inputs_file` field. When `inputs_file` is set, it
 fully replaces `base_inputs` during execution, so keep the inline list empty (or
@@ -78,6 +84,7 @@ This command will:
 - run your instrumented agent across every combination
 - capture traces and metrics in the configured output directory
 - optionally forward data to a collector if you enable it
+- emit generation metadata (mode, provider, strategies) alongside outputs when using LLM mode
 
 Review the generated artifacts in the `experiments/` directory to inspect
 individual runs or aggregate summaries.

@@ -7,6 +7,7 @@ _Release date: YYYY-MM-DD_
 ### New
 - Added `fluxloop generate inputs` to scaffold reviewed input sets before experiments.
 - Introduced deterministic input generator utilities and persisted input counts in configuration objects.
+- Added optional LLM-backed input generation mode with configurable strategies and CLI overrides.
 - Enabled `ExperimentRunner` to consume external input files, resolve relative paths, and update metadata.
 - Enhanced CLI summaries and progress indicators to reflect actual run counts derived from resolved inputs.
 

@@ -16,6 +16,7 @@ from rich.table import Table
 
 from ..runner import ExperimentRunner
 from ..config_loader import load_experiment_config
+from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
 
 app = typer.Typer()
 console = Console()
@@ -24,7 +25,7 @@ console = Console()
 @app.command()
 def experiment(
     config_file: Path = typer.Option(
-        Path("fluxloop.yaml"),
+        DEFAULT_CONFIG_PATH,
         "--config",
         "-c",
         help="Path to experiment configuration file",
@@ -69,16 +70,17 @@ def experiment(
     - Generates summary report
     """
     # Check if config file exists
-    if not config_file.exists():
+    resolved_config = locate_config_file(config_file)
+    if not resolved_config.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         console.print("\nRun [cyan]fluxloop init project[/cyan] to create a configuration file.")
         raise typer.Exit(1)
     
     # Load configuration
-    console.print(f"📋 Loading configuration from: [cyan]{config_file}[/cyan]")
+    console.print(f"📋 Loading configuration from: [cyan]{resolved_config}[/cyan]")
     
     try:
-        config = load_experiment_config(config_file)
+        config = load_experiment_config(resolved_config)
     except Exception as e:
         console.print(f"[red]Error loading configuration:[/red] {e}")
         raise typer.Exit(1)

@@ -37,8 +37,18 @@ class ExperimentRunner:
         self.config = config
         self.no_collector = no_collector
         
-        # Configure SDK
-        offline_dir = Path(config.output_directory) / "artifacts"
+        # Configure output directories (respect config location for relative paths)
+        output_base = Path(config.output_directory)
+        if not output_base.is_absolute():
+            source_dir = config.get_source_dir()
+            if source_dir:
+                output_base = (source_dir / output_base).resolve()
+            else:
+                output_base = output_base.resolve()
+
+        output_base.mkdir(parents=True, exist_ok=True)
+
+        offline_dir = output_base / "artifacts"
         fluxloop.configure(
             use_collector=not no_collector and bool(config.collector_url),
             collector_url=config.collector_url or None,
@@ -46,10 +56,10 @@ class ExperimentRunner:
             offline_store_enabled=True,
             offline_store_dir=str(offline_dir),
         )
-        
+
         # Create output directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_dir = Path(config.output_directory) / f"{config.name}_{timestamp}"
+        self.output_dir = output_base / f"{config.name}_{timestamp}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Results storage
