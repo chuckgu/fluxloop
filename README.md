@@ -52,6 +52,36 @@ This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCo
    fluxloop run experiment
    ```
 
+### Generating Input Sets
+
+Use the CLI to scaffold inputs for review before running an experiment:
+
+```bash
+fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
+```
+
+Open the generated file, review or edit the inputs, then point your experiment
+configuration at it via the `inputs_file` field. When both `base_inputs` and an
+`inputs_file` are present, FluxLoop merges them, letting you keep quick smoke
+checks alongside curated datasets.
+
+### Running an Experiment
+
+After your inputs are ready, execute the full simulation:
+
+```bash
+fluxloop run experiment --config fluxloop.yaml
+```
+
+This command will:
+- load personas, inputs, and variations defined in your configuration
+- run your instrumented agent across every combination
+- capture traces and metrics in the configured output directory
+- optionally forward data to a collector if you enable it
+
+Review the generated artifacts in the `experiments/` directory to inspect
+individual runs or aggregate summaries.
+
 Check out our full documentation and examples to learn more.
 
 ## Why Contribute?
@@ -73,18 +103,3 @@ We are an early-stage project with an ambitious roadmap. Your contributions can 
 
 ## License
 FluxLoop is licensed under the [Apache License 2.0](LICENSE).
-
-### Generating Input Sets
-
-Use the CLI to scaffold inputs for review before running an experiment:
-
-```bash
-fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
-```
-
-Open the generated file, review or edit the inputs, then point your experiment
-configuration at it via the `inputs_file` field.
-
-### Running an Experiment
-
-This will:
