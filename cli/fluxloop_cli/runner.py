@@ -131,25 +131,29 @@ class ExperimentRunner:
     
     async def _load_inputs(self) -> List[Dict[str, Any]]:
         """Load input variations from configuration."""
+        variations: List[Dict[str, Any]]
         if self.config.has_external_inputs():
-            return self._load_external_inputs()
+            variations = self._load_external_inputs()
+        else:
+            variations = []
+            for index, base_input in enumerate(self.config.base_inputs):
+                count = max(1, self.config.variation_count)
+                for offset in range(count):
+                    variations.append({
+                        "input": base_input.get("input"),
+                        "metadata": base_input,
+                        "variation_index": (index * count) + offset,
+                        "source": "base_inputs",
+                    })
 
-        variations: List[Dict[str, Any]] = []
-        for index, base_input in enumerate(self.config.base_inputs):
-            count = max(1, self.config.variation_count)
-            for offset in range(count):
-                variations.append({
-                    "input": base_input.get("input"),
-                    "metadata": base_input,
-                    "variation_index": (index * count) + offset,
-                    "source": "base_inputs",
-                })
-
+        self.config.set_resolved_input_count(len(variations))
         return variations
 
     def _load_external_inputs(self) -> List[Dict[str, Any]]:
         """Load variations from an external file."""
-        inputs_path = Path(self.config.inputs_file)  # type: ignore[arg-type]
+        source_dir = self.config.get_source_dir()
+        raw_path = Path(self.config.inputs_file)  # type: ignore[arg-type]
+        inputs_path = (source_dir / raw_path if source_dir and not raw_path.is_absolute() else raw_path).resolve()
         if not inputs_path.exists():
             raise FileNotFoundError(f"Inputs file not found: {inputs_path}")
 

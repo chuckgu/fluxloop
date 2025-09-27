@@ -61,9 +61,9 @@ fluxloop generate inputs --config fluxloop.yaml --output inputs/generated.yaml
 ```
 
 Open the generated file, review or edit the inputs, then point your experiment
-configuration at it via the `inputs_file` field. When both `base_inputs` and an
-`inputs_file` are present, FluxLoop merges them, letting you keep quick smoke
-checks alongside curated datasets.
+configuration at it via the `inputs_file` field. When `inputs_file` is set, it
+fully replaces `base_inputs` during execution, so keep the inline list empty (or
+commented out) if you want to run exclusively from the reviewed dataset.
 
 ### Running an Experiment
 

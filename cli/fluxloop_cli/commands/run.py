@@ -94,7 +94,15 @@ def experiment(
     if output_dir:
         config.output_directory = str(output_dir)
     
-    # Show experiment summary
+    # Load inputs to ensure accurate counts before showing the summary
+    try:
+        runner = ExperimentRunner(config, no_collector=no_collector)
+        loaded_inputs = asyncio.run(runner._load_inputs())  # type: ignore[attr-defined]
+    except Exception as e:
+        console.print(f"[red]Error preparing inputs:[/red] {e}")
+        raise typer.Exit(1)
+
+    config.set_resolved_input_count(len(loaded_inputs))
     total_runs = config.estimate_total_runs()
     
     summary = Table(title="Experiment Summary", show_header=False)
@@ -128,8 +136,6 @@ def experiment(
             raise typer.Abort()
     
     # Create runner
-    runner = ExperimentRunner(config, no_collector=no_collector)
-    
     # Run experiment with progress tracking
     console.print("\n[bold green]Starting experiment...[/bold green]\n")
     
@@ -146,11 +152,16 @@ def experiment(
             total=total_runs,
         )
         
+        inputs_loaded = 0
+
+        def _progress_callback():
+            progress.advance(main_task)
+
         # Run experiment
         try:
             results = asyncio.run(
                 runner.run_experiment(
-                    progress_callback=lambda: progress.advance(main_task)
+                    progress_callback=_progress_callback
                 )
             )
         except KeyboardInterrupt:
@@ -163,7 +174,16 @@ def experiment(
                 console.print_exception()
             raise typer.Exit(1)
     
-    # Display results
+    config.set_resolved_input_count(results.get("input_count", config.get_input_count()))
+
+    input_total_runs = config.estimate_total_runs()
+
+    if input_total_runs != total_runs:
+        console.print(
+            f"\n[yellow]Notice:[/yellow] Effective total runs adjusted to {input_total_runs} "
+            "after loading inputs."
+        )
+
     _display_results(results)
 
 
