@@ -34,12 +34,12 @@ Visual Studio Code extension for FluxLoop - AI Agent Simulation and Observabilit
 
 ### Run an Experiment
 
-1. Open a folder with `fluxloop.yaml`
+1. Open a folder with `setting.yaml`
 2. Click the FluxLoop icon in the activity bar
 3. Click "Run Experiment" in the Experiments view
 
 Or:
-- Right-click on `fluxloop.yaml` in the explorer
+- Right-click on `setting.yaml` in the explorer
 - Select "FluxLoop: Run Experiment"
 
 ### Run Single Agent
@@ -75,7 +75,7 @@ All commands are available through the Command Palette (Ctrl+Shift+P / Cmd+Shift
 - `FluxLoop: Run Experiment` - Run the current experiment
 - `FluxLoop: Run Single Execution` - Run a single agent execution
 - `FluxLoop: Show Status` - Display system status
-- `FluxLoop: Open Configuration` - Open fluxloop.yaml
+- `FluxLoop: Open Configuration` - Open setting.yaml
 - `FluxLoop: Select Execution Environment` - Choose where to run experiments
 
 ## Settings

@@ -21,7 +21,7 @@
   ],
   "icon": "resources/icon.png",
   "activationEvents": [
-    "workspaceContains:fluxloop.yaml",
+    "workspaceContains:setting.yaml",
     "workspaceContains:fluxloop.yml",
     "onCommand:fluxloop.init",
     "onCommand:fluxloop.runExperiment"
@@ -63,7 +63,7 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "resourceFilename == fluxloop.yaml || resourceFilename == fluxloop.yml",
+          "when": "resourceFilename == setting.yaml || resourceFilename == setting.yml",
           "command": "fluxloop.runExperiment",
           "group": "fluxloop"
         }
@@ -172,6 +172,7 @@
     "publish": "vsce publish"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",

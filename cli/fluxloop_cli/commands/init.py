@@ -2,13 +2,12 @@
 Initialize command for creating new FluxLoop projects.
 """
 
-import shutil
 from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm
 from rich.tree import Tree
 
 from ..templates import (
@@ -50,7 +49,7 @@ def project(
     Initialize a new FluxLoop project.
     
     This command creates:
-    - fluxloop.yaml: Default experiment configuration
+    - setting.yaml: Default experiment configuration
     - .env: Environment variables template
     - examples/: Sample agent code (optional)
     """
@@ -69,14 +68,14 @@ def project(
             raise typer.Abort()
     
     # Check for existing files
-    config_file = project_path / "fluxloop.yaml"
+    config_file = project_path / "setting.yaml"
     env_file = project_path / ".env"
     gitignore_file = project_path / ".gitignore"
     
     if not force:
         existing_files = []
         if config_file.exists():
-            existing_files.append("fluxloop.yaml")
+            existing_files.append("setting.yaml")
         if env_file.exists():
             existing_files.append(".env")
         
@@ -117,7 +116,7 @@ def project(
     console.print("\n[bold green]✓ Project initialized successfully![/bold green]\n")
     
     tree = Tree(f"[bold]{project_name}/[/bold]")
-    tree.add("📄 fluxloop.yaml")
+    tree.add("📄 setting.yaml")
     tree.add("🔐 .env")
     tree.add("📄 .gitignore")
     
@@ -129,7 +128,7 @@ def project(
     
     # Show next steps
     console.print("\n[bold]Next steps:[/bold]")
-    console.print("1. Edit [cyan]fluxloop.yaml[/cyan] to configure your experiment")
+    console.print("1. Edit [cyan]setting.yaml[/cyan] to configure your experiment")
     console.print("2. Set up environment variables in [cyan].env[/cyan]")
     if with_example:
         console.print("3. Try running: [green]fluxloop run experiment[/green]")
@@ -191,6 +190,6 @@ def agent(
     agent_file.write_text(content)
     
     console.print(f"[green]✓[/green] Agent created: {agent_file}")
-    console.print(f"\nTo use this agent, update your fluxloop.yaml:")
+    console.print("\nTo use this agent, update your setting.yaml:")
     console.print(f"  runner.module_path: agents.{name}")
-    console.print(f"  runner.function_name: run")
+    console.print("  runner.function_name: run")

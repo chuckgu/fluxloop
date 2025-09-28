@@ -38,12 +38,12 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             return experiments;
         }
 
-        // Check for fluxloop.yaml
-        const configPath = path.join(workspaceFolder.uri.fsPath, 'fluxloop.yaml');
+        // Check for setting.yaml
+        const configPath = path.join(workspaceFolder.uri.fsPath, 'setting.yaml');
         if (fs.existsSync(configPath)) {
             experiments.push(new ExperimentItem(
                 'Current Experiment',
-                'fluxloop.yaml',
+                'setting.yaml',
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'experiment',
                 configPath

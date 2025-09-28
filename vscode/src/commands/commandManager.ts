@@ -87,12 +87,12 @@ export class CommandManager {
             return;
         }
 
-        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'fluxloop.yaml');
+        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'setting.yaml');
         try {
             await vscode.workspace.fs.stat(configUri);
         } catch {
             const action = await vscode.window.showErrorMessage(
-                'No fluxloop.yaml found. Initialize a project first?',
+                'No setting.yaml found. Initialize a project first?',
                 'Initialize Project'
             );
             if (action === 'Initialize Project') {
@@ -205,12 +205,12 @@ export class CommandManager {
             return;
         }
 
-        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'fluxloop.yaml');
+        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'setting.yaml');
         try {
             const document = await vscode.workspace.openTextDocument(configUri);
             vscode.window.showTextDocument(document);
         } catch {
-            vscode.window.showErrorMessage('No fluxloop.yaml found');
+            vscode.window.showErrorMessage('No setting.yaml found');
         }
     }
 

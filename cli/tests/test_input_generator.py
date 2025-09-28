@@ -107,7 +107,7 @@ inputs:
 """.strip()
     )
 
-    config_path = project_dir / "fluxloop.yaml"
+    config_path = project_dir / "setting.yaml"
     config_path.write_text(
         """
 name: relative_test
@@ -130,7 +130,7 @@ runner:
 
 
 def test_resolved_input_count_from_loader(tmp_path: pathlib.Path) -> None:
-    config_path = tmp_path / "fluxloop.yaml"
+    config_path = tmp_path / "setting.yaml"
     config_path.write_text(
         """
 name: loader_count

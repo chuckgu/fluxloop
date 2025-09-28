@@ -63,18 +63,18 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
         // Check configuration
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (workspaceFolder) {
-            const configUri = vscode.Uri.joinPath(workspaceFolder.uri, 'fluxloop.yaml');
+            const configUri = vscode.Uri.joinPath(workspaceFolder.uri, 'setting.yaml');
             try {
                 await vscode.workspace.fs.stat(configUri);
                 items.push(new StatusItem(
                     'Config',
-                    'fluxloop.yaml found',
+                    'setting.yaml found',
                     'success'
                 ));
             } catch {
                 items.push(new StatusItem(
                     'Config',
-                    'No fluxloop.yaml',
+                    'No setting.yaml',
                     'warning',
                     'Run: FluxLoop: Initialize Project'
                 ));

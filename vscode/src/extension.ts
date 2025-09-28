@@ -39,7 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const commandManager = new CommandManager(context, cliManager);
     commandManager.registerCommands();
 
-    // Register file watcher for fluxloop.yaml
+    // Register file watcher for setting.yaml
     const watcher = vscode.workspace.createFileSystemWatcher('**/fluxloop.{yaml,yml}');
     watcher.onDidCreate(() => {
         experimentsProvider.refresh();

@@ -12,7 +12,7 @@ _Release date: YYYY-MM-DD_
 - Enhanced CLI summaries and progress indicators to reflect actual run counts derived from resolved inputs.
 
 ### Documentation
-- Updated `packages/README.md`, CLI README, and `test-project/fluxloop.yaml` to describe the pre-generated input workflow.
+- Updated `packages/README.md`, CLI README, and `test-project/setting.yaml` to describe the pre-generated input workflow.
 
 ### Testing
 - Added unit tests covering input generation utilities, relative path handling, and resolved input count logic.
