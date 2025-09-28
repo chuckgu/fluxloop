@@ -33,32 +33,44 @@ This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCo
 
 1. **Install the CLI and SDK:**
    ```bash
-   pip install fluxloop-cli fluxloop-sdk
+   pip install fluxloop-cli fluxloop
    ```
 2. **Initialize a FluxLoop project:**
    ```bash
    fluxloop init project my-agent-project
    cd my-agent-project
    ```
+   This generates:
+   ```
+   my-agent-project/
+   ├── setting.yaml        # experiment config (scaffolded template)
+   ├── .env                # environment variables (collector + LLM keys)
+   ├── examples/
+   │   └── simple_agent.py # instrumented sample agent
+   └── experiments/        # output directory (populated on first run)
+   ```
 3. **Instrument your agent:**
    Add the `@fluxloop.agent` decorator to your agent's entry point function.
    ```python
    # examples/simple_agent.py
-   import fluxloop 
-   
+   import fluxloop
+
    @fluxloop.agent
    def my_agent(prompt: str) -> str:
-     return f"Response to: {prompt}"
+       return f"Response to: {prompt}"
    ```
-4. **Configure & set credentials:**
+4. **Configure LLM/collector credentials:**
+   - Open `.env` and add values such as `FLUXLOOP_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`.
+   - Or use the CLI helper to write them safely:
+     ```bash
+     fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
+     ```
+     (adds/updates the relevant key in `.env` and optional defaults in `setting.yaml`).
+5. **Adjust `setting.yaml`:**
+   Tune personas, base inputs, runner module path, and evaluation options. Relative paths are resolved from this file's directory, so keep it in your project root.
+6. **Run an experiment:**
    ```bash
-   fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
-   ```
-   This updates the project `.env` and `setting.yaml` so LLM-backed generation can run immediately.
-5. **Run an experiment:**
-   Configure `setting.yaml` (created during init) and run your first simulation.
-   ```bash
-   fluxloop run experiment
+   fluxloop run experiment --config setting.yaml
    ```
 
 ### Generating Input Sets

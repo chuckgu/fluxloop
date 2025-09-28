@@ -17,145 +17,131 @@ fluxloop init project my-agent-project
 cd my-agent-project
 ```
 
-This creates:
-- `setting.yaml` - Experiment configuration
-- `.env` - Environment variables
-- `examples/` - Sample agent code
+Init scaffolds a ready-to-run workspace:
+```
+my-agent-project/
+├── setting.yaml        # Experiment template (personas, inputs, runner)
+├── .env                # Collector + LLM credentials (fill these in)
+├── examples/
+│   └── simple_agent.py # Sample agent instrumented with fluxloop
+└── experiments/        # Outputs land here once you run
+```
 
-### 2. Configure Your Experiment
+### 2. Configure Credentials and Environment
+
+- Open `.env`, set values like:
+  ```bash
+  FLUXLOOP_COLLECTOR_URL=http://localhost:8000
+  FLUXLOOP_API_KEY=your-collector-key
+  OPENAI_API_KEY=sk-...
+  ANTHROPIC_API_KEY=sk-ant-...
+  ```
+- Or write them through the CLI (updates `.env` automatically):
+  ```bash
+  fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
+  ```
+- To check what’s loaded, run:
+  ```bash
+  fluxloop config env --show-values
+  ```
+
+### 3. Configure Your Experiment
 
 Edit `setting.yaml` to define:
-- Number of iterations
-- User personas
-- Input variations
-- Evaluation criteria
+- Number of iterations & parallelism
+- User personas and variation strategies
+- Base inputs or external input files
+- Runner module/function pointing at your agent
+- Evaluators and collector settings
 
-### 3. Run an Experiment
+### 4. Run an Experiment
 
 ```bash
-fluxloop run experiment
+fluxloop run experiment --config setting.yaml
+```
+Add flags such as `--no-collector`, `--dry-run`, or overrides like `--iterations 20` as needed.
+
+## Folder Structure (after first run)
+```
+my-agent-project/
+├── setting.yaml
+├── .env
+├── examples/
+├── experiments/
+│   ├── my_experiment_YYYYMMDD_HHMMSS/
+│   │   ├── summary.json
+│   │   ├── traces.jsonl
+│   │   └── errors.json
+│   └── artifacts/        # offline trace cache (SDK-managed)
+└── inputs/               # (optional) generated inputs
 ```
 
 ## Commands
 
 ### `fluxloop init`
-
-Initialize FluxLoop projects and agents.
-
 ```bash
-# Create a new project
+# Create a new project scaffold
 fluxloop init project [PATH]
 
 # Create an agent from template
-fluxloop init agent my_agent --template langchain
+fluxloop init agent my_agent --template simple
 ```
 
 ### `fluxloop run`
-
-Run experiments and simulations.
-
 ```bash
-# Run full experiment from config
+# Run full experiment
 fluxloop run experiment --config setting.yaml
 
-# Run single agent execution
-fluxloop run single my_agent.main "Test input"
+# Single agent execution
+fluxloop run single examples.simple_agent "Test input"
 
-# Override configuration
-fluxloop run experiment --iterations 20 --personas expert_user
+# Override parameters
+fluxloop run experiment --config setting.yaml --iterations 20
 ```
 
 ### `fluxloop status`
-
-Check system status and view results.
-
 ```bash
-# Check system status
 fluxloop status check
-
-# List recent experiments
 fluxloop status experiments
-
-# View traces
 fluxloop status traces
 ```
 
 ### `fluxloop config`
-
-Manage configuration.
-
 ```bash
-# Show current configuration
 fluxloop config show
-
-# Set configuration value
 fluxloop config set iterations 20
-
-# Show environment variables
 fluxloop config env
-
-# Validate configuration
 fluxloop config validate
+fluxloop config set-llm openai sk-xxxx
 ```
 
-## Configuration
-
-### Experiment Configuration (setting.yaml)
-
-```yaml
-name: my_experiment
-iterations: 10
-
-personas:
-  - name: novice_user
-    description: New to the system
-    expertise_level: novice
-
-variation_strategies:
-  - rephrase
-  - verbose
-variation_count: 2
-
-runner:
-  module_path: my_agent.main
-  function_name: run
-  timeout_seconds: 30
-
-evaluators:
-  - name: success_checker
-    type: rule_based
-    enabled: true
-```
-
-### Environment Variables
-
+## Environment Variables Reference
 ```bash
-# Collector configuration
+# Collector
 export FLUXLOOP_COLLECTOR_URL=http://localhost:8000
 export FLUXLOOP_API_KEY=your-api-key
 
-# SDK configuration
+# CLI/SDK behavior
 export FLUXLOOP_ENABLED=true
 export FLUXLOOP_DEBUG=false
 export FLUXLOOP_SAMPLE_RATE=1.0
 
-# LLM API keys
+# LLM providers
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-ant-...
+export FLUXLOOP_LLM_API_KEY=sk-...  # universal fallback
 ```
+
+If values are set in `.env`, `fluxloop init` and `fluxloop run` will automatically load them (thanks to `python-dotenv`).
 
 ## Writing Agents
 
-### Simple Agent
-
 ```python
-import fluxloop 
+import fluxloop
 
 @fluxloop.agent(name="MyAgent")
 def run(input_text: str) -> str:
-    # Your agent logic
-    response = process_input(input_text)
-    return response
+    return process_input(input_text)
 
 @fluxloop.prompt(model="gpt-3.5-turbo")
 def process_input(text: str) -> str:
@@ -163,99 +149,32 @@ def process_input(text: str) -> str:
     return llm.complete(text)
 ```
 
-### Async Agent
-
-```python
-import asyncio
-import fluxloop 
-
-@fluxloop.agent()
-async def run(input_text: str) -> str:
-    result = await async_process(input_text)
-    return result
-```
-
 ## Output Structure
-
-Experiments create the following output structure:
 
 ```
 experiments/
-└── my_experiment_20240101_120000/
+└── my_experiment_YYYYMMDD_HHMMSS/
     ├── summary.json       # Experiment summary and metrics
     ├── traces.jsonl       # Individual trace data
     └── errors.json        # Any errors encountered
 ```
 
-## Advanced Usage
-
-### Custom Evaluators
-
-```python
-# In your configuration
-evaluators:
-  - name: custom_evaluator
-    type: custom
-    module_path: my_evaluators.quality_checker
-    class_name: QualityEvaluator
-```
-
-### Parallel Execution
-
-```bash
-# Run multiple iterations in parallel
-fluxloop run experiment --parallel-runs 4
-```
-
-### Docker Execution
-
-```bash
-# Run in Docker container
-fluxloop run experiment --docker
-```
-
-### Generating Inputs
-
-```bash
-fluxloop generate inputs --config setting.yaml --output inputs/generated.yaml
-```
-
-- `--dry-run` prints a summary without writing a file
-- `--overwrite` allows replacing an existing file
-- `--limit` restricts how many entries are created
-
-### Running Experiments
-
 ## Development
-
-### Running Tests
 
 ```bash
 pip install -e ".[dev]"
 pytest
 ```
 
-### Building
-
-```bash
-python -m build
-```
-
 ## Troubleshooting
-
-### Common Issues
-
-1. **Module not found**: Ensure your agent module is in the Python path
-2. **Collector connection failed**: Check FLUXLOOP_COLLECTOR_URL
-3. **API key errors**: Verify your LLM API keys are set
-
-### Debug Mode
+1. **Module not found**: Ensure your agent module is on `PYTHONPATH`.
+2. **Collector connection failed**: Verify `FLUXLOOP_COLLECTOR_URL` and network access.
+3. **API key errors**: Ensure `.env` has the right LLM/collector keys (`fluxloop config env`).
 
 ```bash
-# Enable debug output
+# Enable verbose logging
 fluxloop --debug run experiment
 ```
 
 ## License
-
 MIT

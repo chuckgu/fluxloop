@@ -80,8 +80,8 @@ evaluators:
     model: gpt-3.5-turbo
     prompt_template: |
       Rate the quality of this response on a scale of 1-10:
-      Input: {{input}}
-      Output: {{output}}
+      Input: {input}
+      Output: {output}
       
       Consider: relevance, completeness, clarity
       Score:
