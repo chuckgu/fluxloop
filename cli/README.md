@@ -10,21 +10,25 @@ pip install fluxloop-cli
 
 ## Quick Start
 
-### 1. Initialize a Project
+### 1. Initialize the FluxLoop workspace
 
 ```bash
-fluxloop init project my-agent-project
-cd my-agent-project
+fluxloop init project --name my-agent
+# creates fluxloop/my-agent/
+cd fluxloop/my-agent
 ```
 
-Init scaffolds a ready-to-run workspace:
+Scaffold after init:
 ```
-my-agent-project/
-├── setting.yaml        # Experiment template (personas, inputs, runner)
-├── .env                # Collector + LLM credentials (fill these in)
-├── examples/
-│   └── simple_agent.py # Sample agent instrumented with fluxloop
-└── experiments/        # Outputs land here once you run
+fluxloop/
+├── .env                      # Global environment variables
+└── my-agent/
+    ├── setting.yaml          # Project experiment configuration
+    ├── .env                  # (optional) project-specific overrides
+    ├── examples/
+    │   └── simple_agent.py
+    ├── experiments/          # Run outputs will be created here
+    └── inputs/               # Generated/curated input datasets
 ```
 
 ### 2. Configure Credentials and Environment
@@ -49,8 +53,10 @@ my-agent-project/
 
 Edit `setting.yaml` to define:
 - Number of iterations & parallelism
-- User personas and variation strategies
-- Base inputs or external input files
+- User personas (입력 생성 시 참고용)
+- Base inputs (LLM이 변주를 생성할 때 참조)
+- `inputs_file` (필수) – `fluxloop generate inputs`로 생성한 파일 경로
+- `input_generation` 블록 – LLM provider/model, 전략(`strategies`), 생성 횟수(`variation_count`) 등
 - Runner module/function pointing at your agent
 - Evaluators and collector settings
 
@@ -80,39 +86,54 @@ my-agent-project/
 
 ### `fluxloop init`
 ```bash
-# Create a new project scaffold
-fluxloop init project [PATH]
+# Create a new project under fluxloop/<name>
+fluxloop init project --name my-agent
 
 # Create an agent from template
 fluxloop init agent my_agent --template simple
 ```
 
+### `fluxloop generate`
+```bash
+# Generate LLM-based inputs (필수)
+fluxloop generate inputs --project my-agent --output inputs/generated.yaml \
+    --strategy rephrase --strategy verbose
+```
+
 ### `fluxloop run`
 ```bash
-# Run full experiment
-fluxloop run experiment --config setting.yaml
+# Run full experiment (auto-detects setting.yaml in current project)
+fluxloop run experiment
+
+# Or specify project and root explicitly
+fluxloop run experiment --project my-agent
 
 # Single agent execution
 fluxloop run single examples.simple_agent "Test input"
 
 # Override parameters
-fluxloop run experiment --config setting.yaml --iterations 20
+fluxloop run experiment --project my-agent --iterations 20
 ```
 
 ### `fluxloop status`
 ```bash
-fluxloop status check
-fluxloop status experiments
-fluxloop status traces
+fluxloop status check --project my-agent
+fluxloop status experiments --project my-agent
+fluxloop status traces --project my-agent
+```
+
+### `fluxloop generate`
+```bash
+fluxloop generate inputs --project my-agent --output inputs/generated.yaml
 ```
 
 ### `fluxloop config`
 ```bash
-fluxloop config show
-fluxloop config set iterations 20
-fluxloop config env
-fluxloop config validate
-fluxloop config set-llm openai sk-xxxx
+fluxloop config show --project my-agent
+fluxloop config set iterations 20 --project my-agent
+fluxloop config env --project my-agent
+fluxloop config validate --project my-agent
+fluxloop config set-llm openai sk-xxxx --project my-agent
 ```
 
 ## Environment Variables Reference
@@ -149,14 +170,17 @@ def process_input(text: str) -> str:
     return llm.complete(text)
 ```
 
-## Output Structure
+## Output & Artifacts
 
 ```
-experiments/
-└── my_experiment_YYYYMMDD_HHMMSS/
-    ├── summary.json       # Experiment summary and metrics
-    ├── traces.jsonl       # Individual trace data
-    └── errors.json        # Any errors encountered
+fluxloop/
+└── my-agent/
+    └── experiments/
+        └── my_experiment_YYYYMMDD_HHMMSS/
+            ├── summary.json       # Experiment summary and metrics
+            ├── traces.jsonl       # Individual trace data
+            ├── errors.json        # Any errors encountered
+            └── artifacts/         # Offline store (trace cache)
 ```
 
 ## Development

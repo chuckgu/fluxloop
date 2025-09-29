@@ -41,15 +41,7 @@ personas:
       - Optimize workflows
       - Access advanced features
 
-# Prompt variation settings
-variation_strategies:
-  - rephrase
-  - verbose
-variation_count: 2
-variation_temperature: 0.7
-variation_model: gpt-3.5-turbo
-
-# Base inputs for testing
+# Base inputs for reference (generate inputs from these)
 base_inputs:
   - input: "How do I get started?"
     expected_intent: help
@@ -64,6 +56,20 @@ runner:
   function_name: run
   timeout_seconds: 30
   max_retries: 3
+
+# Input generation configuration
+input_generation:
+  mode: llm
+  llm:
+    enabled: true
+    provider: openai
+    model: gpt-4o-mini
+    temperature: 0.7
+  strategies:
+    - type: rephrase
+    - type: verbose
+    - type: error_prone
+  variation_count: 2
 
 # Evaluation methods
 evaluators:
@@ -80,16 +86,19 @@ evaluators:
     model: gpt-3.5-turbo
     prompt_template: |
       Rate the quality of this response on a scale of 1-10:
-      Input: {input}
-      Output: {output}
+      Input: {{input}}
+      Output: {{output}}
       
       Consider: relevance, completeness, clarity
       Score:
 
 # Output configuration
-output_directory: ./experiments
+output_directory: ../experiments/{project_name}
 save_traces: true
 save_aggregated_metrics: true
+
+# Inputs must be generated before running experiments
+inputs_file: inputs/generated.yaml
 
 # Collector settings (optional)
 # collector_url: http://localhost:8000

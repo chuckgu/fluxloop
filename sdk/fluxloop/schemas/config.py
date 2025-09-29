@@ -53,7 +53,7 @@ class LLMGeneratorConfig(BaseModel):
 class InputGenerationConfig(BaseModel):
     """Wrapper around input generation options."""
 
-    mode: InputGenerationMode = InputGenerationMode.DETERMINISTIC
+    mode: InputGenerationMode = InputGenerationMode.LLM
     llm: LLMGeneratorConfig = Field(default_factory=LLMGeneratorConfig)
 
 

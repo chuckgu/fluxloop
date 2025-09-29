@@ -16,6 +16,8 @@ from ..templates import (
     create_gitignore,
     create_env_file,
 )
+from ..project_paths import resolve_root_dir, resolve_project_dir
+from ..constants import DEFAULT_ROOT_DIR_NAME
 
 app = typer.Typer()
 console = Console()
@@ -24,8 +26,8 @@ console = Console()
 @app.command()
 def project(
     path: Path = typer.Argument(
-        Path.cwd(),
-        help="Directory to initialize the project in",
+        Path(DEFAULT_ROOT_DIR_NAME),
+        help="Root directory for FluxLoop projects",
     ),
     name: Optional[str] = typer.Option(
         None,
@@ -54,8 +56,27 @@ def project(
     - examples/: Sample agent code (optional)
     """
     # Resolve path
-    project_path = path.resolve()
-    project_name = name or project_path.name
+    root_dir = resolve_root_dir(path)
+
+    if not root_dir.exists():
+        console.print(f"[dim]Creating FluxLoop root directory at {root_dir}[/dim]")
+        root_dir.mkdir(parents=True, exist_ok=True)
+
+    if not name:
+        current = Path.cwd()
+        if current.parent == root_dir:
+            project_name = current.name
+        else:
+            console.print(
+                "[red]Error:[/red] Project name must be provided when running outside the FluxLoop root directory."
+            )
+            raise typer.Exit(1)
+    else:
+        project_name = name
+    project_path = resolve_project_dir(project_name, root_dir)
+
+    console.print(f"\n[bold blue]Initializing FluxLoop project:[/bold blue] {project_name}")
+    console.print(f"[dim]Location: {project_path}[/dim]\n")
     
     console.print(f"\n[bold blue]Initializing FluxLoop project:[/bold blue] {project_name}")
     console.print(f"[dim]Location: {project_path}[/dim]\n")
@@ -91,10 +112,15 @@ def project(
     config_content = create_experiment_config(project_name)
     config_file.write_text(config_content)
     
-    # Create .env file
-    console.print("🔐 Creating environment template...")
-    env_content = create_env_file()
-    env_file.write_text(env_content)
+    # Ensure root .env exists, create project override template
+    root_env_file = root_dir / ".env"
+    if not root_env_file.exists():
+        console.print("🔐 Creating root environment template...")
+        root_env_file.write_text(create_env_file())
+
+    console.print("🔐 Creating project .env template...")
+    project_env_content = "# Project-specific overrides\n"
+    env_file.write_text(project_env_content)
     
     # Update .gitignore
     if not gitignore_file.exists():

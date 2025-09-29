@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 import yaml
 from pydantic import ValidationError
 
-from .constants import locate_config_file
+from .project_paths import resolve_config_path
 
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
@@ -21,7 +21,7 @@ def load_experiment_config(config_file: Path) -> ExperimentConfig:
     """
     Load and validate experiment configuration from YAML file.
     """
-    resolved_path = locate_config_file(config_file)
+    resolved_path = resolve_config_path(config_file, project=None, root=None)
     if not resolved_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_file}")
 
@@ -55,7 +55,7 @@ def load_experiment_config(config_file: Path) -> ExperimentConfig:
 
 def _resolve_input_count(config: ExperimentConfig) -> int:
     """Determine the effective number of inputs for this configuration."""
-    if config.has_external_inputs() and config.inputs_file:
+    if config.inputs_file:
         inputs_path = (config.get_source_dir() / Path(config.inputs_file)
                        if config.get_source_dir() and not Path(config.inputs_file).is_absolute()
                        else Path(config.inputs_file)).resolve()

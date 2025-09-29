@@ -131,51 +131,6 @@ def generate_inputs(
 
         return GenerationResult(entries=entries, metadata=metadata)
 
-    entries: List[GeneratedInput] = []
-
-    for base_index, base_input in enumerate(config.base_inputs):
-        base_text = base_input.get("input")
-        if not base_text:
-            continue
-
-        personas: Iterable[Optional[PersonaConfig]]
-        if config.personas:
-            personas = config.personas
-        else:
-            personas = [None]
-
-        for persona_index, persona in enumerate(personas):
-            metadata = {
-                "source": "base_inputs",
-                "base_index": base_index,
-            }
-            metadata.update({k: v for k, v in base_input.items() if k != "input"})
-
-            if persona:
-                metadata["persona"] = persona.name
-                metadata["persona_description"] = persona.description
-
-            entry_text = base_text
-            entries.append(
-                GeneratedInput(
-                    input=entry_text,
-                    metadata=metadata,
-                )
-            )
-
-            if settings.limit is not None and len(entries) >= settings.limit:
-                break
-
-        if settings.limit is not None and len(entries) >= settings.limit:
-            break
-
-    metadata = {
-        "config_name": config.name,
-        "total_base_inputs": len(config.base_inputs),
-        "total_personas": len(config.personas),
-        "strategies": [strategy.value for strategy in config.variation_strategies],
-        "limit": settings.limit,
-        "generation_mode": InputGenerationMode.DETERMINISTIC.value,
-    }
-
-    return GenerationResult(entries=entries, metadata=metadata)
+    raise GenerationError(
+        "Only LLM-based generation is supported. Set input_generation.mode to 'llm'"
+    )

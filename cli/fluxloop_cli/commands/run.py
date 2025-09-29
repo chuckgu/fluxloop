@@ -16,7 +16,11 @@ from rich.table import Table
 
 from ..runner import ExperimentRunner
 from ..config_loader import load_experiment_config
-from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
+from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..project_paths import (
+    resolve_config_path,
+    resolve_project_relative,
+)
 
 app = typer.Typer()
 console = Console()
@@ -29,6 +33,16 @@ def experiment(
         "--config",
         "-c",
         help="Path to experiment configuration file",
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
     ),
     iterations: Optional[int] = typer.Option(
         None,
@@ -70,7 +84,7 @@ def experiment(
     - Generates summary report
     """
     # Check if config file exists
-    resolved_config = locate_config_file(config_file)
+    resolved_config = resolve_config_path(config_file, project, root)
     if not resolved_config.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         console.print("\nRun [cyan]fluxloop init project[/cyan] to create a configuration file.")
@@ -94,7 +108,8 @@ def experiment(
         config.personas = [p for p in config.personas if p.name in persona_list]
     
     if output_dir:
-        config.output_directory = str(output_dir)
+        resolved_output = resolve_project_relative(output_dir, project, root)
+        config.output_directory = str(resolved_output)
     
     # Load inputs to ensure accurate counts before showing the summary
     try:
@@ -114,7 +129,6 @@ def experiment(
     summary.add_row("Name", config.name)
     summary.add_row("Iterations", str(config.iterations))
     summary.add_row("Personas", str(len(config.personas)))
-    summary.add_row("Variations", str(config.variation_count))
     summary.add_row(
         "Input Source",
         "external file" if config.has_external_inputs() else "base_inputs",

@@ -40,7 +40,7 @@ class ExperimentRunner:
             if source_dir:
                 output_base = (source_dir / output_base).resolve()
             else:
-                output_base = output_base.resolve()
+                output_base = (Path.cwd() / output_base).resolve()
 
         output_base.mkdir(parents=True, exist_ok=True)
 
@@ -83,16 +83,15 @@ class ExperimentRunner:
         # Load agent module
         agent_func = self._load_agent()
         
-        # Generate all variations
-        variations = await self._load_inputs()
+        inputs = await self._load_inputs()
         
         # Run iterations
         for iteration in range(self.config.iterations):
             for persona in self.config.personas or [None]:
-                for variation in variations:
+                for entry in inputs:
                     await self._run_single(
                         agent_func,
-                        variation,
+                        entry,
                         persona,
                         iteration,
                     )
@@ -136,24 +135,17 @@ class ExperimentRunner:
             raise RuntimeError(f"Failed to load agent: {e}")
     
     async def _load_inputs(self) -> List[Dict[str, Any]]:
-        """Load input variations from configuration."""
-        variations: List[Dict[str, Any]]
-        if self.config.has_external_inputs():
-            variations = self._load_external_inputs()
-        else:
-            variations = []
-            for index, base_input in enumerate(self.config.base_inputs):
-                count = max(1, self.config.variation_count)
-                for offset in range(count):
-                    variations.append({
-                        "input": base_input.get("input"),
-                        "metadata": base_input,
-                        "variation_index": (index * count) + offset,
-                        "source": "base_inputs",
-                    })
+        """Load input entries from configuration or external files."""
+        if not self.config.inputs_file:
+            raise ValueError(
+                "inputs_file is not configured. Generate inputs with "
+                "`fluxloop generate inputs --project <name>` and set the generated file "
+                "in setting.yaml before running experiments."
+            )
 
-        self.config.set_resolved_input_count(len(variations))
-        return variations
+        inputs = self._load_external_inputs()
+        self.config.set_resolved_input_count(len(inputs))
+        return inputs
 
     def _load_external_inputs(self) -> List[Dict[str, Any]]:
         """Load variations from an external file."""
@@ -191,18 +183,17 @@ class ExperimentRunner:
             if not input_value:
                 raise ValueError(f"Input entry at index {index} is missing required 'input' field")
 
-            variations.append({
+            inputs.append({
                 "input": input_value,
                 "metadata": item.get("metadata", item),
-                "variation_index": item.get("variation_index", index),
                 "source": "external_file",
                 "source_index": index,
             })
 
-        if not variations:
+        if not inputs:
             raise ValueError(f"Inputs file {inputs_path} did not contain any inputs")
 
-        return variations
+        return inputs
     
     async def _run_single(
         self,

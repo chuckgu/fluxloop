@@ -12,7 +12,12 @@ from ..config_loader import load_experiment_config
 from ..input_generator import GenerationSettings, generate_inputs
 from ..llm_generator import DEFAULT_STRATEGIES
 from ..validators import parse_variation_strategies
-from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
+from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..project_paths import (
+    resolve_config_path,
+    resolve_project_relative,
+    resolve_env_path,
+)
 from fluxloop.schemas import InputGenerationMode, VariationStrategy
 
 app = typer.Typer()
@@ -26,6 +31,16 @@ def inputs(
         "--config",
         "-c",
         help="Path to experiment configuration file",
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
     ),
     output_file: Path = typer.Option(
         ...,
@@ -78,14 +93,16 @@ def inputs(
     ),
 ):
     """Generate input variations for review before running experiments."""
-    resolved_config = locate_config_file(config_file)
+    resolved_config = resolve_config_path(config_file, project, root)
     if not resolved_config.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
 
-    if output_file.exists() and not overwrite and not dry_run:
+    resolved_output = resolve_project_relative(output_file, project, root)
+
+    if resolved_output.exists() and not overwrite and not dry_run:
         console.print(
-            f"[red]Error:[/red] Output file already exists: {output_file}\n"
+            f"[red]Error:[/red] Output file already exists: {resolved_output}\n"
             "Use --overwrite to replace it."
         )
         raise typer.Exit(1)
@@ -153,14 +170,14 @@ def inputs(
         console.print(f"Planned inputs: {len(result.entries)}")
         return
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(result.to_yaml(), encoding="utf-8")
+    resolved_output.parent.mkdir(parents=True, exist_ok=True)
+    resolved_output.write_text(result.to_yaml(), encoding="utf-8")
 
     strategies_used = result.metadata.get("strategies") or [s.value for s in DEFAULT_STRATEGIES]
 
     console.print(
         "\n[bold green]Generation complete![/bold green]"
-        f"\n📝 Inputs written to: [cyan]{output_file}[/cyan]"
+        f"\n📝 Inputs written to: [cyan]{resolved_output}[/cyan]"
         f"\n✨ Total inputs: [green]{len(result.entries)}[/green]"
         f"\n🧠 Mode: [magenta]{result.metadata.get('generation_mode', 'deterministic')}[/magenta]"
         f"\n🎯 Strategies: [cyan]{', '.join(strategy for strategy in strategies_used)}[/cyan]"

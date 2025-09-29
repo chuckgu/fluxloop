@@ -14,7 +14,11 @@ from rich.table import Table
 
 from ..config_loader import load_experiment_config
 from ..templates import create_env_file, create_gitignore, create_sample_agent
-from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
+from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..project_paths import (
+    resolve_config_path,
+    resolve_env_path,
+)
 
 app = typer.Typer()
 console = Console()
@@ -28,6 +32,16 @@ def show(
         "-f",
         help="Configuration file to show",
     ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
+    ),
     format: str = typer.Option(
         "yaml",
         "--format",
@@ -37,7 +51,7 @@ def show(
     """
     Show current configuration.
     """
-    resolved_path = locate_config_file(config_file)
+    resolved_path = resolve_config_path(config_file, project, root)
     if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
@@ -73,6 +87,16 @@ def set(
         "-f",
         help="Configuration file to update",
     ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
+    ),
 ):
     """
     Set a configuration value.
@@ -81,7 +105,7 @@ def set(
     - fluxloop config set iterations 20
     - fluxloop config set runner.timeout 300
     """
-    resolved_path = locate_config_file(config_file)
+    resolved_path = resolve_config_path(config_file, project, root)
     if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)
@@ -135,6 +159,16 @@ def env(
         "-s",
         help="Show actual values (be careful with secrets)",
     ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
+    ),
 ):
     """
     Show environment variables used by FluxLoop.
@@ -180,7 +214,7 @@ def env(
     console.print(table)
     
     # Check for .env file
-    env_file = Path(".env")
+    env_file = resolve_env_path(Path(".env"), project, root)
     if env_file.exists():
         console.print(f"\n[dim]Loading from:[/dim] {env_file}")
     else:
@@ -196,6 +230,8 @@ def set_llm(
     overwrite_env: bool = typer.Option(False, "--overwrite-env", help="Overwrite existing key in .env"),
     config_file: Path = typer.Option(DEFAULT_CONFIG_PATH, "--file", "-f", help="Configuration file to update"),
     env_file: Path = typer.Option(Path(".env"), "--env-file", help="Path to environment file"),
+    project: Optional[str] = typer.Option(None, "--project", help="Project name under the FluxLoop root"),
+    root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="FluxLoop root directory"),
 ):
     """Configure LLM provider credentials and defaults."""
 
@@ -226,7 +262,7 @@ def set_llm(
     env_var = provider_info["env_var"]
 
     # Update .env file
-    env_path = env_file
+    env_path = resolve_env_path(env_file, project, root)
     env_contents: Dict[str, str] = {}
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -246,26 +282,23 @@ def set_llm(
         console.print(f"[green]✓[/green] Saved {env_var} to {env_path}")
 
     # Update configuration file
-    resolved_cfg = locate_config_file(config_file)
+    resolved_cfg = resolve_config_path(config_file, project, root)
     with open(resolved_cfg) as f:
         config = yaml.safe_load(f) or {}
 
     input_generation = config.setdefault("input_generation", {})
-    input_generation["mode"] = "llm"
 
     llm_config = input_generation.setdefault("llm", {})
     llm_config["enabled"] = True
     llm_config["provider"] = normalized_provider
-    if model:
-        llm_config["model"] = model
-    else:
-        llm_config.setdefault("model", provider_info["model"])
+    llm_config["model"] = model or llm_config.get("model", provider_info["model"])
 
     with open(resolved_cfg, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
+    display_config_path = resolved_cfg if project else config_file
     console.print(
-        f"[green]✓[/green] Updated {config_file} with provider='{normalized_provider}' model='{llm_config['model']}'"
+        f"[green]✓[/green] Updated {display_config_path} with provider='{normalized_provider}' model='{llm_config['model']}'"
     )
 
 
@@ -277,11 +310,21 @@ def validate(
         "-f",
         help="Configuration file to validate",
     ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
+    ),
 ):
     """
     Validate configuration file.
     """
-    resolved_path = locate_config_file(config_file)
+    resolved_path = resolve_config_path(config_file, project, root)
     if not resolved_path.exists():
         console.print(f"[red]Error:[/red] Configuration file not found: {config_file}")
         raise typer.Exit(1)

@@ -10,7 +10,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from ..constants import DEFAULT_CONFIG_PATH, locate_config_file
+from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..project_paths import resolve_config_path, resolve_root_dir, resolve_project_relative
 
 app = typer.Typer()
 console = Console()
@@ -23,6 +24,16 @@ def check(
         "--verbose",
         "-v",
         help="Show detailed information",
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
     ),
 ):
     """
@@ -78,7 +89,7 @@ def check(
         )
     
     # Check for configuration file
-    resolved_config = locate_config_file(DEFAULT_CONFIG_PATH)
+    resolved_config = resolve_config_path(DEFAULT_CONFIG_PATH, project, root)
     if resolved_config.exists():
         status_table.add_row(
             "Config",
@@ -130,6 +141,16 @@ def experiments(
         "-o",
         help="Directory containing experiment results",
     ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        help="Project name under the FluxLoop root",
+    ),
+    root: Path = typer.Option(
+        Path(DEFAULT_ROOT_DIR_NAME),
+        "--root",
+        help="FluxLoop root directory",
+    ),
     limit: int = typer.Option(
         10,
         "--limit",
@@ -140,14 +161,16 @@ def experiments(
     """
     List recent experiments and their results.
     """
-    if not output_dir.exists():
-        console.print(f"[yellow]No experiments found in:[/yellow] {output_dir}")
+    resolved_output = resolve_project_relative(output_dir, project, root)
+
+    if not resolved_output.exists():
+        console.print(f"[yellow]No experiments found in:[/yellow] {resolved_output}")
         console.print("\nRun an experiment first: [cyan]fluxloop run experiment[/cyan]")
         return
     
     # Find experiment directories
     exp_dirs = sorted(
-        [d for d in output_dir.iterdir() if d.is_dir()],
+        [d for d in resolved_output.iterdir() if d.is_dir()],
         key=lambda x: x.stat().st_mtime,
         reverse=True
     )[:limit]
@@ -156,7 +179,7 @@ def experiments(
         console.print("[yellow]No experiments found[/yellow]")
         return
     
-    console.print(f"[bold]Recent Experiments[/bold] (showing {len(exp_dirs)} of {len(list(output_dir.iterdir()))})\n")
+    console.print(f"[bold]Recent Experiments[/bold] (showing {len(exp_dirs)} of {len(list(resolved_output.iterdir()))})\n")
     
     for exp_dir in exp_dirs:
         # Try to load summary

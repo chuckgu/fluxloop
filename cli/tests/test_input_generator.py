@@ -25,19 +25,6 @@ def base_config(tmp_path: pathlib.Path) -> ExperimentConfig:
     )
 
 
-def test_generate_inputs_basic(base_config: ExperimentConfig) -> None:
-    result = generate_inputs(base_config, GenerationSettings())
-    assert len(result.entries) == 2
-    assert result.entries[0].input == "Hello"
-    assert result.entries[1].input == "World"
-
-
-def test_generate_inputs_with_limit(base_config: ExperimentConfig) -> None:
-    settings = GenerationSettings(limit=1)
-    result = generate_inputs(base_config, settings)
-    assert len(result.entries) == 1
-
-
 def test_generate_inputs_requires_base_inputs(base_config: ExperimentConfig) -> None:
     base_config.base_inputs = []
     with pytest.raises(GenerationError):
@@ -78,20 +65,6 @@ def test_generate_inputs_llm_mode(base_config: ExperimentConfig) -> None:
     assert len(result.entries) == len(base_config.base_inputs) * 3
     assert result.metadata["generation_mode"] == InputGenerationMode.LLM.value
     assert stub.calls[0]["model"] == base_config.input_generation.llm.model
-
-
-def test_generate_inputs_llm_mode_with_strategies(base_config: ExperimentConfig) -> None:
-    base_config.input_generation.mode = InputGenerationMode.LLM
-    base_config.input_generation.llm.enabled = True
-    base_config.variation_strategies = [parse_variation_strategies(["rephrase"])[0]]
-
-    stub = StubLLMClient()
-    settings = GenerationSettings(llm_client=stub, strategies=base_config.variation_strategies)
-
-    result = generate_inputs(base_config, settings)
-
-    assert len(result.entries) == len(base_config.base_inputs)
-    assert all(entry.metadata["strategy"] == "rephrase" for entry in result.entries)
 
 
 def test_load_external_inputs_relative(tmp_path: pathlib.Path) -> None:
