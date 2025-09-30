@@ -5,6 +5,7 @@ Runner modules for executing experiments and agents.
 import asyncio
 import importlib
 import json
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -68,6 +69,41 @@ class ExperimentRunner:
             "durations": [],
         }
     
+    def _load_agent(self) -> Callable:
+        """Load the agent function from module path."""
+        work_dir_str = self.config.runner.working_directory
+        path_to_add = None
+
+        if work_dir_str:
+            work_dir_path = Path(work_dir_str)
+            if not work_dir_path.is_absolute():
+                source_dir = self.config.get_source_dir()
+                if source_dir:
+                    work_dir_path = (source_dir / work_dir_path).resolve()
+
+            path_to_add = str(work_dir_path)
+            if path_to_add not in sys.path:
+                sys.path.insert(0, path_to_add)
+
+        try:
+            module = importlib.import_module(self.config.runner.module_path)
+            func = getattr(module, self.config.runner.function_name)
+            return func
+        except (ImportError, AttributeError) as e:
+            # Provide a more helpful error message
+            error_msg = f"Failed to load agent: {e}. "
+            if work_dir_str:
+                error_msg += (
+                    f"Ensure 'runner.working_directory' ({work_dir_str}) is correctly "
+                    f"set to the root of your project containing the '{self.config.runner.module_path.split('.')[0]}' module."
+                )
+            else:
+                error_msg += "Consider setting 'runner.working_directory' in your setting.yaml."
+            raise RuntimeError(error_msg)
+        finally:
+            if path_to_add and path_to_add in sys.path:
+                sys.path.remove(path_to_add)
+
     async def run_experiment(self, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
         """
         Run the complete experiment.
@@ -125,15 +161,6 @@ class ExperimentRunner:
             "output_dir": str(self.output_dir),
         }
     
-    def _load_agent(self) -> Callable:
-        """Load the agent function from module path."""
-        try:
-            module = importlib.import_module(self.config.runner.module_path)
-            func = getattr(module, self.config.runner.function_name)
-            return func
-        except (ImportError, AttributeError) as e:
-            raise RuntimeError(f"Failed to load agent: {e}")
-    
     async def _load_inputs(self) -> List[Dict[str, Any]]:
         """Load input entries from configuration or external files."""
         if not self.config.inputs_file:
@@ -163,6 +190,7 @@ class ExperimentRunner:
 
         # Support either top-level list or dict with "inputs"
         entries: List[Dict[str, Any]]
+        variations: List[Dict[str, Any]] = []
         if isinstance(data, dict) and "inputs" in data:
             entries = data["inputs"]
         elif isinstance(data, list):
@@ -172,7 +200,6 @@ class ExperimentRunner:
                 "Inputs file must be a list of inputs or a mapping containing an 'inputs' list"
             )
 
-        variations: List[Dict[str, Any]] = []
         for index, item in enumerate(entries):
             if not isinstance(item, dict):
                 raise ValueError(
@@ -183,17 +210,17 @@ class ExperimentRunner:
             if not input_value:
                 raise ValueError(f"Input entry at index {index} is missing required 'input' field")
 
-            inputs.append({
+            variations.append({
                 "input": input_value,
                 "metadata": item.get("metadata", item),
                 "source": "external_file",
                 "source_index": index,
             })
 
-        if not inputs:
+        if not variations:
             raise ValueError(f"Inputs file {inputs_path} did not contain any inputs")
 
-        return inputs
+        return variations
     
     async def _run_single(
         self,

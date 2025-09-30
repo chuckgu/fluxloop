@@ -11,6 +11,14 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tuple
 
 import httpx
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeRemainingColumn,
+)
 
 from fluxloop.schemas import (
     ExperimentConfig,
@@ -72,13 +80,64 @@ def _hash_prompt(prompt: str) -> str:
     return hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
 
 
+async def _generate_one_variation_openai(
+    client: httpx.AsyncClient,
+    llm_config: LLMGeneratorConfig,
+    prompt_text: str,
+    metadata: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Generate a single input variation via OpenAI API."""
+    messages: List[Dict[str, str]] = []
+    if llm_config.system_prompt:
+        messages.append({"role": "system", "content": llm_config.system_prompt})
+    messages.append({"role": "user", "content": prompt_text})
+
+    payload = {
+        "model": llm_config.model,
+        "messages": messages,
+    }
+
+    # Add GPT-5 specific controls if they exist on the config object
+    if hasattr(llm_config, "reasoning_effort") and llm_config.reasoning_effort:
+        payload["reasoning"] = {"effort": llm_config.reasoning_effort}
+
+    if hasattr(llm_config, "text_verbosity") and llm_config.text_verbosity:
+        payload["text"] = {"verbosity": llm_config.text_verbosity}
+
+    response = await _request_openai(client, config=llm_config, payload=payload)
+
+    text = None
+    if "choices" in response:
+        choices = response.get("choices", [])
+        if choices:
+            message = choices[0].get("message") or {}
+            text = message.get("content")
+
+    if text is None:
+        error_details = json.dumps(response, indent=2)
+        raise LLMGenerationError(
+            f"OpenAI response did not contain content. Full response:\n{error_details}"
+        )
+
+    return {
+        "input": text.strip(),
+        "metadata": {
+            **metadata,
+            "model": llm_config.model,
+            "provider": llm_config.provider,
+            "prompt_hash": _hash_prompt(prompt_text),
+            "prompt": prompt_text,
+        },
+    }
+
+
 async def _request_openai(
     client: httpx.AsyncClient,
     *,
     config: LLMGeneratorConfig,
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
-    endpoint = "https://api.openai.com/v1/responses"
+    endpoint = "https://api.openai.com/v1/chat/completions"
     headers = {}
     if config.api_key:
         headers["Authorization"] = f"Bearer {config.api_key}"
@@ -107,52 +166,25 @@ async def _generate_variations_openai(
     config: ExperimentConfig,
     llm_config: LLMGeneratorConfig,
     prompts: Sequence[Tuple[str, Dict[str, Any]]],
+    progress: Progress,
+    task_id: Any,
 ) -> List[Dict[str, Any]]:
+    tasks = [
+        _generate_one_variation_openai(client, llm_config, prompt_text, metadata)
+        for prompt_text, metadata in prompts
+    ]
+
     results: List[Dict[str, Any]] = []
-
-    for prompt_text, metadata in prompts:
-        payload = {
-            "model": llm_config.model,
-            "input": prompt_text,
-            "temperature": llm_config.temperature,
-            "top_p": llm_config.top_p,
-            "frequency_penalty": llm_config.frequency_penalty,
-            "presence_penalty": llm_config.presence_penalty,
-            "max_output_tokens": llm_config.max_tokens,
-        }
-
-        if llm_config.system_prompt:
-            payload["modalities"] = ["text"]
-            payload["metadata"] = {"system_prompt": llm_config.system_prompt}
-
-        response = await _request_openai(client, config=llm_config, payload=payload)
-
-        text = None
-        if "output" in response and isinstance(response["output"], list):
-            candidates = response["output"]
-            if candidates:
-                text = candidates[0].get("content") or candidates[0].get("text")
-        if not text and "choices" in response:
-            choices = response["choices"]
-            if choices:
-                message = choices[0].get("message") or {}
-                text = message.get("content")
-
-        if not text:
-            raise LLMGenerationError("OpenAI response did not contain content")
-
-        results.append(
-            {
-                "input": text.strip(),
-                "metadata": {
-                    **metadata,
-                    "model": llm_config.model,
-                    "provider": llm_config.provider,
-                    "prompt_hash": _hash_prompt(prompt_text),
-                    "prompt": prompt_text,
-                },
-            }
-        )
+    for future in asyncio.as_completed(tasks):
+        try:
+            result = await future
+            results.append(result)
+        except LLMGenerationError as exc:
+            logger.warning(f"Failed to generate one variation: {exc}")
+        except Exception as exc:
+            logger.error(f"An unexpected error occurred during generation: {exc}")
+        finally:
+            progress.update(task_id, advance=1)
 
     return results
 
@@ -162,29 +194,30 @@ async def _generate_variations_mock(
     config: ExperimentConfig,
     llm_config: LLMGeneratorConfig,
     prompts: Sequence[Tuple[str, Dict[str, Any]]],
+    progress: Progress,
+    task_id: Any,
 ) -> List[Dict[str, Any]]:
-    results: List[Dict[str, Any]] = []
-
-    for prompt_text, metadata in prompts:
-        persona = metadata.get("persona") or "generic"
-        strategy = metadata.get("strategy", "unspecified")
-        base_index = metadata.get("base_index")
-        generated = f"[mock:{strategy}] persona={persona} base={base_index}"
-        results.append(
-            {
-                "input": generated,
-                "metadata": {
-                    **metadata,
-                    "model": llm_config.model,
-                    "provider": "mock",
-                    "prompt_hash": _hash_prompt(prompt_text),
-                    "prompt": prompt_text,
-                    "mock": True,
-                },
-            }
+    if llm_config.provider == "mock":
+        results = await _generate_variations_mock(
+            config=config,
+            llm_config=llm_config,
+            prompts=prompts,
         )
+        progress.update(task_id, completed=len(prompts))
+        return results
 
-    return results
+    if llm_config.provider == "openai":
+        async with httpx.AsyncClient() as client:
+            return await _generate_variations_openai(
+                client=client,
+                config=config,
+                llm_config=llm_config,
+                prompts=prompts,
+                progress=progress,
+                task_id=task_id,
+            )
+
+    raise LLMGenerationError(f"Unsupported LLM provider: {llm_config.provider}")
 
 
 def _format_prompt(
@@ -193,11 +226,27 @@ def _format_prompt(
     context: LLMGenerationContext,
 ) -> Tuple[str, Dict[str, Any]]:
     template = llm_config.user_prompt_template or (
-        "Generate a user input variation given the base input and persona.\n"
-        "Base Input: {input}\n"
-        "Strategy: {strategy}\n"
-        "Persona: {persona}\n"
-        "Provide a single realistic user message variant."
+        """You are an expert in creating high-quality datasets for testing AI agents.
+Your task is to generate a single, realistic user message that a person would type into a support chat or search box. This message will be used as an input in an automated simulation to test an AI agent's performance.
+
+**Instructions:**
+1.  Read the Base Input, Strategy, and Persona details carefully.
+2.  Generate a new user message that modifies the Base Input according to the given Strategy and reflects the Persona.
+3.  **Keep the message concise and natural.** Even when the strategy is "verbose," it should still be a realistic user query, not a lengthy technical specification. A verbose user might ask multiple related questions in one message, but they would not write an essay.
+4.  **Your output must ONLY be the generated user message text.** Do not include any prefixes, quotation marks, explanations, or formatting like bullet points. It should be a single block of text.
+
+---
+**Base Input:**
+{input}
+
+**Strategy to Apply (how the user words their request):**
+{strategy}
+
+**User Persona Profile:**
+{persona}
+---
+
+Generated User Message:"""
     )
 
     optional_persona = (
@@ -230,12 +279,16 @@ async def _generate_with_client(
     config: ExperimentConfig,
     llm_config: LLMGeneratorConfig,
     prompts: Sequence[Tuple[str, Dict[str, Any]]],
+    progress: Progress,
+    task_id: Any,
 ) -> List[Dict[str, Any]]:
     if llm_config.provider == "mock":
         return await _generate_variations_mock(
             config=config,
             llm_config=llm_config,
             prompts=prompts,
+            progress=progress,
+            task_id=task_id,
         )
 
     if llm_config.provider == "openai":
@@ -245,6 +298,8 @@ async def _generate_with_client(
                 config=config,
                 llm_config=llm_config,
                 prompts=prompts,
+                progress=progress,
+                task_id=task_id,
             )
 
     raise LLMGenerationError(f"Unsupported LLM provider: {llm_config.provider}")
@@ -302,8 +357,9 @@ def generate_llm_inputs(
     if not prompts:
         raise LLMGenerationError("No prompts generated from base inputs")
 
-    async def _run_generation() -> List[Dict[str, Any]]:
+    async def _run_generation(progress: Progress, task_id: Any) -> List[Dict[str, Any]]:
         if settings.llm_client:
+            # Note: Custom clients do not support progress bars currently
             result = settings.llm_client.generate(
                 prompts=prompts,
                 config=config,
@@ -317,17 +373,44 @@ def generate_llm_inputs(
             config=config,
             llm_config=llm_config,
             prompts=prompts,
+            progress=progress,
+            task_id=task_id,
         )
 
-    try:
-        results = asyncio.run(_run_generation())
-    except RuntimeError:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            raise LLMGenerationError(
-                "LLM generation cannot run inside an active asyncio event loop"
-            )
-        results = loop.run_until_complete(_run_generation())
+    console = Console()
+    console.print(f"🧠 Generating [bold cyan]{len(prompts)}[/bold cyan] variations using LLM...")
+
+    results: List[Dict[str, Any]] = []
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeRemainingColumn(),
+        TextColumn("({task.completed} of {task.total})"),
+        console=console,
+    ) as progress:
+        generation_task = progress.add_task("[green]Generating...", total=len(prompts))
+        try:
+            results = asyncio.run(_run_generation(progress, generation_task))
+        except RuntimeError:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            if loop.is_running():
+                raise LLMGenerationError(
+                    "LLM generation cannot run inside an active asyncio event loop"
+                )
+
+            results = loop.run_until_complete(_run_generation(progress, generation_task))
+
+    if len(results) < len(prompts):
+        console.print(
+            f"[yellow]Warning:[/yellow] {len(prompts) - len(results)} variations failed to generate."
+        )
 
     return results
 

@@ -238,7 +238,7 @@ def set_llm(
     supported_providers: Dict[str, Dict[str, str]] = {
         "openai": {
             "env_var": "OPENAI_API_KEY",
-            "model": "gpt-4o-mini",
+            "model": "gpt-5",
         },
         "anthropic": {
             "env_var": "ANTHROPIC_API_KEY",
@@ -246,7 +246,7 @@ def set_llm(
         },
         "gemini": {
             "env_var": "GEMINI_API_KEY",
-            "model": "gemini-1.5-flash",
+            "model": "gemini-2.5-flash",
         },
     }
 

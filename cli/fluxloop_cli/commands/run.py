@@ -11,7 +11,7 @@ import typer
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn
 from rich.table import Table
 
 from ..runner import ExperimentRunner
@@ -153,13 +153,15 @@ def experiment(
     
     # Create runner
     # Run experiment with progress tracking
-    console.print("\n[bold green]Starting experiment...[/bold green]\n")
-    
+    console.print("\n[bold green]▶️ Starting experiment...[/bold green]\n")
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeRemainingColumn(),
+        TextColumn("({task.completed} of {task.total})"),
         console=console,
     ) as progress:
         # Create main task
@@ -167,8 +169,6 @@ def experiment(
             f"Running {config.name}",
             total=total_runs,
         )
-        
-        inputs_loaded = 0
 
         def _progress_callback():
             progress.advance(main_task)

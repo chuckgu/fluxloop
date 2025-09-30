@@ -44,10 +44,20 @@ class LLMGeneratorConfig(BaseModel):
     top_p: float = Field(default=1.0, ge=0.0, le=1.0)
     frequency_penalty: float = Field(default=0.0, ge=-2.0, le=2.0)
     presence_penalty: float = Field(default=0.0, ge=-2.0, le=2.0)
-    max_tokens: int = Field(default=256, ge=16, le=2048)
+    max_tokens: int = Field(default=1024, ge=16, le=4096)
     request_timeout: int = Field(default=60, ge=1, le=600)
     batch_size: int = Field(default=1, ge=1, le=10)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    # GPT-5 specific controls
+    reasoning_effort: Optional[str] = Field(
+        default="medium",
+        description="Reasoning effort for GPT-5 models: minimal, low, medium, high",
+    )
+    text_verbosity: Optional[str] = Field(
+        default="medium",
+        description="Output verbosity for GPT-5 models: low, medium, high",
+    )
 
 
 class InputGenerationConfig(BaseModel):

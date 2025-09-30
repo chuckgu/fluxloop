@@ -17,7 +17,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 from fluxloop.schemas import ExperimentConfig
 
 
-def load_experiment_config(config_file: Path) -> ExperimentConfig:
+def load_experiment_config(
+    config_file: Path,
+    *,
+    require_inputs_file: bool = True,
+) -> ExperimentConfig:
     """
     Load and validate experiment configuration from YAML file.
     """
@@ -36,7 +40,10 @@ def load_experiment_config(config_file: Path) -> ExperimentConfig:
     try:
         config = ExperimentConfig(**data)
         config.set_source_dir(resolved_path.parent)
-        resolved_input_count = _resolve_input_count(config)
+        resolved_input_count = _resolve_input_count(
+            config,
+            require_inputs_file=require_inputs_file,
+        )
         config.set_resolved_input_count(resolved_input_count)
     except ValidationError as e:
         # Format validation errors nicely
@@ -53,7 +60,11 @@ def load_experiment_config(config_file: Path) -> ExperimentConfig:
     return config
 
 
-def _resolve_input_count(config: ExperimentConfig) -> int:
+def _resolve_input_count(
+    config: ExperimentConfig,
+    *,
+    require_inputs_file: bool = True,
+) -> int:
     """Determine the effective number of inputs for this configuration."""
     if config.inputs_file:
         inputs_path = (config.get_source_dir() / Path(config.inputs_file)
@@ -61,25 +72,35 @@ def _resolve_input_count(config: ExperimentConfig) -> int:
                        else Path(config.inputs_file)).resolve()
 
         if not inputs_path.exists():
-            raise FileNotFoundError(f"Inputs file not found when loading config: {inputs_path}")
+            if require_inputs_file:
+                raise FileNotFoundError(
+                    f"Inputs file not found when loading config: {inputs_path}"
+                )
+            return len(config.base_inputs)
 
         with open(inputs_path, "r", encoding="utf-8") as f:
             payload = yaml.safe_load(f)
 
         if not payload:
-            raise ValueError(f"Inputs file is empty: {inputs_path}")
+            if require_inputs_file:
+                raise ValueError(f"Inputs file is empty: {inputs_path}")
+            return len(config.base_inputs)
 
         if isinstance(payload, dict):
             entries = payload.get("inputs")
             if entries is None:
-                raise ValueError("Inputs file must contain an 'inputs' list when using mapping format")
+                if require_inputs_file:
+                    raise ValueError("Inputs file must contain an 'inputs' list when using mapping format")
+                return len(config.base_inputs)
         elif isinstance(payload, list):
             entries = payload
         else:
             raise ValueError("Inputs file must be either a list or a mapping with an 'inputs' key")
 
         if not isinstance(entries, list):
-            raise ValueError("Inputs entries must be provided as a list")
+            if require_inputs_file:
+                raise ValueError("Inputs entries must be provided as a list")
+            return len(config.base_inputs)
 
         return len(entries)
 

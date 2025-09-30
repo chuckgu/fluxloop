@@ -54,6 +54,7 @@ base_inputs:
 runner:
   module_path: examples.simple_agent
   function_name: run
+  working_directory: .  # IMPORTANT: Set this to your project's root directory
   timeout_seconds: 30
   max_retries: 3
 
@@ -63,8 +64,7 @@ input_generation:
   llm:
     enabled: true
     provider: openai
-    model: gpt-4o-mini
-    temperature: 0.7
+    model: gpt-5
   strategies:
     - type: rephrase
     - type: verbose
@@ -83,7 +83,7 @@ evaluators:
   - name: response_quality
     type: llm_judge
     enabled: false
-    model: gpt-3.5-turbo
+    model: gpt-5
     prompt_template: |
       Rate the quality of this response on a scale of 1-10:
       Input: {{input}}
@@ -93,7 +93,7 @@ evaluators:
       Score:
 
 # Output configuration
-output_directory: ../experiments/{project_name}
+output_directory: experiments
 save_traces: true
 save_aggregated_metrics: true
 
