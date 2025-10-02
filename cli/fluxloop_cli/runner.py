@@ -3,19 +3,20 @@ Runner modules for executing experiments and agents.
 """
 
 import asyncio
-import importlib
 import json
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import fluxloop 
+import fluxloop
 import yaml
 
 from fluxloop.schemas import ExperimentConfig, PersonaConfig
 from rich.console import Console
+
+from .target_loader import TargetLoader
+from .arg_binder import ArgBinder
 
 console = Console()
 
@@ -68,41 +69,17 @@ class ExperimentRunner:
             "errors": [],
             "durations": [],
         }
+
+        # Helpers for target loading and argument binding
+        self._arg_binder = ArgBinder(config)
     
     def _load_agent(self) -> Callable:
         """Load the agent function from module path."""
-        work_dir_str = self.config.runner.working_directory
-        path_to_add = None
-
-        if work_dir_str:
-            work_dir_path = Path(work_dir_str)
-            if not work_dir_path.is_absolute():
-                source_dir = self.config.get_source_dir()
-                if source_dir:
-                    work_dir_path = (source_dir / work_dir_path).resolve()
-
-            path_to_add = str(work_dir_path)
-            if path_to_add not in sys.path:
-                sys.path.insert(0, path_to_add)
-
+        loader = TargetLoader(self.config.runner, source_dir=self.config.get_source_dir())
         try:
-            module = importlib.import_module(self.config.runner.module_path)
-            func = getattr(module, self.config.runner.function_name)
-            return func
-        except (ImportError, AttributeError) as e:
-            # Provide a more helpful error message
-            error_msg = f"Failed to load agent: {e}. "
-            if work_dir_str:
-                error_msg += (
-                    f"Ensure 'runner.working_directory' ({work_dir_str}) is correctly "
-                    f"set to the root of your project containing the '{self.config.runner.module_path.split('.')[0]}' module."
-                )
-            else:
-                error_msg += "Consider setting 'runner.working_directory' in your setting.yaml."
-            raise RuntimeError(error_msg)
-        finally:
-            if path_to_add and path_to_add in sys.path:
-                sys.path.remove(path_to_add)
+            return loader.load()
+        except ValueError as exc:
+            raise RuntimeError(str(exc)) from exc
 
     async def run_experiment(self, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
         """
@@ -287,14 +264,20 @@ class ExperimentRunner:
                 "error": str(e),
             })
     
-    async def _call_agent(self, agent_func: Callable, input_text: str) -> Any:
-        """Call the agent function (handles sync/async)."""
+    async def _call_agent(self, agent_func: Callable, input_text: str, iteration: int = 0) -> Any:
+        """Call the agent with arguments bound by ArgBinder (sync or async)."""
+
+        kwargs = self._arg_binder.bind_call_args(
+            agent_func,
+            runtime_input=input_text,
+            iteration=iteration,
+        )
+
         if asyncio.iscoroutinefunction(agent_func):
-            return await agent_func(input_text)
-        else:
-            # Run sync function in executor
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, agent_func, input_text)
+            return await agent_func(**kwargs)
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, lambda: agent_func(**kwargs))
     
     def _save_results(self) -> None:
         """Save results to output directory."""

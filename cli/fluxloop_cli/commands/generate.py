@@ -1,9 +1,10 @@
 """Generate command for producing input datasets."""
 
+import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
@@ -91,6 +92,11 @@ def inputs(
         None,
         "--llm-api-key",
         help="API key for LLM provider (falls back to FLUXLOOP_LLM_API_KEY)",
+    ),
+    from_recording: Optional[Path] = typer.Option(
+        None,
+        "--from-recording",
+        help="Use a recorded call (JSONL) as template for generated inputs",
     ),
 ):
     """Generate input variations for review before running experiments."""
@@ -195,8 +201,20 @@ def inputs(
         llm_api_key_override=llm_api_key,
     )
 
+    recording_template = None
+    if from_recording:
+        try:
+            recording_template = _load_recording_template(from_recording, config)
+            console.print(
+                "📝 Generating inputs from recording"
+                f"\n  → Base content: [cyan]{recording_template['base_content'][:60]}[/cyan]"
+            )
+        except Exception as exc:
+            console.print(f"[red]Failed to load recording template:[/red] {exc}")
+            raise typer.Exit(1)
+
     try:
-        result = generate_inputs(config, settings)
+        result = generate_inputs(config, settings, recording_template=recording_template)
     except Exception as exc:
         console.print(f"[red]Generation failed:[/red] {exc}")
         if "--debug" in sys.argv:
@@ -220,3 +238,67 @@ def inputs(
         f"\n🧠 Mode: [magenta]{result.metadata.get('generation_mode', 'deterministic')}[/magenta]"
         f"\n🎯 Strategies: [cyan]{', '.join(strategy for strategy in strategies_used)}[/cyan]"
     )
+
+
+def _load_recording_template(path: Path, config: "ExperimentConfig") -> Dict[str, object]:
+    target_path = path
+    if not target_path.is_absolute():
+        source_dir = config.get_source_dir()
+        if source_dir:
+            target_path = (source_dir / target_path).resolve()
+        else:
+            target_path = target_path.resolve()
+
+    if not target_path.exists():
+        raise FileNotFoundError(f"Recording file not found: {target_path}")
+
+    with target_path.open("r", encoding="utf-8") as handle:
+        first_line = handle.readline()
+
+    if not first_line:
+        raise ValueError(f"Recording file is empty: {target_path}")
+
+    try:
+        record = json.loads(first_line)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in recording file {target_path}: {exc}")
+
+    kwargs = record.get("kwargs", {})
+    base_content = _extract_content(kwargs)
+    if not base_content:
+        sample = json.dumps(kwargs, indent=2)[:500]
+        raise ValueError(
+            "Unable to locate textual content in recording. "
+            "Expected keys such as data.content, input, input_text, message, query, text, or content." \
+            f"\nRecording snapshot:\n{sample}"
+        )
+
+    return {
+        "base_content": base_content,
+        "full_kwargs": kwargs,
+        "target": record.get("target"),
+    }
+
+
+def _extract_content(kwargs: Dict[str, Any]) -> Optional[str]:
+    content_paths = [
+        "data.content",
+        "input",
+        "input_text",
+        "message",
+        "query",
+        "text",
+        "content",
+    ]
+
+    for path in content_paths:
+        try:
+            current: Any = kwargs
+            for part in path.split('.'):
+                current = current[part]
+            if isinstance(current, str) and current:
+                return current
+        except (KeyError, TypeError):
+            continue
+
+    return None

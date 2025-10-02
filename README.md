@@ -13,121 +13,309 @@
 
 ## Simulate, Evaluate, and Trust Your AI Agents
 
-**FluxLoop is an open-source toolkit for running reproducible, offline-first simulations of AI agents against dynamic scenarios.** It empowers developers to rigorously test agent behavior, evaluate performance against custom criteria, and build confidence before shipping to production. Stop guessing, start simulating.
+**FluxLoop is an open-source toolkit for running reproducible, offline-first simulations of AI agents against dynamic scenarios.** It empowers developers to rigorously test agent behavior, evaluate performance against custom criteria, and build confidence before shipping to production.
 
-Our core philosophy is **local-first, framework-agnostic evaluation**. FluxLoop runs on your machine, integrating with your existing agent code via simple decorators. It produces structured, auditable JSON artifacts that describe every step of a simulation, from prompt variations to tool calls and final outputs. These artifacts are your ground truth for performance, and can be consumed by any evaluation backend—including our own upcoming FluxLoop Service for advanced analytics.
+### Core Philosophy
+
+- **Local-first simulation**: Run experiments on your machine with full control
+- **Framework-agnostic**: Works with any agent framework (LangGraph, LangChain, custom)
+- **Argument replay**: Record complex function calls once, replay them hundreds of times
+- **Structured artifacts**: Auditable JSON/JSONL outputs following a documented [contract](docs/api/json-contract.md)
+
+Stop guessing, start simulating.
+
+---
 
 ## Key Features
 
-- **Simple, decorator-based setup:** Instrument your existing agent code with minimal changes.
-- **Framework-agnostic:** Works with any agent framework.
-- **Local-first simulation:** Run experiments on your machine with full control. No cloud dependency required.
-- **Structured JSON output:** Generate reproducible, auditable artifacts that follow a documented [JSON contract](docs/api/json-contract.md).
-- **Extensible evaluation:** Use the generated artifacts with any evaluation tool.
-- **Orchestration CLI:** Define and run complex simulation experiments from the command line.
-- **VSCode extension:** Manage and monitor your experiments from within your IDE.
+### 🎯 Simple Decorator-Based Setup
+Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing.
 
-This repository contains the core OSS packages: the **SDK**, **CLI**, and **VSCode Extension**.
+### 🔄 Argument Replay System
+Record complex function arguments (WebSocket callbacks, session data, etc.) from staging, then replay them locally with different content. No manual mocking required.
+
+### 🧪 Offline-First Simulation
+Run experiments on your machine without cloud dependencies. Generate structured artifacts that work with any evaluation backend.
+
+### 📊 Structured JSON Output
+Every simulation produces reproducible, auditable artifacts:
+- `summary.json`: Aggregate statistics
+- `traces.jsonl`: Detailed execution traces
+- `errors.json`: Failure analysis
+
+### 🚀 CLI Orchestration
+Define complex experiments in YAML, generate input variations with LLM, and run batch simulations—all from the command line.
+
+### 🔌 VSCode Extension
+Manage experiments, monitor runs, and explore results directly in your IDE.
+
+---
 
 ## Getting Started
 
-1. **Install the CLI and SDK:**
-   ```bash
-   pip install fluxloop-cli fluxloop
-   ```
-2. **Initialize a FluxLoop project:**
-   ```bash
-   fluxloop init project my-agent-project
-   cd my-agent-project
-   ```
-   This generates:
-   ```
-   my-agent-project/
-   ├── setting.yaml        # experiment config (scaffolded template)
-   ├── .env                # environment variables (collector + LLM keys)
-   ├── examples/
-   │   └── simple_agent.py # instrumented sample agent
-   └── experiments/        # output directory (populated on first run)
-   ```
-3. **Instrument your agent:**
-   Add the `@fluxloop.agent` decorator to your agent's entry point function.
-   ```python
-   # examples/simple_agent.py
-   import fluxloop
-
-   @fluxloop.agent
-   def my_agent(prompt: str) -> str:
-       return f"Response to: {prompt}"
-   ```
-4. **Configure LLM/collector credentials:**
-   - Open `.env` and add values such as `FLUXLOOP_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`.
-   - Or use the CLI helper to write them safely:
-     ```bash
-     fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
-     ```
-     (adds/updates the relevant key in `.env` and optional defaults in `setting.yaml`).
-5. **Adjust `setting.yaml`:**
-   Tune personas, base inputs, runner module path, and evaluation options. Relative paths are resolved from this file's directory, so keep it in your project root.
-6. **Run an experiment:**
-   ```bash
-   fluxloop run experiment --config setting.yaml
-   ```
-
-### Generating Input Sets
-
-Use the CLI to scaffold inputs for review before running an experiment:
+### 1. Install Packages
 
 ```bash
-fluxloop generate inputs --config setting.yaml --output inputs/generated.yaml
+pip install fluxloop-cli fluxloop
 ```
 
-Switch to LLM-backed generation for richer datasets:
+### 2. Initialize Project
 
 ```bash
-fluxloop generate inputs --config setting.yaml --mode llm --strategy persona_based --output inputs/llm.yaml
+fluxloop init project --name my-agent
+cd fluxloop/my-agent
 ```
 
-Open the generated file, review or edit the inputs, then point your experiment
-configuration at it via the `inputs_file` field. When `inputs_file` is set, it
-fully replaces `base_inputs` during execution, so keep the inline list empty (or
-commented out) if you want to run exclusively from the reviewed dataset.
+**Generated structure:**
+```
+fluxloop/
+├── .env                      # Global environment variables
+└── my-agent/
+    ├── setting.yaml          # Experiment configuration
+    ├── .env                  # Project-specific overrides
+    ├── examples/
+    │   └── simple_agent.py   # Sample instrumented agent
+    ├── experiments/          # Results output
+    ├── inputs/               # Generated input datasets
+    └── recordings/           # Recorded arguments (optional)
+```
 
-### Running an Experiment
+### 3. Instrument Your Agent
 
-After your inputs are ready, execute the full simulation:
+Add the `@fluxloop.agent` decorator to your agent's entry point:
+
+```python
+# examples/simple_agent.py
+import fluxloop
+
+@fluxloop.agent()
+def run(input_text: str) -> str:
+    return f"Response to: {input_text}"
+```
+
+### 4. Configure Credentials
+
+```bash
+# Add to .env
+FLUXLOOP_COLLECTOR_URL=http://localhost:8000
+OPENAI_API_KEY=sk-...
+
+# Or use CLI helper
+fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
+```
+
+### 5. Generate Inputs
+
+```bash
+fluxloop generate inputs --config setting.yaml --limit 20
+```
+
+### 6. Run Experiment
 
 ```bash
 fluxloop run experiment --config setting.yaml
 ```
 
-This command will:
-- load personas, inputs, and variations defined in your configuration
-- run your instrumented agent across every combination
-- capture traces and metrics in the configured output directory
-- optionally forward data to a collector if you enable it
-- emit generation metadata (mode, provider, strategies) alongside outputs when using LLM mode
+**Results** → `experiments/my_agent_experiment_YYYYMMDD_HHMMSS/`
 
-Review the generated artifacts in the `experiments/` directory (relative to your project root) to inspect
-individual runs or aggregate summaries. FluxLoop automatically resolves relative paths using the configuration file location, so outputs stay inside the project workspace even when you launch commands from elsewhere.
+---
 
-Check out our full documentation and examples to learn more.
+## 🎬 Argument Replay Workflow
 
-## Why Contribute?
+For complex agents with many parameters (e.g., WebSocket handlers, class methods):
 
-Building trustworthy AI requires a community dedicated to rigorous, transparent evaluation. FluxLoop provides the foundational tooling for this task, but there is much more to do. We invite you to join us in building the future of AI agent simulation.
+### Step 1: Record (Staging)
 
-- **Shape the standard:** Help define the open contract for AI agent simulation data.
-- **Build new integrations:** Create adapters for popular agent frameworks like LangChain, LlamaIndex, and more.
-- **Improve the developer experience:** Enhance the CLI, SDK, and VSCode extension.
-- **Develop novel evaluation methods:** Use the structured output to create new ways of measuring agent performance.
+```python
+import fluxloop
 
-We are an early-stage project with an ambitious roadmap. Your contributions can have a massive impact. Check out our [contribution guide](CONTRIBUTING.md) and open issues to get started.
+# Enable recording
+fluxloop.configure(record_args=True, recording_file="/tmp/args.jsonl")
 
-## Community & Support
+class MessageHandler:
+    async def handle_message(
+        self,
+        connection_id: str,
+        data: Dict[str, Any],
+        user_connection: Dict[str, Any],
+        send_callback: Callable,
+        error_callback: Callable
+    ):
+        # Record arguments
+        fluxloop.record_call_args(
+            target="app.handler:MessageHandler.handle_message",
+            connection_id=connection_id,
+            data=data,
+            user_connection=user_connection,
+            send_callback=send_callback,
+            error_callback=error_callback,
+        )
+        # ... existing logic
+```
 
-- Join our community on [Discord](https://discord.gg/your-discord-link) to ask questions, share your projects, and connect with other developers.
-- Follow us on [Twitter](https://twitter.com/your-twitter-handle) for project updates.
-- Open an issue to report bugs or suggest new features.
+Deploy to staging, trigger a test request, then download:
+```bash
+scp staging:/tmp/args.jsonl ./recordings/
+```
 
-## License
+### Step 2: Generate (Local)
+
+```bash
+fluxloop generate inputs \
+  --config setting.yaml \
+  --from-recording recordings/args.jsonl \
+  --limit 50
+```
+
+### Step 3: Configure (Local)
+
+```yaml
+# setting.yaml
+runner:
+  target: "app.handler:MessageHandler.handle_message"
+  working_directory: "."
+
+replay_args:
+  enabled: true
+  recording_file: "recordings/args.jsonl"
+  callable_providers:
+    send_callback: "builtin:collector.send"
+    error_callback: "builtin:collector.error"
+  override_param_path: "data.content"
+
+inputs_file: "inputs/generated.yaml"
+iterations: 50
+```
+
+### Step 4: Simulate (Local)
+
+```bash
+fluxloop run experiment --config setting.yaml
+```
+
+The CLI will:
+1. Load recorded kwargs
+2. Override `data.content` with each generated input
+3. Restore callable objects
+4. Execute real logic with actual code paths
+
+**Benefits:**
+- ✅ No manual mock construction
+- ✅ Real code execution (not mocked)
+- ✅ Different LLM responses every iteration
+- ✅ Production-like argument structures
+
+---
+
+## 📦 Repository Structure
+
+```
+fluxloop/
+├── packages/
+│   ├── sdk/              # Python SDK (decorators, recording)
+│   ├── cli/              # CLI tool (generate, run, status)
+│   └── vscode/           # VSCode extension
+├── services/
+│   └── collector/        # Trace collection service
+├── examples/
+│   ├── simple-agent/     # Basic examples
+│   └── pluto_duck/       # Complex multi-agent example
+└── docs/
+    ├── guides/           # Integration guides
+    ├── prd/              # Product specs
+    └── api/              # API contracts
+```
+
+---
+
+## 📚 Documentation
+
+- **Quick Start**: [5-Minute Guide](../docs/guides/fluxloop-quick-start.md)
+- **SDK Reference**: [SDK README](sdk/README.md)
+- **CLI Reference**: [CLI README](cli/README.md)
+- **Pluto Duck Integration**: [Integration Guide](../docs/guides/pluto-duck-fluxloop-integration.md)
+- **Argument Replay PRD**: [System Design](../docs/prd/argument-replay-system.md)
+- **Simulation Workflow**: [Korean Guide](../docs/guides/simulation-workflow-ko.md)
+
+---
+
+## 🤝 Why Contribute?
+
+Building trustworthy AI requires a community dedicated to rigorous, transparent evaluation. FluxLoop provides the foundational tooling, but there's much more to do:
+
+- **Shape the standard**: Define the open contract for AI agent simulation data
+- **Build integrations**: Create adapters for popular frameworks (LangChain, LlamaIndex, CrewAI)
+- **Enhance developer experience**: Improve CLI, SDK, and VSCode extension
+- **Develop evaluation methods**: Create novel ways of measuring agent performance
+
+We're an early-stage project with an ambitious roadmap. Your contributions can have massive impact.
+
+Check out our [contribution guide](CONTRIBUTING.md) and open issues to get started.
+
+---
+
+## 🌟 Example Use Cases
+
+### Use Case 1: Simple Agent Testing
+
+```python
+@fluxloop.agent()
+def run(input_text: str) -> str:
+    return process(input_text)
+```
+
+```bash
+fluxloop run experiment --config setting.yaml
+# → Tests function with 50 input variations
+```
+
+### Use Case 2: Complex WebSocket Handler
+
+Record from staging:
+```python
+fluxloop.record_call_args(target="app:Handler.handle", **all_args)
+```
+
+Replay locally:
+```bash
+fluxloop generate inputs --from-recording recordings/args.jsonl --limit 100
+fluxloop run experiment --config setting.yaml
+# → Simulates 100 realistic scenarios offline
+```
+
+### Use Case 3: Multi-Agent System
+
+```python
+@fluxloop.agent()
+async def orchestrator(...):
+    result = await planner_agent.plan(...)
+    await executor_agent.execute(...)
+    return result
+```
+
+Trace the entire flow with hierarchical observations.
+
+---
+
+## 🚨 Community & Support
+
+- **Discord**: Join our [community](https://discord.gg/your-discord-link) for questions and discussions
+- **Twitter**: Follow [@your-handle](https://twitter.com/your-twitter-handle) for updates
+- **Issues**: Report bugs or suggest features on [GitHub](https://github.com/chuckgu/fluxloop/issues)
+
+---
+
+## 📄 License
+
 FluxLoop is licensed under the [Apache License 2.0](LICENSE).
+
+---
+
+## 🚀 What's Next?
+
+1. **Try the Quick Start**: [Get running in 5 minutes](../docs/guides/fluxloop-quick-start.md)
+2. **Explore Examples**: Check out `examples/` for real-world patterns
+3. **Read the Guides**: Deep-dive into [integration guides](../docs/guides/)
+4. **Join the Community**: Connect with other FluxLoop users
+
+**Start simulating your agents today!** 🎯

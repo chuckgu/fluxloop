@@ -24,6 +24,8 @@ class TestSDKConfig:
         assert config.timeout == 10.0
         assert config.sample_rate == 1.0
         assert config.environment == "development"
+        assert config.record_args is False
+        assert config.recording_file is None
     
     def test_config_from_env_vars(self):
         """Test configuration from environment variables."""
@@ -36,7 +38,9 @@ class TestSDKConfig:
             "FLUXLOOP_FLUSH_INTERVAL": "10.0",
             "FLUXLOOP_SAMPLE_RATE": "0.5",
             "FLUXLOOP_SERVICE_NAME": "test-service",
-            "FLUXLOOP_ENVIRONMENT": "staging"
+            "FLUXLOOP_ENVIRONMENT": "staging",
+            "FLUXLOOP_RECORD_ARGS": "true",
+            "FLUXLOOP_RECORDING_FILE": "/tmp/custom.jsonl",
         }
         
         with patch.dict(os.environ, env_vars):
@@ -51,6 +55,8 @@ class TestSDKConfig:
             assert config.sample_rate == 0.5
             assert config.service_name == "test-service"
             assert config.environment == "staging"
+            assert config.record_args is True
+            assert config.recording_file == "/tmp/custom.jsonl"
     
     def test_collector_url_validation(self):
         """Test collector URL validation."""

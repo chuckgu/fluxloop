@@ -134,6 +134,14 @@ class RunnerConfig(BaseModel):
     # Entry point
     module_path: str  # e.g., "my_agent.main"
     function_name: str = "run"  # Function to call
+    target: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional combined target specification. Use 'module:function' or "
+            "'module:Class.method'. When provided, takes precedence over "
+            "module_path + function_name."
+        ),
+    )
     
     # Execution environment
     working_directory: Optional[str] = None
@@ -158,50 +166,54 @@ class RunnerConfig(BaseModel):
 
 class ExperimentConfig(BaseModel):
     """Complete experiment configuration."""
+
     _source_dir: Optional[Path] = PrivateAttr(default=None)
     _resolved_input_count: Optional[int] = PrivateAttr(default=None)
-    
+
     # Basic info
     name: str
     description: Optional[str] = None
     version: str = "1.0.0"
-    
+
     # Simulation settings
     iterations: int = Field(default=10, ge=1, le=1000)
     parallel_runs: int = Field(default=1, ge=1, le=10)
     seed: Optional[int] = None
-    
+
     # Personas
     personas: List[PersonaConfig] = Field(default_factory=list)
-    
+
     # Variation settings
     variation_strategies: List[VariationStrategy] = Field(default_factory=list)
     variation_count: int = Field(default=1, ge=1, le=10)
     variation_temperature: float = Field(default=0.7, ge=0, le=2)
     variation_model: str = "gpt-3.5-turbo"
     custom_variation_prompt: Optional[str] = None
-    
+
     # Base prompts/inputs
     base_inputs: List[Dict[str, Any]] = Field(default_factory=list)
     inputs_file: Optional[str] = None
     input_template: Optional[str] = None
     input_generation: InputGenerationConfig = Field(default_factory=InputGenerationConfig)
-    
+
     # Runner configuration
     runner: RunnerConfig
-    
+
+    # Argument replay (optional)
+    replay_args: Optional["ReplayArgsConfig"] = None
+
     # Evaluators
     evaluators: List[EvaluatorConfig] = Field(default_factory=list)
-    
+
     # Output settings
     output_directory: str = "./experiments"
     save_traces: bool = True
     save_aggregated_metrics: bool = True
-    
+
     # Collector settings
     collector_url: Optional[str] = None
     collector_api_key: Optional[str] = None
-    
+
     # Metadata
     tags: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -265,3 +277,21 @@ class ExperimentConfig(BaseModel):
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return self.model_dump(exclude_none=True)
+
+
+class ReplayArgsConfig(BaseModel):
+    """Configuration for argument replay (MVP scope)."""
+
+    enabled: bool = False
+    recording_file: Optional[str] = None
+    callable_providers: Dict[str, str] = Field(
+        default_factory=lambda: {
+            "send_message_callback": "builtin:collector.send",
+            "send_error_callback": "builtin:collector.error",
+        },
+        description="Mapping of callable parameter names to builtin providers",
+    )
+    override_param_path: Optional[str] = Field(
+        default="data.content",
+        description="Single dot-notation path whose value should be overridden with runtime input",
+    )

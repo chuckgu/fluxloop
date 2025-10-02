@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence
 
 import yaml
 
@@ -88,9 +88,22 @@ class GenerationError(Exception):
 def generate_inputs(
     config: ExperimentConfig,
     settings: GenerationSettings,
+    recording_template: Optional[Dict[str, Any]] = None,
 ) -> GenerationResult:
     """Generate deterministic input entries based on configuration."""
-    if not config.base_inputs:
+    base_inputs = config.base_inputs
+    if recording_template:
+        base_inputs = [
+            {
+                "input": recording_template["base_content"],
+                "metadata": {
+                    "source": "recording",
+                    "target": recording_template.get("target"),
+                },
+            }
+        ]
+
+    if not base_inputs:
         raise GenerationError("base_inputs must be defined to generate inputs")
 
     mode = settings.mode or config.input_generation.mode
@@ -120,7 +133,7 @@ def generate_inputs(
 
         metadata = {
             "config_name": config.name,
-            "total_base_inputs": len(config.base_inputs),
+            "total_base_inputs": len(base_inputs),
             "total_personas": len(config.personas),
             "strategies": [strategy.value for strategy in strategies],
             "limit": settings.limit,
@@ -128,6 +141,12 @@ def generate_inputs(
             "llm_provider": config.input_generation.llm.provider,
             "llm_model": config.input_generation.llm.model,
         }
+
+        if recording_template:
+            for entry in entries:
+                entry.metadata["args_template"] = "use_recorded"
+                entry.metadata["template_kwargs"] = recording_template.get("full_kwargs")
+            metadata["recording_target"] = recording_template.get("target")
 
         return GenerationResult(entries=entries, metadata=metadata)
 

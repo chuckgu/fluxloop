@@ -3,11 +3,44 @@ SDK Configuration management.
 """
 
 import os
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator
+
+from .recording import disable_recording, enable_recording
+
+
+def _resolve_recording_path(path: Optional[str]) -> Path:
+    """Resolve the recording file path, creating parent directories."""
+
+    if path:
+        resolved = Path(path).expanduser().resolve()
+    else:
+        resolved = Path(
+            f"/tmp/fluxloop_args_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
+        ).resolve()
+
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+
+def _apply_recording_config(config: "SDKConfig") -> None:
+    """Enable or disable argument recording based on configuration."""
+
+    if config.record_args:
+        resolved_path = _resolve_recording_path(config.recording_file)
+        enable_recording(str(resolved_path))
+        config.recording_file = str(resolved_path)
+        if config.debug:
+            print(f"🎥 Argument recording enabled → {resolved_path}")
+    else:
+        disable_recording()
+        if config.debug:
+            print("🎥 Argument recording disabled")
 
 # Load environment variables
 load_dotenv()
@@ -39,6 +72,14 @@ class SDKConfig(BaseModel):
     )
     offline_store_dir: str = Field(
         default_factory=lambda: os.getenv("FLUXLOOP_OFFLINE_DIR", "./fluxloop_artifacts")
+    )
+
+    # Argument recording (disabled by default)
+    record_args: bool = Field(
+        default_factory=lambda: os.getenv("FLUXLOOP_RECORD_ARGS", "false").lower() == "true"
+    )
+    recording_file: Optional[str] = Field(
+        default_factory=lambda: os.getenv("FLUXLOOP_RECORDING_FILE")
     )
     
     # Performance settings
@@ -100,6 +141,7 @@ class SDKConfig(BaseModel):
 
 # Global configuration instance
 _config = SDKConfig()
+_apply_recording_config(_config)
 
 
 def configure(**kwargs) -> SDKConfig:
@@ -130,7 +172,9 @@ def configure(**kwargs) -> SDKConfig:
     
     # Re-validate the configuration
     _config = SDKConfig(**_config.model_dump())
-    
+
+    _apply_recording_config(_config)
+
     return _config
 
 
@@ -143,4 +187,5 @@ def reset_config() -> SDKConfig:
     """Reset configuration to defaults."""
     global _config
     _config = SDKConfig()
+    _apply_recording_config(_config)
     return _config

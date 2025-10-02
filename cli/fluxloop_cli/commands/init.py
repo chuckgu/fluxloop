@@ -119,6 +119,9 @@ def project(
         root_env_file.write_text(create_env_file())
 
     console.print("🔐 Creating project .env template...")
+    recordings_dir = project_path / "recordings"
+    recordings_dir.mkdir(exist_ok=True)
+
     project_env_content = "# Project-specific overrides\n"
     env_file.write_text(project_env_content)
     
@@ -145,6 +148,7 @@ def project(
     tree.add("📄 setting.yaml")
     tree.add("🔐 .env")
     tree.add("📄 .gitignore")
+    tree.add("📁 recordings/")
     
     if with_example:
         examples_tree = tree.add("📁 examples/")

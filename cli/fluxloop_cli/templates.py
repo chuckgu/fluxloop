@@ -52,11 +52,19 @@ base_inputs:
 
 # Agent runner configuration
 runner:
-  module_path: examples.simple_agent
-  function_name: run
+  target: "examples.simple_agent:run"  # module:function or module:Class.method
   working_directory: .  # IMPORTANT: Set this to your project's root directory
   timeout_seconds: 30
   max_retries: 3
+
+# Recorded argument replay (optional)
+replay_args:
+  enabled: false
+  recording_file: recordings/args_recording.jsonl
+  callable_providers:
+    send_message_callback: "builtin:collector.send"
+    send_error_callback: "builtin:collector.error"
+  override_param_path: data.content
 
 # Input generation configuration
 input_generation:
@@ -251,6 +259,9 @@ FLUXLOOP_API_KEY=your-api-key-here
 FLUXLOOP_ENABLED=true
 FLUXLOOP_DEBUG=false
 FLUXLOOP_SAMPLE_RATE=1.0
+# Argument Recording (global toggle)
+FLUXLOOP_RECORD_ARGS=false
+FLUXLOOP_RECORDING_FILE=recordings/args_recording.jsonl
 
 # Service Configuration
 FLUXLOOP_SERVICE_NAME=my-agent
