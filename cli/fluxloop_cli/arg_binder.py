@@ -10,6 +10,16 @@ from typing import Any, Callable, Dict, Optional
 from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig
 
 
+class _AwaitableNone:
+    """Simple awaitable that resolves to ``None``."""
+
+    def __await__(self):  # type: ignore[override]
+        async def _noop() -> None:
+            return None
+
+        return _noop().__await__()
+
+
 class ArgBinder:
     """Bind call arguments using replay data when configured."""
 
@@ -41,14 +51,17 @@ class ArgBinder:
                 f"Recording file not found: {file_path}. Make sure it is available locally."
             )
 
+        last_line: Optional[str] = None
         with file_path.open("r", encoding="utf-8") as fp:
-            first_line = fp.readline()
+            for line in fp:
+                if line.strip():
+                    last_line = line
 
-        if not first_line:
+        if not last_line:
             raise ValueError(f"Recording file is empty: {file_path}")
 
         try:
-            self._recording = json.loads(first_line)
+            self._recording = json.loads(last_line)
         except json.JSONDecodeError as exc:
             raise ValueError(f"Invalid JSON in recording file {file_path}: {exc}")
 
@@ -148,13 +161,16 @@ class ArgBinder:
         if provider == "builtin:collector.send":
             messages: list = []
 
-            def send(message: Any) -> None:
-                messages.append(message)
-                print(f"[COLLECTED] {message}")
+            def _record(args: Any, kwargs: Any) -> None:
+                messages.append((args, kwargs))
+                pretty = args[0] if len(args) == 1 and not kwargs else {"args": args, "kwargs": kwargs}
 
-            async def send_async(message: Any) -> None:
-                messages.append(message)
-                print(f"[COLLECTED] {message}")
+            def send(*args: Any, **kwargs: Any) -> _AwaitableNone:
+                _record(args, kwargs)
+                return _AwaitableNone()
+
+            async def send_async(*args: Any, **kwargs: Any) -> None:
+                _record(args, kwargs)
 
             send.messages = messages
             send_async.messages = messages
@@ -165,13 +181,17 @@ class ArgBinder:
         if provider == "builtin:collector.error":
             errors: list = []
 
-            def send_error(err: Any) -> None:
-                errors.append(err)
-                print(f"[ERROR] {err}")
+            def _record_error(args: Any, kwargs: Any) -> None:
+                errors.append((args, kwargs))
+                pretty = args[0] if len(args) == 1 and not kwargs else {"args": args, "kwargs": kwargs}
+                print(f"[ERROR] {pretty}")
 
-            async def send_error_async(err: Any) -> None:
-                errors.append(err)
-                print(f"[ERROR] {err}")
+            def send_error(*args: Any, **kwargs: Any) -> _AwaitableNone:
+                _record_error(args, kwargs)
+                return _AwaitableNone()
+
+            async def send_error_async(*args: Any, **kwargs: Any) -> None:
+                _record_error(args, kwargs)
 
             send_error.errors = errors
             send_error_async.errors = errors

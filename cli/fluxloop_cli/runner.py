@@ -7,7 +7,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import fluxloop
 import yaml
@@ -97,21 +97,52 @@ class ExperimentRunner:
         agent_func = self._load_agent()
         
         inputs = await self._load_inputs()
-        
+
+        persona_map = {persona.name: persona for persona in (self.config.personas or [])}
+        use_entry_persona = self.config.has_external_inputs()
+
+        delay = getattr(self.config, "run_delay_seconds", 0) or 0
+
         # Run iterations
         for iteration in range(self.config.iterations):
-            for persona in self.config.personas or [None]:
+            if use_entry_persona:
                 for entry in inputs:
+                    persona = self._resolve_entry_persona(entry, persona_map)
                     await self._run_single(
                         agent_func,
                         entry,
                         persona,
                         iteration,
                     )
-                    
+
                     if progress_callback:
                         progress_callback()
-        
+
+                    if delay > 0:
+                        await asyncio.sleep(delay)
+            else:
+                personas = self.config.personas or [None]
+                for persona in personas:
+                    for entry in inputs:
+                        await self._run_single(
+                            agent_func,
+                            entry,
+                            persona,
+                            iteration,
+                        )
+
+                        if progress_callback:
+                            progress_callback()
+
+                        if delay > 0:
+                            await asyncio.sleep(delay)
+
+        if use_entry_persona:
+            self.config.set_resolved_persona_count(1)
+        else:
+            persona_multiplier = len(self.config.personas) if self.config.personas else 1
+            self.config.set_resolved_persona_count(persona_multiplier)
+
         # Calculate summary statistics
         end_time = time.time()
         self.results["duration_seconds"] = end_time - start_time
@@ -149,6 +180,11 @@ class ExperimentRunner:
 
         inputs = self._load_external_inputs()
         self.config.set_resolved_input_count(len(inputs))
+        if self.config.has_external_inputs():
+            self.config.set_resolved_persona_count(1)
+        else:
+            persona_multiplier = len(self.config.personas) if self.config.personas else 1
+            self.config.set_resolved_persona_count(persona_multiplier)
         return inputs
 
     def _load_external_inputs(self) -> List[Dict[str, Any]]:
@@ -234,8 +270,33 @@ class ExperimentRunner:
                 if persona:
                     ctx.add_metadata("persona", persona.name)
                 
+                # Prepare collector callback storage
+                callback_messages: Dict[str, Any] = {}
+
                 # Run agent
-                result = await self._call_agent(agent_func, input_text)
+                result = await self._call_agent(
+                    agent_func,
+                    input_text,
+                    iteration=iteration,
+                    callback_store=callback_messages,
+                )
+
+                # If collector callbacks captured messages, include them
+                send_messages = callback_messages.get("send", [])
+                error_messages = callback_messages.get("error", [])
+
+                if send_messages or error_messages:
+                    ctx.add_metadata(
+                        "callback_messages",
+                        {
+                            "send": send_messages,
+                            "error": error_messages,
+                        },
+                    )
+
+                if send_messages:
+                    last_args, last_kwargs = send_messages[-1]
+                    result = self._extract_payload(last_args, last_kwargs)
                 
                 # Mark successful
                 self.results["successful"] += 1
@@ -243,16 +304,23 @@ class ExperimentRunner:
                 # Record duration
                 duration_ms = (time.time() - start_time) * 1000
                 self.results["durations"].append(duration_ms)
-                
-                # Store trace info
-                self.results["traces"].append({
+
+                trace_entry = {
                     "iteration": iteration,
                     "persona": persona.name if persona else None,
                     "input": input_text,
                     "output": result,
                     "duration_ms": duration_ms,
                     "success": True,
-                })
+                }
+
+                if send_messages or error_messages:
+                    trace_entry["callback_messages"] = {
+                        "send": [self._serialize_callback(args, kwargs) for args, kwargs in send_messages],
+                        "error": [self._serialize_callback(args, kwargs) for args, kwargs in error_messages],
+                    }
+
+                self.results["traces"].append(trace_entry)
                 
         except Exception as e:
             # Record failure
@@ -264,7 +332,28 @@ class ExperimentRunner:
                 "error": str(e),
             })
     
-    async def _call_agent(self, agent_func: Callable, input_text: str, iteration: int = 0) -> Any:
+    def _resolve_entry_persona(
+        self,
+        entry: Dict[str, Any],
+        persona_map: Dict[str, PersonaConfig],
+    ) -> Optional[PersonaConfig]:
+        """Select persona metadata from an input entry when available."""
+
+        metadata = entry.get("metadata") or {}
+        persona_name = metadata.get("persona")
+
+        if persona_name and persona_name in persona_map:
+            return persona_map[persona_name]
+
+        return None
+
+    async def _call_agent(
+        self,
+        agent_func: Callable,
+        input_text: str,
+        iteration: int = 0,
+        callback_store: Optional[Dict[str, Any]] = None,
+    ) -> Any:
         """Call the agent with arguments bound by ArgBinder (sync or async)."""
 
         kwargs = self._arg_binder.bind_call_args(
@@ -273,11 +362,34 @@ class ExperimentRunner:
             iteration=iteration,
         )
 
+        # Attach collector callback capture if present
+        if callback_store is not None:
+            send_cb = kwargs.get("send_message_callback")
+            if callable(send_cb) and hasattr(send_cb, "messages"):
+                callback_store["send"] = send_cb.messages
+
+            error_cb = kwargs.get("send_error_callback")
+            if callable(error_cb) and hasattr(error_cb, "errors"):
+                callback_store["error"] = error_cb.errors
+
         if asyncio.iscoroutinefunction(agent_func):
             return await agent_func(**kwargs)
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: agent_func(**kwargs))
+
+    @staticmethod
+    def _extract_payload(args: Sequence[Any], kwargs: Dict[str, Any]) -> Any:
+        if kwargs:
+            return kwargs
+
+        if not args:
+            return None
+
+        if len(args) == 1:
+            return args[0]
+
+        return list(args)
     
     def _save_results(self) -> None:
         """Save results to output directory."""

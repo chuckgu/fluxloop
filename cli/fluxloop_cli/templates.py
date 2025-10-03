@@ -14,6 +14,7 @@ version: 1.0.0
 iterations: 10
 parallel_runs: 1
 seed: 42
+run_delay_seconds: 0
 
 # User personas for simulation
 personas:

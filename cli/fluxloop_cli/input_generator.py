@@ -92,6 +92,7 @@ def generate_inputs(
 ) -> GenerationResult:
     """Generate deterministic input entries based on configuration."""
     base_inputs = config.base_inputs
+    config_for_generation = config
     if recording_template:
         base_inputs = [
             {
@@ -102,24 +103,25 @@ def generate_inputs(
                 },
             }
         ]
+        config_for_generation = config.model_copy(update={"base_inputs": base_inputs})
 
     if not base_inputs:
         raise GenerationError("base_inputs must be defined to generate inputs")
 
-    mode = settings.mode or config.input_generation.mode
+    mode = settings.mode or config_for_generation.input_generation.mode
 
     if mode == InputGenerationMode.LLM:
         strategies: Sequence[VariationStrategy]
         if settings.strategies and len(settings.strategies) > 0:
             strategies = list(settings.strategies)
-        elif config.variation_strategies:
-            strategies = config.variation_strategies
+        elif config_for_generation.variation_strategies:
+            strategies = config_for_generation.variation_strategies
         else:
             strategies = DEFAULT_STRATEGIES
 
         try:
             raw_entries = generate_llm_inputs(
-                config=config,
+                config=config_for_generation,
                 strategies=strategies,
                 settings=settings,
             )
@@ -132,14 +134,14 @@ def generate_inputs(
         ]
 
         metadata = {
-            "config_name": config.name,
+            "config_name": config_for_generation.name,
             "total_base_inputs": len(base_inputs),
-            "total_personas": len(config.personas),
+            "total_personas": len(config_for_generation.personas),
             "strategies": [strategy.value for strategy in strategies],
             "limit": settings.limit,
             "generation_mode": InputGenerationMode.LLM.value,
-            "llm_provider": config.input_generation.llm.provider,
-            "llm_model": config.input_generation.llm.model,
+            "llm_provider": config_for_generation.input_generation.llm.provider,
+            "llm_model": config_for_generation.input_generation.llm.model,
         }
 
         if recording_template:
@@ -147,6 +149,7 @@ def generate_inputs(
                 entry.metadata["args_template"] = "use_recorded"
                 entry.metadata["template_kwargs"] = recording_template.get("full_kwargs")
             metadata["recording_target"] = recording_template.get("target")
+            metadata["recording_base_input"] = recording_template.get("base_content")
 
         return GenerationResult(entries=entries, metadata=metadata)
 

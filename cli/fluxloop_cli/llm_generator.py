@@ -98,11 +98,11 @@ async def _generate_one_variation_openai(
     }
 
     # Add GPT-5 specific controls if they exist on the config object
-    if hasattr(llm_config, "reasoning_effort") and llm_config.reasoning_effort:
-        payload["reasoning"] = {"effort": llm_config.reasoning_effort}
+    # if hasattr(llm_config, "reasoning_effort") and llm_config.reasoning_effort:
+    #     payload["reasoning"] = {"effort": llm_config.reasoning_effort}
 
-    if hasattr(llm_config, "text_verbosity") and llm_config.text_verbosity:
-        payload["text"] = {"verbosity": llm_config.text_verbosity}
+    # if hasattr(llm_config, "text_verbosity") and llm_config.text_verbosity:
+    #     payload["text"] = {"verbosity": llm_config.text_verbosity}
 
     response = await _request_openai(client, config=llm_config, payload=payload)
 

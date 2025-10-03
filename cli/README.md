@@ -140,6 +140,8 @@ scp staging:/tmp/pluto_args.jsonl ./recordings/
 
 #### Step 2: Generate Inputs from Recording
 
+> ⚠️ OpenAI 정책 변경에 따라 reasoning/text 옵션이 지원되지 않는 모델에서는 제거되었습니다. SDK 0.1.x 기준으로 기본 설정이면 문제없이 동작합니다. 모델이 계속 400 에러를 반환하면 `setting.yaml`의 `input_generation.llm` 섹션을 확인해 주세요.
+
 ```bash
 fluxloop generate inputs \
   --config setting.yaml \
@@ -147,7 +149,7 @@ fluxloop generate inputs \
   --limit 50
 ```
 
-This creates `inputs/generated.yaml` with variations based on the recorded base content.
+이 명령은 녹화 파일의 **마지막 레코드**를 템플릿으로 사용해 variations를 생성합니다. `--from-recording` 옵션을 생략하면 `setting.yaml`에 정의된 `base_inputs`를 기반으로 생성합니다.
 
 #### Step 3: Configure Replay
 

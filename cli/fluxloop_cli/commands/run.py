@@ -148,8 +148,13 @@ def experiment(
             f"\n[yellow]Warning:[/yellow] This will execute {total_runs} runs. "
             "This may take a while and incur API costs."
         )
-        if not typer.confirm("Continue?"):
-            raise typer.Abort()
+    else:
+        console.print(
+            f"\nThis will execute {total_runs} runs."
+        )
+
+    if not typer.confirm("Continue?"):
+        raise typer.Abort()
     
     # Create runner
     # Run experiment with progress tracking

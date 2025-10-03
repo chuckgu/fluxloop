@@ -7,9 +7,11 @@ import pytest
 from fluxloop_cli.config_loader import load_experiment_config
 from fluxloop_cli.input_generator import (
     GenerationError,
+    GenerationResult,
     GenerationSettings,
     generate_inputs,
 )
+from fluxloop_cli.llm_generator import DEFAULT_STRATEGIES, generate_llm_inputs
 from fluxloop_cli.runner import ExperimentRunner
 from fluxloop_cli.validators import parse_variation_strategies
 from fluxloop.schemas import ExperimentConfig, InputGenerationMode, RunnerConfig
@@ -121,3 +123,38 @@ runner:
     config = load_experiment_config(config_path)
     assert config.get_resolved_input_count() == 6
     assert config.estimate_total_runs() == 12
+
+
+def test_openai_payload_omits_reasoning_and_text_when_unset(monkeypatch):
+    calls = []
+
+    async def fake_request_openai(client, *, config, payload):
+        calls.append(payload)
+        return {"choices": [{"message": {"content": "generated"}}]}
+
+    monkeypatch.setattr(
+        "fluxloop_cli.llm_generator._request_openai",
+        fake_request_openai,
+    )
+
+    config = ExperimentConfig(
+        name="test",
+        runner={"module_path": "examples.simple_agent", "function_name": "run"},
+        base_inputs=[{"input": "hello"}],
+        input_generation={
+            "mode": "llm",
+            "llm": {
+                "enabled": True,
+                "provider": "openai",
+                "model": "gpt-4o-mini",
+            },
+        },
+    )
+
+    settings = GenerationSettings(limit=1)
+    result = generate_llm_inputs(config=config, strategies=DEFAULT_STRATEGIES[:1], settings=settings)
+
+    assert result
+    payload = calls[0]
+    assert "reasoning" not in payload
+    assert "text" not in payload

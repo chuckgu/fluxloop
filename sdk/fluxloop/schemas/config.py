@@ -51,11 +51,11 @@ class LLMGeneratorConfig(BaseModel):
 
     # GPT-5 specific controls
     reasoning_effort: Optional[str] = Field(
-        default="medium",
+        default=None,
         description="Reasoning effort for GPT-5 models: minimal, low, medium, high",
     )
     text_verbosity: Optional[str] = Field(
-        default="medium",
+        default=None,
         description="Output verbosity for GPT-5 models: low, medium, high",
     )
 
@@ -169,6 +169,7 @@ class ExperimentConfig(BaseModel):
 
     _source_dir: Optional[Path] = PrivateAttr(default=None)
     _resolved_input_count: Optional[int] = PrivateAttr(default=None)
+    _resolved_persona_count: Optional[int] = PrivateAttr(default=None)
 
     # Basic info
     name: str
@@ -179,6 +180,7 @@ class ExperimentConfig(BaseModel):
     iterations: int = Field(default=10, ge=1, le=1000)
     parallel_runs: int = Field(default=1, ge=1, le=10)
     seed: Optional[int] = None
+    run_delay_seconds: float = Field(default=0.0, ge=0.0)
 
     # Personas
     personas: List[PersonaConfig] = Field(default_factory=list)
@@ -256,6 +258,16 @@ class ExperimentConfig(BaseModel):
         """Return the resolved input count if it has been set."""
         return self._resolved_input_count
 
+    def set_resolved_persona_count(self, count: int) -> None:
+        """Record the effective persona multiplier after resolution."""
+        if count < 1:
+            raise ValueError("resolved persona count must be >= 1")
+        self._resolved_persona_count = count
+
+    def get_resolved_persona_count(self) -> Optional[int]:
+        """Return the resolved persona multiplier if available."""
+        return self._resolved_persona_count
+
     def _default_input_count(self) -> int:
         """Fallback calculation when no resolved count is available."""
         base_count = len(self.base_inputs)
@@ -270,7 +282,10 @@ class ExperimentConfig(BaseModel):
 
     def estimate_total_runs(self) -> int:
         """Calculate total number of runs."""
-        persona_count = len(self.personas) if self.personas else 1
+        if self._resolved_persona_count is not None:
+            persona_count = self._resolved_persona_count
+        else:
+            persona_count = len(self.personas) if self.personas else 1
         input_count = self.get_input_count()
         return self.iterations * persona_count * input_count
     
