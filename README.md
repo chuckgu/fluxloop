@@ -40,8 +40,9 @@ Run experiments on your machine without cloud dependencies. Generate structured 
 ### 📊 Structured JSON Output
 Every simulation produces reproducible, auditable artifacts:
 - `summary.json`: Aggregate statistics
+- `trace_summary.jsonl`: Per-trace summary records
+- `observations.jsonl`: Observation stream
 - `traces.jsonl`: Detailed execution traces
-- `errors.json`: Failure analysis
 
 ### 🚀 CLI Orchestration
 Define complex experiments in YAML, generate input variations with LLM, and run batch simulations—all from the command line.
@@ -50,6 +51,14 @@ Define complex experiments in YAML, generate input variations with LLM, and run 
 Manage experiments, monitor runs, and explore results directly in your IDE.
 
 ---
+
+## 🧭 End-to-End Flow
+
+```
+Init → Record → Input Generation → Experiment → Parse (human-readable) → Evaluate (TBD)
+```
+
+This is the canonical workflow. The detailed steps and commands follow below.
 
 ## Getting Started
 
@@ -107,7 +116,10 @@ fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
 ### 5. Generate Inputs
 
 ```bash
-fluxloop generate inputs --config setting.yaml --limit 20
+fluxloop generate inputs \
+  --config setting.yaml \
+  --from-recording recordings/args.jsonl \
+  --limit 50
 ```
 
 ### 6. Run Experiment
@@ -195,6 +207,7 @@ replay_args:
 
 inputs_file: "inputs/generated.yaml"
 iterations: 50
+output_directory: "experiments"
 ```
 
 ### Step 4: Simulate (Local)
