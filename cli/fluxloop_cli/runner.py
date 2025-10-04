@@ -2,6 +2,8 @@
 Runner modules for executing experiments and agents.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time
@@ -12,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 import fluxloop
 import yaml
 
+from fluxloop.buffer import EventBuffer
 from fluxloop.schemas import ExperimentConfig, PersonaConfig
 from rich.console import Console
 
@@ -54,6 +57,7 @@ class ExperimentRunner:
             offline_store_enabled=True,
             offline_store_dir=str(offline_dir),
         )
+        self.offline_dir = offline_dir
 
         # Create output directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -263,16 +267,21 @@ class ExperimentRunner:
         start_time = time.time()
         
         try:
+            callback_messages: Dict[str, Any] = {}
+            trace_id: Optional[str] = None
+            result: Any
+
             with fluxloop.instrument(trace_name) as ctx:
+                if hasattr(ctx, "trace") and getattr(ctx, "trace") is not None:
+                    trace_id = str(ctx.trace.id)
+                    ctx.add_metadata("trace_id", trace_id)
+                
                 # Add metadata
                 ctx.add_metadata("iteration", iteration)
                 ctx.add_metadata("variation", variation)
                 if persona:
                     ctx.add_metadata("persona", persona.name)
                 
-                # Prepare collector callback storage
-                callback_messages: Dict[str, Any] = {}
-
                 # Run agent
                 result = await self._call_agent(
                     agent_func,
@@ -281,7 +290,9 @@ class ExperimentRunner:
                     callback_store=callback_messages,
                 )
 
-                # If collector callbacks captured messages, include them
+                # Allow background callbacks to flush
+                await self._wait_for_callbacks(callback_messages)
+
                 send_messages = callback_messages.get("send", [])
                 error_messages = callback_messages.get("error", [])
 
@@ -294,34 +305,48 @@ class ExperimentRunner:
                         },
                     )
 
-                if send_messages:
-                    last_args, last_kwargs = send_messages[-1]
-                    result = self._extract_payload(last_args, last_kwargs)
-                
-                # Mark successful
-                self.results["successful"] += 1
-                
-                # Record duration
-                duration_ms = (time.time() - start_time) * 1000
-                self.results["durations"].append(duration_ms)
+            # Force flush buffered events so observations are persisted
+            EventBuffer.get_instance().flush()
 
-                trace_entry = {
-                    "iteration": iteration,
-                    "persona": persona.name if persona else None,
-                    "input": input_text,
-                    "output": result,
-                    "duration_ms": duration_ms,
-                    "success": True,
+            observations: List[Dict[str, Any]] = []
+            if trace_id:
+                observations = self._load_observations_for_trace(trace_id)
+
+            final_output = self._extract_final_output(callback_messages, observations)
+            if final_output is not None:
+                result = final_output
+
+            # Mark successful
+            self.results["successful"] += 1
+            
+            # Record duration
+            duration_ms = (time.time() - start_time) * 1000
+            self.results["durations"].append(duration_ms)
+
+            trace_entry = {
+                "trace_id": trace_id,
+                "iteration": iteration,
+                "persona": persona.name if persona else None,
+                "input": input_text,
+                "output": result,
+                "duration_ms": duration_ms,
+                "success": True,
+            }
+
+            send_messages = callback_messages.get("send", [])
+            error_messages = callback_messages.get("error", [])
+
+            if send_messages or error_messages:
+                trace_entry["callback_messages"] = {
+                    "send": [self._serialize_callback(args, kwargs) for args, kwargs in send_messages],
+                    "error": [self._serialize_callback(args, kwargs) for args, kwargs in error_messages],
                 }
 
-                if send_messages or error_messages:
-                    trace_entry["callback_messages"] = {
-                        "send": [self._serialize_callback(args, kwargs) for args, kwargs in send_messages],
-                        "error": [self._serialize_callback(args, kwargs) for args, kwargs in error_messages],
-                    }
+            if observations:
+                trace_entry["observation_count"] = len(observations)
 
-                self.results["traces"].append(trace_entry)
-                
+            self.results["traces"].append(trace_entry)
+            
         except Exception as e:
             # Record failure
             self.results["failed"] += 1
@@ -346,7 +371,7 @@ class ExperimentRunner:
             return persona_map[persona_name]
 
         return None
-
+    
     async def _call_agent(
         self,
         agent_func: Callable,
@@ -378,6 +403,67 @@ class ExperimentRunner:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: agent_func(**kwargs))
 
+    async def _wait_for_callbacks(
+        self,
+        callback_messages: Dict[str, Any],
+        *,
+        timeout_seconds: float = 5.0,
+        poll_interval: float = 0.1,
+    ) -> None:
+        """Wait briefly for background callbacks to populate the capture lists."""
+        if not callback_messages:
+            return
+
+        deadline = time.time() + timeout_seconds
+        while time.time() < deadline:
+            if callback_messages.get("send") or callback_messages.get("error"):
+                break
+            await asyncio.sleep(poll_interval)
+
+    def _load_observations_for_trace(self, trace_id: str) -> List[Dict[str, Any]]:
+        """Load observations from the offline store that match the given trace_id."""
+        observations_path = self.offline_dir / "observations.jsonl"
+        if not observations_path.exists():
+            return []
+
+        matched: List[Dict[str, Any]] = []
+        try:
+            with observations_path.open("r", encoding="utf-8") as src:
+                for line in src:
+                    if not line.strip():
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if data.get("trace_id") == trace_id:
+                        matched.append(data)
+        except OSError:
+            return []
+
+        return matched
+
+    def _extract_final_output(
+        self,
+        callback_messages: Dict[str, Any],
+        observations: List[Dict[str, Any]],
+    ) -> Any:
+        """Derive the final output from callbacks or observations."""
+        for observation in reversed(observations):
+            if observation.get("name") == "agent_final_response" and observation.get("output") is not None:
+                return observation.get("output")
+
+        for observation in reversed(observations):
+            if observation.get("type") == "agent" and observation.get("output") is not None:
+                return observation.get("output")
+
+        send_messages = callback_messages.get("send") if callback_messages else None
+        if send_messages:
+            last_args, last_kwargs = send_messages[-1]
+            return self._extract_payload(last_args, last_kwargs)
+
+        return None
+
     @staticmethod
     def _extract_payload(args: Sequence[Any], kwargs: Dict[str, Any]) -> Any:
         if kwargs:
@@ -390,6 +476,16 @@ class ExperimentRunner:
             return args[0]
 
         return list(args)
+    
+    @staticmethod
+    def _serialize_callback(args: Sequence[Any], kwargs: Dict[str, Any]) -> Any:
+        """Serialize callback arguments for JSON storage."""
+        if len(args) == 1 and not kwargs:
+            return args[0]
+        return {
+            "args": list(args),
+            "kwargs": kwargs,
+        }
     
     def _save_results(self) -> None:
         """Save results to output directory."""
@@ -410,17 +506,79 @@ class ExperimentRunner:
         }
         summary_file.write_text(json.dumps(summary, indent=2))
         
-        # Save traces
         if self.config.save_traces:
-            traces_file = self.output_dir / "traces.jsonl"
-            with open(traces_file, "w") as f:
-                for trace in self.results["traces"]:
-                    f.write(json.dumps(trace) + "\n")
+            self._save_trace_summary()
+            self._save_experiment_observations()
         
         # Save errors
         if self.results["errors"]:
             errors_file = self.output_dir / "errors.json"
             errors_file.write_text(json.dumps(self.results["errors"], indent=2))
+
+    def _save_trace_summary(self) -> None:
+        """Persist detailed and summary trace information for the experiment."""
+        full_traces_path = self.output_dir / "traces.jsonl"
+        summary_path = self.output_dir / "trace_summary.jsonl"
+
+        with full_traces_path.open("w", encoding="utf-8") as full_file:
+            for trace in self.results["traces"]:
+                full_file.write(json.dumps(trace) + "\n")
+
+        with summary_path.open("w", encoding="utf-8") as summary_file:
+            for trace in self.results["traces"]:
+                summary_file.write(
+                    json.dumps(
+                        {
+                            "trace_id": trace.get("trace_id"),
+                            "iteration": trace.get("iteration"),
+                            "persona": trace.get("persona"),
+                            "input": trace.get("input"),
+                            "output": trace.get("output"),
+                            "duration_ms": trace.get("duration_ms"),
+                            "success": trace.get("success"),
+                        }
+                    )
+                    + "\n"
+                )
+
+    def _save_experiment_observations(self) -> None:
+        """Copy matching observations from the offline store into the experiment directory."""
+        trace_ids = {
+            trace["trace_id"]
+            for trace in self.results["traces"]
+            if trace.get("trace_id")
+        }
+
+        if not trace_ids:
+            return
+
+        source_path = self.offline_dir / "observations.jsonl"
+        if not source_path.exists():
+            console.print(
+                f"[yellow]⚠️  Observations file not found: {source_path}[/yellow]"
+            )
+            return
+
+        destination = self.output_dir / "observations.jsonl"
+        copied = 0
+
+        with source_path.open("r", encoding="utf-8") as src, destination.open(
+            "w", encoding="utf-8"
+        ) as dst:
+            for line in src:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("trace_id") in trace_ids:
+                    dst.write(json.dumps(record) + "\n")
+                    copied += 1
+
+        console.print(
+            f"[green]✅ Saved {copied} observations to {destination.name}[/green]"
+        )
 
 
 class SingleRunner:
