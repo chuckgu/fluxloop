@@ -118,6 +118,16 @@ fluxloop run experiment --config setting.yaml
 
 **Results** → `experiments/my_agent_experiment_YYYYMMDD_HHMMSS/`
 
+### 7. Parse Results (Human-Readable)
+
+Convert raw JSONL artifacts into per-trace Markdown timelines:
+
+```bash
+fluxloop parse experiment experiments/<your_experiment_dir> --output per_trace_analysis --overwrite
+```
+
+Each trace gets a timeline file under `per_trace_analysis/` showing step-by-step inputs/outputs.
+
 ---
 
 ## 🎬 Argument Replay Workflow
@@ -230,6 +240,7 @@ fluxloop/
 
 ## 📚 Documentation
 
+- **End-to-End Workflow**: [Full pipeline](../docs/guides/end-to-end-workflow.md)
 - **Quick Start**: [5-Minute Guide](../docs/guides/fluxloop-quick-start.md)
 - **SDK Reference**: [SDK README](sdk/README.md)
 - **CLI Reference**: [CLI README](cli/README.md)
