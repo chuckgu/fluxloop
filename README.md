@@ -20,7 +20,7 @@
 - **Local-first simulation**: Run experiments on your machine with full control
 - **Framework-agnostic**: Works with any agent framework (LangGraph, LangChain, custom)
 - **Argument replay**: Record complex function calls once, replay them hundreds of times
-- **Structured artifacts**: Auditable JSON/JSONL outputs following a documented [contract](docs/api/json-contract.md)
+- **Structured artifacts**: Auditable JSON/JSONL outputs following a documented [contract](https://github.com/chuckgu/fluxloop/blob/main/docs/api/json-contract.md)
 
 Stop guessing, start simulating.
 
@@ -253,13 +253,7 @@ fluxloop/
 
 ## 📚 Documentation
 
-- **End-to-End Workflow**: [Full pipeline](../docs/guides/end-to-end-workflow.md)
-- **Quick Start**: [5-Minute Guide](../docs/guides/fluxloop-quick-start.md)
-- **SDK Reference**: [SDK README](sdk/README.md)
-- **CLI Reference**: [CLI README](cli/README.md)
-- **Pluto Duck Integration**: [Integration Guide](../docs/guides/pluto-duck-fluxloop-integration.md)
-- **Argument Replay PRD**: [System Design](../docs/prd/argument-replay-system.md)
-- **Simulation Workflow**: [Korean Guide](../docs/guides/simulation-workflow-ko.md)
+- **End-to-End Workflow**: [Full pipeline](docs/guides/end-to-end-workflow.md)
 
 ---
 
@@ -323,8 +317,6 @@ Trace the entire flow with hierarchical observations.
 
 ## 🚨 Community & Support
 
-- **Discord**: Join our [community](https://discord.gg/your-discord-link) for questions and discussions
-- **Twitter**: Follow [@your-handle](https://twitter.com/your-twitter-handle) for updates
 - **Issues**: Report bugs or suggest features on [GitHub](https://github.com/chuckgu/fluxloop/issues)
 
 ---
@@ -337,9 +329,9 @@ FluxLoop is licensed under the [Apache License 2.0](LICENSE).
 
 ## 🚀 What's Next?
 
-1. **Try the Quick Start**: [Get running in 5 minutes](../docs/guides/fluxloop-quick-start.md)
-2. **Explore Examples**: Check out `examples/` for real-world patterns
-3. **Read the Guides**: Deep-dive into [integration guides](../docs/guides/)
-4. **Join the Community**: Connect with other FluxLoop users
+1. **Read the End-to-End Workflow**: [Follow the full pipeline](docs/guides/end-to-end-workflow.md)
+2. **Initialize and Run**: Create a project and run an experiment
+3. **Parse Results**: Generate human-readable timelines from artifacts
+4. **Contribute**: See [CONTRIBUTING.md](CONTRIBUTING.md) and open an [issue](https://github.com/chuckgu/fluxloop/issues)
 
 **Start simulating your agents today!** 🎯
