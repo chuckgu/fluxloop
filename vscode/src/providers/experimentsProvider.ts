@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ProjectContext } from '../project/projectContext';
 
 export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<ExperimentItem | undefined | null | void> = new vscode.EventEmitter<ExperimentItem | undefined | null | void>();
@@ -17,10 +18,6 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
     }
 
     getChildren(element?: ExperimentItem): Thenable<ExperimentItem[]> {
-        if (!vscode.workspace.workspaceFolders) {
-            return Promise.resolve([]);
-        }
-
         if (element) {
             // Show experiment details
             return Promise.resolve(this.getExperimentDetails(element));
@@ -32,11 +29,19 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
     private getExperiments(): ExperimentItem[] {
         const experiments: ExperimentItem[] = [];
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const workspacePath = ProjectContext.getActiveWorkspacePath();
 
-        if (!workspaceFolder) {
+        if (!workspacePath) {
+            experiments.push(new ExperimentItem(
+                'Select a project to view experiments',
+                '',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
+            ));
             return experiments;
         }
+
+        const workspaceFolder = { uri: vscode.Uri.file(workspacePath) } as vscode.WorkspaceFolder;
 
         // Check for setting.yaml
         const configPath = path.join(workspaceFolder.uri.fsPath, 'setting.yaml');

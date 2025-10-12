@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ProjectContext } from '../project/projectContext';
 
 export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<ResultItem | undefined | null | void> = new vscode.EventEmitter<ResultItem | undefined | null | void>();
@@ -16,6 +17,16 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
         // TODO: Implement results view
         // This would connect to the collector service to show live results
         
+        const projectPath = ProjectContext.getActiveWorkspacePath();
+
+        if (!projectPath) {
+            return Promise.resolve([new ResultItem(
+                'No project selected',
+                'Select a project to view results',
+                vscode.TreeItemCollapsibleState.None
+            )]);
+        }
+
         const items: ResultItem[] = [
             new ResultItem(
                 'Results will appear here',

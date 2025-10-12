@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { CLIManager } from '../cli/cliManager';
-import { OutputChannelManager } from '../utils/outputChannel';
+import { WireframeViewer } from '../wireframe/wireframeViewer';
+import { InputGenerationWizard } from '../wireframe/inputGenerationWizard';
+import { DialogsWireframe } from '../wireframe/dialogsWireframe';
+import { WebviewsWireframe } from '../wireframe/webviewsWireframe';
+import { InteractiveWireframe } from '../wireframe/interactiveWireframe';
+import { ProjectContext } from '../project/projectContext';
+import { ProjectManager } from '../project/projectManager';
 
 export class CommandManager {
     constructor(
@@ -16,88 +22,23 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.runExperiment', () => this.runExperiment()),
             vscode.commands.registerCommand('fluxloop.runSingle', () => this.runSingle()),
             vscode.commands.registerCommand('fluxloop.showStatus', () => this.showStatus()),
-            vscode.commands.registerCommand('fluxloop.openConfig', () => this.openConfig()),
-            vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment())
+            vscode.commands.registerCommand('fluxloop.openConfig', (projectId?: string) => this.openConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
+            vscode.commands.registerCommand('fluxloop.showWireframe', () => this.showWireframe()),
+            vscode.commands.registerCommand('fluxloop.showInputWizard', () => this.showInputWizard()),
+            vscode.commands.registerCommand('fluxloop.showDialogsWireframe', () => this.showDialogsWireframe()),
+            vscode.commands.registerCommand('fluxloop.showWebviewsWireframe', () => this.showWebviewsWireframe()),
+            vscode.commands.registerCommand('fluxloop.showInteractiveWireframe', () => this.showInteractiveWireframe())
         );
     }
 
     private async initProject() {
-        const folderUri = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            canSelectMany: false,
-            openLabel: 'Select Project Folder',
-            title: 'Initialize FluxLoop Project'
-        });
-
-        if (!folderUri || folderUri.length === 0) {
-            return;
-        }
-
-        const projectPath = folderUri[0].fsPath;
-        const projectName = await vscode.window.showInputBox({
-            prompt: 'Enter project name',
-            value: path.basename(projectPath),
-            validateInput: (value) => {
-                if (!value) {
-                    return 'Project name is required';
-                }
-                return null;
-            }
-        });
-
-        if (!projectName) {
-            return;
-        }
-
-        const withExample = await vscode.window.showQuickPick(
-            ['Yes', 'No'],
-            {
-                placeHolder: 'Include example agent?'
-            }
-        );
-
-        const args = ['init', 'project', projectPath, '--name', projectName];
-        if (withExample === 'No') {
-            args.push('--no-example');
-        }
-
-        await this.cliManager.runCommand(args, projectPath);
-
-        // Open the project
-        const openInNewWindow = await vscode.window.showQuickPick(
-            ['Current Window', 'New Window'],
-            {
-                placeHolder: 'Open project in...'
-            }
-        );
-
-        if (openInNewWindow === 'New Window') {
-            vscode.commands.executeCommand('vscode.openFolder', folderUri[0], true);
-        } else if (openInNewWindow === 'Current Window') {
-            vscode.commands.executeCommand('vscode.openFolder', folderUri[0], false);
-        }
+        void vscode.commands.executeCommand('fluxloop.createProject');
     }
 
     private async runExperiment() {
-        // Check for config file
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            vscode.window.showErrorMessage('No workspace folder open');
-            return;
-        }
-
-        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'setting.yaml');
-        try {
-            await vscode.workspace.fs.stat(configUri);
-        } catch {
-            const action = await vscode.window.showErrorMessage(
-                'No setting.yaml found. Initialize a project first?',
-                'Initialize Project'
-            );
-            if (action === 'Initialize Project') {
-                vscode.commands.executeCommand('fluxloop.init');
-            }
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
             return;
         }
 
@@ -124,14 +65,17 @@ export class CommandManager {
             args.push('--iterations', iterations);
         }
 
-        // Run based on environment
         if (environment === 'Docker') {
-            await this.runInDocker(args);
-        } else if (environment === 'Dev Container') {
-            await this.runInDevContainer(args);
-        } else {
-            await this.cliManager.runCommand(args);
+            vscode.window.showWarningMessage('Docker execution from VSCode is not yet implemented. Please run the CLI manually.');
+            return;
         }
+
+        if (environment === 'Dev Container' && !process.env.REMOTE_CONTAINERS) {
+            vscode.window.showErrorMessage('Dev Container execution requires running inside a Dev Container.');
+            return;
+        }
+
+        await this.cliManager.runCommand(args, project.path);
     }
 
     private async runSingle() {
@@ -148,14 +92,17 @@ export class CommandManager {
         }
 
         // Get module path
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage('File is not in a workspace');
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
             return;
         }
 
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, document.fileName);
-        const modulePath = relativePath.replace(/\.py$/, '').replace(/\//g, '.');
+        const relativePath = path.relative(project.path, document.fileName);
+        if (!relativePath || relativePath.startsWith('..')) {
+            vscode.window.showErrorMessage('Active file is not within the selected FluxLoop project');
+            return;
+        }
+        const modulePath = relativePath.replace(/\.py$/, '').replace(/[\\/]+/g, '.');
 
         // Get function name
         const functionName = await vscode.window.showInputBox({
@@ -190,22 +137,24 @@ export class CommandManager {
 
         // Run command
         const args = ['run', 'single', modulePath, input, '--function', functionName];
-        await this.cliManager.runCommand(args);
+        await this.cliManager.runCommand(args, project.path);
     }
 
     private async showStatus() {
         const args = ['status', 'check', '--verbose'];
-        await this.cliManager.runCommand(args);
+        await this.cliManager.runCommand(args, ProjectContext.getActiveWorkspacePath());
     }
 
-    private async openConfig() {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            vscode.window.showErrorMessage('No workspace folder open');
+    private async openConfig(projectId?: string) {
+        const project = projectId ? ProjectManager.getInstance().getProjectById(projectId) : ProjectContext.ensureActiveProject();
+        if (!project) {
+            if (projectId) {
+                vscode.window.showWarningMessage('The selected project is no longer available.');
+            }
             return;
         }
 
-        const configUri = vscode.Uri.joinPath(workspaceFolders[0].uri, 'setting.yaml');
+        const configUri = vscode.Uri.joinPath(vscode.Uri.file(project.path), 'setting.yaml');
         try {
             const document = await vscode.workspace.openTextDocument(configUri);
             vscode.window.showTextDocument(document);
@@ -256,19 +205,28 @@ export class CommandManager {
         return selected?.label;
     }
 
-    private async runInDocker(args: string[]) {
-        // TODO: Implement Docker execution
-        vscode.window.showInformationMessage('Docker execution not yet implemented');
+    private showWireframe() {
+        const wireframeViewer = new WireframeViewer(this.context);
+        wireframeViewer.createOrShow();
     }
 
-    private async runInDevContainer(args: string[]) {
-        // Check if in Dev Container
-        if (!process.env.REMOTE_CONTAINERS) {
-            vscode.window.showErrorMessage('Not running in a Dev Container');
-            return;
-        }
-        
-        // Run normally (already in container)
-        await this.cliManager.runCommand(args);
+    private showInputWizard() {
+        const inputWizard = new InputGenerationWizard(this.context);
+        inputWizard.createOrShow();
+    }
+
+    private showDialogsWireframe() {
+        const dialogsWireframe = new DialogsWireframe(this.context);
+        dialogsWireframe.createOrShow();
+    }
+
+    private showWebviewsWireframe() {
+        const webviewsWireframe = new WebviewsWireframe(this.context);
+        webviewsWireframe.createOrShow();
+    }
+
+    private showInteractiveWireframe() {
+        const interactiveWireframe = new InteractiveWireframe(this.context);
+        interactiveWireframe.createOrShow();
     }
 }

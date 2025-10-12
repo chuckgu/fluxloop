@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as which from 'which';
+import { ProjectContext } from '../project/projectContext';
 
 export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<StatusItem | undefined | null | void> = new vscode.EventEmitter<StatusItem | undefined | null | void>();
@@ -18,7 +19,7 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
 
         // Check CLI installation
         try {
-            const cliPath = await which('fluxloop');
+            const cliPath = await which.default('fluxloop');
             items.push(new StatusItem(
                 'CLI',
                 'Installed',
@@ -61,9 +62,9 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
         ));
 
         // Check configuration
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (workspaceFolder) {
-            const configUri = vscode.Uri.joinPath(workspaceFolder.uri, 'setting.yaml');
+        const workspacePath = ProjectContext.getActiveWorkspacePath();
+        if (workspacePath) {
+            const configUri = vscode.Uri.joinPath(vscode.Uri.file(workspacePath), 'setting.yaml');
             try {
                 await vscode.workspace.fs.stat(configUri);
                 items.push(new StatusItem(
@@ -79,6 +80,13 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
                     'Run: FluxLoop: Initialize Project'
                 ));
             }
+        } else {
+            items.push(new StatusItem(
+                'Config',
+                'No project selected',
+                'info',
+                'Select a project from the FluxLoop panel'
+            ));
         }
 
         return items;

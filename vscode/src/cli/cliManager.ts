@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as child_process from 'child_process';
 import * as which from 'which';
 import { OutputChannelManager } from '../utils/outputChannel';
+import { ProjectContext } from '../project/projectContext';
 
 export class CLIManager {
     private cliPath: string | null = null;
@@ -10,7 +11,7 @@ export class CLIManager {
 
     async checkInstallation(): Promise<boolean> {
         try {
-            this.cliPath = await which('fluxloop');
+            this.cliPath = await which.default('fluxloop');
             OutputChannelManager.getInstance().appendLine(`FluxLoop CLI found at: ${this.cliPath}`);
             return true;
         } catch {
@@ -86,9 +87,10 @@ export class CLIManager {
             }
         }
 
-        const workspaceFolder = cwd || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const workspaceFolder = cwd || ProjectContext.getActiveWorkspacePath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage('No workspace folder open');
+            vscode.window.showErrorMessage('Select a FluxLoop project to continue.');
+            ProjectContext.ensureActiveProject();
             return;
         }
 
