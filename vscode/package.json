@@ -24,7 +24,8 @@
     "workspaceContains:setting.yaml",
     "workspaceContains:fluxloop.yml",
     "onCommand:fluxloop.init",
-    "onCommand:fluxloop.runExperiment"
+    "onCommand:fluxloop.runExperiment",
+    "onCommand:fluxloop.generateInputs"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -72,6 +73,11 @@
       {
         "command": "fluxloop.runSingle",
         "title": "Run Single Execution",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.generateInputs",
+        "title": "Generate Inputs",
         "category": "FluxLoop"
       },
       {
@@ -123,6 +129,13 @@
           "group": "fluxloop"
         }
       ],
+      "view/title": [
+        {
+          "command": "fluxloop.generateInputs",
+          "when": "view == fluxloop.inputs",
+          "group": "navigation@1"
+        }
+      ],
       "editor/context": [
         {
           "when": "resourceExtname == .py",
@@ -147,6 +160,12 @@
           "name": "Projects",
           "icon": "$(folder)",
           "contextualTitle": "FluxLoop Projects"
+        },
+        {
+          "id": "fluxloop.inputs",
+          "name": "Inputs",
+          "icon": "$(notebook)",
+          "contextualTitle": "FluxLoop Inputs"
         },
         {
           "id": "fluxloop.experiments",
@@ -249,7 +268,8 @@
     "typescript": "^4.9.3"
   },
   "dependencies": {
-    "which": "^3.0.0"
+    "which": "^3.0.0",
+    "yaml": "^2.8.1"
   },
   "repository": {
     "type": "git",

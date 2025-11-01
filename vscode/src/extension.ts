@@ -3,6 +3,7 @@ import { ExperimentsProvider } from './providers/experimentsProvider';
 import { ResultsProvider } from './providers/resultsProvider';
 import { StatusProvider } from './providers/statusProvider';
 import { ProjectsProvider } from './providers/projectsProvider';
+import { InputsProvider } from './providers/inputsProvider';
 import { CommandManager } from './commands/commandManager';
 import { CLIManager } from './cli/cliManager';
 import { OutputChannelManager } from './utils/outputChannel';
@@ -35,17 +36,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register tree data providers
     const projectsProvider = new ProjectsProvider();
+    const inputsProvider = new InputsProvider();
     const experimentsProvider = new ExperimentsProvider(context.workspaceState);
     const resultsProvider = new ResultsProvider();
     const statusProvider = new StatusProvider();
 
     vscode.window.registerTreeDataProvider('fluxloop.projects', projectsProvider);
+    vscode.window.registerTreeDataProvider('fluxloop.inputs', inputsProvider);
     vscode.window.registerTreeDataProvider('fluxloop.experiments', experimentsProvider);
     vscode.window.registerTreeDataProvider('fluxloop.results', resultsProvider);
     vscode.window.registerTreeDataProvider('fluxloop.status', statusProvider);
 
     // Initialize command manager
-    const commandManager = new CommandManager(context, cliManager);
+    const commandManager = new CommandManager(context, cliManager, statusProvider, inputsProvider);
     commandManager.registerCommands();
 
     // Register project commands
@@ -56,6 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const refreshProviders = () => {
         projectsProvider.refresh();
         experimentsProvider.refresh();
+        inputsProvider.refresh();
         resultsProvider.refresh();
         statusProvider.refresh();
     };
@@ -83,6 +87,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const handleConfigUpdate = () => {
             projectManager.refreshProjectById(project.id);
             experimentsProvider.refresh();
+            inputsProvider.refresh();
             statusProvider.refresh();
         };
 
@@ -97,6 +102,28 @@ export async function activate(context: vscode.ExtensionContext) {
             experimentsProvider.refresh();
             resultsProvider.refresh();
         };
+        const inputsPattern = new vscode.RelativePattern(project.path, 'inputs/**');
+        const inputsWatcher = vscode.workspace.createFileSystemWatcher(inputsPattern);
+        const handleInputsUpdate = () => {
+            inputsProvider.refresh();
+        };
+
+        disposables.push(inputsWatcher);
+        disposables.push(inputsWatcher.onDidCreate(handleInputsUpdate));
+        disposables.push(inputsWatcher.onDidChange(handleInputsUpdate));
+        disposables.push(inputsWatcher.onDidDelete(handleInputsUpdate));
+
+        const recordingsPattern = new vscode.RelativePattern(project.path, 'recordings/**');
+        const recordingsWatcher = vscode.workspace.createFileSystemWatcher(recordingsPattern);
+        const handleRecordingsUpdate = () => {
+            inputsProvider.refresh();
+        };
+
+        disposables.push(recordingsWatcher);
+        disposables.push(recordingsWatcher.onDidCreate(handleRecordingsUpdate));
+        disposables.push(recordingsWatcher.onDidChange(handleRecordingsUpdate));
+        disposables.push(recordingsWatcher.onDidDelete(handleRecordingsUpdate));
+
 
         disposables.push(experimentsWatcher);
         disposables.push(experimentsWatcher.onDidCreate(handleExperimentUpdate));

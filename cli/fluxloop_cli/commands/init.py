@@ -11,13 +11,21 @@ from rich.prompt import Confirm
 from rich.tree import Tree
 
 from ..templates import (
-    create_experiment_config,
+    create_project_config,
+    create_input_config,
+    create_simulation_config,
+    create_evaluation_config,
     create_sample_agent,
     create_gitignore,
     create_env_file,
 )
 from ..project_paths import resolve_root_dir, resolve_project_dir
-from ..constants import DEFAULT_ROOT_DIR_NAME
+from ..constants import (
+    DEFAULT_ROOT_DIR_NAME,
+    CONFIG_DIRECTORY_NAME,
+    CONFIG_SECTION_FILENAMES,
+    CONFIG_SECTION_ORDER,
+)
 
 app = typer.Typer()
 console = Console()
@@ -51,7 +59,7 @@ def project(
     Initialize a new FluxLoop project.
     
     This command creates:
-    - setting.yaml: Default experiment configuration
+    - configs/: Separated configuration files (project/input/simulation/evaluation)
     - .env: Environment variables template
     - examples/: Sample agent code (optional)
     """
@@ -89,14 +97,20 @@ def project(
             raise typer.Abort()
     
     # Check for existing files
-    config_file = project_path / "setting.yaml"
+    config_dir = project_path / CONFIG_DIRECTORY_NAME
+    section_paths = {
+        key: config_dir / CONFIG_SECTION_FILENAMES[key]
+        for key in CONFIG_SECTION_FILENAMES
+    }
     env_file = project_path / ".env"
     gitignore_file = project_path / ".gitignore"
     
     if not force:
         existing_files = []
-        if config_file.exists():
-            existing_files.append("setting.yaml")
+        for key in CONFIG_SECTION_ORDER:
+            path = section_paths[key]
+            if path.exists():
+                existing_files.append(path.relative_to(project_path).as_posix())
         if env_file.exists():
             existing_files.append(".env")
         
@@ -107,10 +121,21 @@ def project(
             if not Confirm.ask("Overwrite existing files?", default=False):
                 raise typer.Abort()
     
-    # Create configuration file
-    console.print("📝 Creating experiment configuration...")
-    config_content = create_experiment_config(project_name)
-    config_file.write_text(config_content)
+    # Create configuration files
+    console.print("📝 Creating configuration files...")
+    config_dir.mkdir(exist_ok=True)
+
+    section_writers = {
+        "project": lambda: create_project_config(project_name),
+        "input": create_input_config,
+        "simulation": lambda: create_simulation_config(project_name),
+        "evaluation": create_evaluation_config,
+    }
+
+    for key in CONFIG_SECTION_ORDER:
+        content = section_writers[key]()  # type: ignore[operator]
+        section_path = section_paths[key]
+        section_path.write_text(content)
     
     # Ensure root .env exists, create project override template
     root_env_file = root_dir / ".env"
@@ -145,7 +170,9 @@ def project(
     console.print("\n[bold green]✓ Project initialized successfully![/bold green]\n")
     
     tree = Tree(f"[bold]{project_name}/[/bold]")
-    tree.add("📄 setting.yaml")
+    configs_node = tree.add(f"📁 {CONFIG_DIRECTORY_NAME}/")
+    for key in CONFIG_SECTION_ORDER:
+        configs_node.add(f"📄 {CONFIG_SECTION_FILENAMES[key]}")
     tree.add("🔐 .env")
     tree.add("📄 .gitignore")
     tree.add("📁 recordings/")
@@ -158,7 +185,7 @@ def project(
     
     # Show next steps
     console.print("\n[bold]Next steps:[/bold]")
-    console.print("1. Edit [cyan]setting.yaml[/cyan] to configure your experiment")
+    console.print("1. Review configs in [cyan]configs/[/cyan] (project/input/simulation/evaluation)")
     console.print("2. Set up environment variables in [cyan].env[/cyan]")
     if with_example:
         console.print("3. Try running: [green]fluxloop run experiment[/green]")

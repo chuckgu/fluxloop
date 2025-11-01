@@ -5,18 +5,25 @@ from typer.testing import CliRunner
 
 from fluxloop_cli.commands import config as config_cmd
 
+actions_runner = CliRunner()
 
-runner = CliRunner()
 
+def _setup_config_dirs(tmp_path: Path) -> Path:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir(exist_ok=True)
 
-def test_set_llm_updates_env_and_config(tmp_path: Path, monkeypatch) -> None:
-    config_file = tmp_path / "setting.yaml"
-    config_file.write_text(
+    (config_dir / "project.yaml").write_text(
         textwrap.dedent(
             """
             name: demo
-            base_inputs:
-              - input: "Hello"
+            """
+        ).strip()
+    )
+
+    (config_dir / "simulation.yaml").write_text(
+        textwrap.dedent(
+            """
+            name: demo_experiment
             runner:
               module_path: examples.simple_agent
               function_name: run
@@ -24,10 +31,26 @@ def test_set_llm_updates_env_and_config(tmp_path: Path, monkeypatch) -> None:
         ).strip()
     )
 
+    input_path = config_dir / "input.yaml"
+    input_path.write_text(
+        textwrap.dedent(
+            """
+            base_inputs:
+              - input: "Hello"
+            """
+        ).strip()
+    )
+
+    return input_path
+
+
+def test_set_llm_updates_env_and_config(tmp_path: Path) -> None:
+    input_config = _setup_config_dirs(tmp_path)
+
     env_file = tmp_path / ".env"
     env_file.write_text("FLUXLOOP_ENVIRONMENT=development\n")
 
-    result = runner.invoke(
+    result = actions_runner.invoke(
         config_cmd.app,
         [
             "set-llm",
@@ -36,33 +59,34 @@ def test_set_llm_updates_env_and_config(tmp_path: Path, monkeypatch) -> None:
             "--model",
             "gpt-4.1-mini",
             "--file",
-            str(config_file),
+            str(input_config),
             "--env-file",
             str(env_file),
         ],
     )
 
     assert result.exit_code == 0, result.output
-    env_contents = env_file.read_text().strip().splitlines()
-    assert "OPENAI_API_KEY=sk-test" in env_contents
+    env_contents = dict(
+        line.split("=", 1) for line in env_file.read_text().strip().splitlines()
+    )
+    assert env_contents.get("OPENAI_API_KEY") == "sk-test"
 
-    updated = config_file.read_text()
+    updated = input_config.read_text()
     assert "provider: openai" in updated
     assert "model: gpt-4.1-mini" in updated
 
 
 def test_set_llm_requires_supported_provider(tmp_path: Path) -> None:
-    config_file = tmp_path / "setting.yaml"
-    config_file.write_text("name: demo\nrunner:\n  module_path: examples.simple_agent\n  function_name: run\n")
+    input_config = _setup_config_dirs(tmp_path)
 
-    result = runner.invoke(
+    result = actions_runner.invoke(
         config_cmd.app,
         [
             "set-llm",
             "unsupported",
             "token",
             "--file",
-            str(config_file),
+            str(input_config),
         ],
     )
 

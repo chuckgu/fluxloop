@@ -1,13 +1,21 @@
 import * as vscode from 'vscode';
 import * as which from 'which';
+import { spawnSync } from 'child_process';
 import { ProjectContext } from '../project/projectContext';
 
 export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<StatusItem | undefined | null | void> = new vscode.EventEmitter<StatusItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<StatusItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
+    private lastEnvironment: string | undefined;
+
     refresh(): void {
         this._onDidChangeTreeData.fire();
+    }
+
+    refreshForEnvironment(environment: string | undefined): void {
+        this.lastEnvironment = environment;
+        this.refresh();
     }
 
     getTreeItem(element: StatusItem): vscode.TreeItem {
@@ -36,21 +44,13 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
         }
 
         // Check SDK installation
-        try {
-            // This is a simplified check
-            items.push(new StatusItem(
-                'SDK',
-                'Check in terminal',
-                'warning',
-                'Run: pip show fluxloop-sdk'
-            ));
-        } catch {
-            items.push(new StatusItem(
-                'SDK',
-                'Unknown',
-                'warning'
-            ));
-        }
+        const sdkStatus = this.checkSdkInstallation();
+        items.push(new StatusItem(
+            'SDK',
+            sdkStatus.description,
+            sdkStatus.status,
+            sdkStatus.detail
+        ));
 
         // Check collector connection
         const config = vscode.workspace.getConfiguration('fluxloop');
@@ -91,13 +91,73 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
 
         return items;
     }
+
+    private checkSdkInstallation(): SdkStatusResult {
+        if (this.lastEnvironment === 'Docker') {
+            return {
+                description: 'Verify inside Docker environment',
+                status: 'info',
+                detail: 'Run fluxloop-sdk install/check inside the selected Docker runtime'
+            };
+        }
+
+        if (this.lastEnvironment === 'Dev Container') {
+            return {
+                description: 'Assuming Dev Container runtime',
+                status: 'info',
+                detail: 'FluxLoop SDK should be available in the Dev Container environment'
+            };
+        }
+
+        const commands: Array<{ command: string; args: string[]; display: string }> = [
+            { command: 'python', args: ['-c', 'import fluxloop'], display: 'python' },
+            { command: 'python3', args: ['-c', 'import fluxloop'], display: 'python3' },
+            { command: 'py', args: ['-c', 'import fluxloop'], display: 'py' }
+        ];
+
+        let attempted = false;
+
+        for (const entry of commands) {
+            const result = spawnSync(entry.command, entry.args, { stdio: 'pipe' });
+
+            if (result.error && 'code' in result.error && result.error.code === 'ENOENT') {
+                continue;
+            }
+
+            attempted = true;
+
+            if (result.status === 0) {
+                return {
+                    description: 'Installed',
+                    status: 'success',
+                    detail: `Detected via ${entry.display}`
+                };
+            }
+        }
+
+        if (!attempted) {
+            return {
+                description: 'Python interpreter not found',
+                status: 'warning',
+                detail: 'Install Python or set a Python interpreter to verify FluxLoop SDK'
+            };
+        }
+
+        return {
+            description: 'Not installed',
+            status: 'warning',
+            detail: 'Install FluxLoop SDK: pip install fluxloop-sdk'
+        };
+    }
 }
+
+type StatusLevel = 'success' | 'error' | 'warning' | 'info';
 
 class StatusItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly description: string,
-        public readonly status: 'success' | 'error' | 'warning' | 'info',
+        public readonly status: StatusLevel,
         public readonly detail?: string
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -121,4 +181,10 @@ class StatusItem extends vscode.TreeItem {
                 break;
         }
     }
+}
+
+interface SdkStatusResult {
+    description: string;
+    status: StatusLevel;
+    detail?: string;
 }

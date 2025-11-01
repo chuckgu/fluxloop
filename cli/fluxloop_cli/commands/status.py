@@ -11,7 +11,13 @@ from rich.table import Table
 from rich.panel import Panel
 
 from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
-from ..project_paths import resolve_config_path, resolve_root_dir, resolve_project_relative
+from ..config_schema import CONFIG_SECTION_FILENAMES, CONFIG_REQUIRED_KEYS
+from ..project_paths import (
+    resolve_config_path,
+    resolve_config_directory,
+    resolve_root_dir,
+    resolve_project_relative,
+)
 
 app = typer.Typer()
 console = Console()
@@ -90,17 +96,40 @@ def check(
     
     # Check for configuration file
     resolved_config = resolve_config_path(DEFAULT_CONFIG_PATH, project, root)
-    if resolved_config.exists():
+    config_dir = resolve_config_directory(project, root)
+
+    missing_sections = [
+        CONFIG_SECTION_FILENAMES[key]
+        for key in CONFIG_SECTION_FILENAMES
+        if not (config_dir / CONFIG_SECTION_FILENAMES[key]).exists()
+    ]
+
+    if resolved_config.exists() and not missing_sections:
         status_table.add_row(
             "Config",
             "[green]✓ Found[/green]",
-            str(resolved_config)
+            str(config_dir)
         )
     else:
+        detail_parts = []
+        if not config_dir.exists():
+            detail_parts.append(f"Missing directory: {config_dir}")
+        if missing_sections:
+            required_missing = [
+                name for name in missing_sections
+                if _section_key_from_filename(name) in CONFIG_REQUIRED_KEYS
+            ]
+            if required_missing:
+                detail_parts.append(
+                    "Missing sections: " + ", ".join(required_missing)
+                )
+        if not detail_parts:
+            detail_parts.append("Run: fluxloop init project")
+
         status_table.add_row(
             "Config",
-            "[yellow]- Not found[/yellow]",
-            "Run: fluxloop init project"
+            "[yellow]- Incomplete[/yellow]",
+            "\n".join(detail_parts)
         )
     
     # Check environment
@@ -131,6 +160,13 @@ def check(
         console.print("\n[bold]Recommendations:[/bold]")
         for rec in recommendations:
             console.print(f"  • {rec}")
+
+
+def _section_key_from_filename(filename: str) -> Optional[str]:
+    for key, value in CONFIG_SECTION_FILENAMES.items():
+        if value == filename:
+            return key
+    return None
 
 
 @app.command()

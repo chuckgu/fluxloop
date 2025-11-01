@@ -15,6 +15,7 @@ from rich.table import Table
 from ..config_loader import load_experiment_config
 from ..templates import create_env_file, create_gitignore, create_sample_agent
 from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..config_schema import CONFIG_SECTION_FILENAMES
 from ..project_paths import (
     resolve_config_path,
     resolve_env_path,
@@ -228,7 +229,12 @@ def set_llm(
     api_key: str = typer.Argument(..., help="API key or token for the provider"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Default model to use"),
     overwrite_env: bool = typer.Option(False, "--overwrite-env", help="Overwrite existing key in .env"),
-    config_file: Path = typer.Option(DEFAULT_CONFIG_PATH, "--file", "-f", help="Configuration file to update"),
+    config_file: Path = typer.Option(
+        Path(CONFIG_SECTION_FILENAMES["input"]),
+        "--file",
+        "-f",
+        help="Configuration file to update",
+    ),
     env_file: Path = typer.Option(Path(".env"), "--env-file", help="Path to environment file"),
     project: Optional[str] = typer.Option(None, "--project", help="Project name under the FluxLoop root"),
     root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="FluxLoop root directory"),
@@ -330,7 +336,11 @@ def validate(
         raise typer.Exit(1)
     
     try:
-        config = load_experiment_config(config_file)
+        config = load_experiment_config(
+            resolved_path,
+            project=project,
+            root=root,
+        )
         
         # Show validation results
         console.print("[green]✓[/green] Configuration is valid!\n")

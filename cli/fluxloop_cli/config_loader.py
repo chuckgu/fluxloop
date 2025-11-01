@@ -4,12 +4,20 @@ Configuration loader for experiments.
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Optional
 
 import yaml
 from pydantic import ValidationError
 
 from .project_paths import resolve_config_path
+from .config_schema import (
+    CONFIG_SECTION_FILENAMES,
+    CONFIG_SECTION_ORDER,
+    CONFIG_REQUIRED_KEYS,
+    iter_section_paths,
+    is_legacy_config,
+)
+from .constants import CONFIG_DIRECTORY_NAME
 
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
@@ -20,33 +28,63 @@ from fluxloop.schemas import ExperimentConfig
 def load_experiment_config(
     config_file: Path,
     *,
+    project: Optional[str] = None,
+    root: Optional[Path] = None,
     require_inputs_file: bool = True,
 ) -> ExperimentConfig:
     """
     Load and validate experiment configuration from YAML file.
     """
-    resolved_path = resolve_config_path(config_file, project=None, root=None)
-    if not resolved_path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_file}")
+    resolved_path = resolve_config_path(config_file, project, root)
 
-    # Load YAML
-    with open(resolved_path) as f:
-        data = yaml.safe_load(f)
+    structure, project_root, config_dir = _detect_config_context(resolved_path)
 
-    if not data:
-        raise ValueError("Configuration file is empty")
+    if structure == "legacy":
+        if not resolved_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {resolved_path}")
+
+        data = _load_yaml_mapping(resolved_path)
+        source_dir = resolved_path.parent
+    else:
+        # Multi-section configuration
+        merged: Dict[str, Any] = {}
+        missing_required = []
+
+        for section_path in iter_section_paths(project_root):
+            if not section_path.exists():
+                key = section_path.name
+                logical_key = _section_key_from_filename(section_path.name)
+                if logical_key in CONFIG_REQUIRED_KEYS:
+                    missing_required.append(section_path.name)
+                continue
+
+            section_data = _load_yaml_mapping(section_path)
+            _deep_merge(merged, section_data)
+
+        if missing_required:
+            raise FileNotFoundError(
+                "Missing required configuration sections: "
+                + ", ".join(missing_required)
+            )
+
+        if not merged:
+            raise ValueError(
+                f"No configuration data found in {config_dir}"
+            )
+
+        data = merged
+        source_dir = project_root
 
     # Validate and create config object
     try:
         config = ExperimentConfig(**data)
-        config.set_source_dir(resolved_path.parent)
+        config.set_source_dir(source_dir)
         resolved_input_count = _resolve_input_count(
             config,
             require_inputs_file=require_inputs_file,
         )
         config.set_resolved_input_count(resolved_input_count)
     except ValidationError as e:
-        # Format validation errors nicely
         errors = []
         for error in e.errors():
             loc = ".".join(str(x) for x in error["loc"])
@@ -54,7 +92,7 @@ def load_experiment_config(
             errors.append(f"  - {loc}: {msg}")
 
         raise ValueError(
-            f"Invalid configuration:\n" + "\n".join(errors)
+            "Invalid configuration:\n" + "\n".join(errors)
         )
 
     return config
@@ -157,3 +195,54 @@ def merge_config_overrides(
     
     # Create new config
     return ExperimentConfig(**data)
+
+
+def _load_yaml_mapping(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+
+    with open(path, "r", encoding="utf-8") as f:
+        payload = yaml.safe_load(f)
+
+    if payload is None:
+        return {}
+
+    if not isinstance(payload, dict):
+        raise ValueError(f"Configuration file must contain a mapping: {path}")
+
+    return payload
+
+
+def _deep_merge(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
+    for key, value in incoming.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _deep_merge(target[key], value)
+        else:
+            target[key] = value
+    return target
+
+
+def _detect_config_context(resolved_path: Path) -> tuple[str, Path, Path]:
+    """Determine whether the path points to legacy or multi-section config."""
+
+    if resolved_path.is_dir():
+        if resolved_path.name == CONFIG_DIRECTORY_NAME:
+            return "multi", resolved_path.parent, resolved_path
+        if (resolved_path / CONFIG_DIRECTORY_NAME).exists():
+            return "multi", resolved_path, resolved_path / CONFIG_DIRECTORY_NAME
+        return "legacy", resolved_path, resolved_path
+
+    if resolved_path.parent.name == CONFIG_DIRECTORY_NAME:
+        return "multi", resolved_path.parent.parent, resolved_path.parent
+
+    if is_legacy_config(resolved_path.name):
+        return "legacy", resolved_path.parent, resolved_path.parent
+
+    return "legacy", resolved_path.parent, resolved_path.parent
+
+
+def _section_key_from_filename(filename: str) -> Optional[str]:
+    for key, value in CONFIG_SECTION_FILENAMES.items():
+        if value == filename:
+            return key
+    return None

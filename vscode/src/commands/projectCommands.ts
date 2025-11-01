@@ -58,16 +58,18 @@ export class ProjectCommands {
         await this.cliManager.runCommand(args, projectPath);
 
         const manager = ProjectManager.getInstance();
-        manager.addProject({ name: projectName, path: projectPath, setActive: true });
+        const projectRoot = path.join(projectPath, projectName);
+        manager.addProject({ name: projectName, path: projectRoot, setActive: true });
 
         const openAction = await vscode.window.showQuickPick(['Open in current window', 'Open in new window', 'Stay in current workspace'], {
             placeHolder: 'How would you like to work with this project?'
         });
 
+        const projectRootUri = vscode.Uri.file(projectRoot);
         if (openAction === 'Open in current window') {
-            await vscode.commands.executeCommand('vscode.openFolder', projectFolder[0], false);
+            await vscode.commands.executeCommand('vscode.openFolder', projectRootUri, false);
         } else if (openAction === 'Open in new window') {
-            await vscode.commands.executeCommand('vscode.openFolder', projectFolder[0], true);
+            await vscode.commands.executeCommand('vscode.openFolder', projectRootUri, true);
         }
 
         ProjectContext.ensureActiveProject();

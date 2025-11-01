@@ -1,46 +1,50 @@
 # FluxLoop CLI
 
-Command-line interface for running agent simulations and managing FluxLoop workflows.
+Command-line interface for running agent simulations.
 
 ## Installation
 
-```bash
+```
 pip install fluxloop-cli
 ```
 
-## Quick Start
+## Configuration Overview (v0.2.0)
 
-```bash
-# Initialize a new FluxLoop project
-fluxloop init
+FluxLoop CLI now stores experiment settings in four files under `configs/`:
 
-# Run agent simulations
-fluxloop run
+- `configs/project.yaml` – project metadata, collector defaults
+- `configs/input.yaml` – personas, base inputs, input generation options
+- `configs/simulation.yaml` – runtime parameters (iterations, runner, replay args)
+- `configs/evaluation.yaml` – evaluator definitions (rule-based, LLM judge, etc.)
 
-# Generate test inputs
-fluxloop generate
+The legacy `setting.yaml` is still supported, but new projects created with
+`fluxloop init project` will generate the structured layout above.
 
-# Check status
-fluxloop status
+## Key Commands
+
+- `fluxloop init project` – scaffold a new project (configs, `.env`, examples)
+- `fluxloop generate inputs` – produce input variations for the active project
+- `fluxloop run experiment` – execute an experiment using `configs/simulation.yaml`
+- `fluxloop parse experiment` – convert experiment outputs into readable artifacts
+- `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
+- `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
+
+Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
+
+## Developing
+
+Install dependencies and run tests:
+
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest
 ```
 
-## Features
+To package the CLI:
 
-- 🚀 **Easy Setup**: Initialize projects with a single command
-- 🔄 **Simulation Runner**: Execute agent tests with various input scenarios
-- 📝 **Input Generation**: LLM-powered test input generation
-- 📊 **Rich Output**: Beautiful terminal UI with detailed progress tracking
-
-## Requirements
-
-- Python 3.8 or higher
-- FluxLoop SDK
-
-## Documentation
-
-For detailed documentation, visit [https://docs.fluxloop.dev](https://docs.fluxloop.dev)
-
-## License
-
-Apache License 2.0 - see LICENSE file for details
+```
+./build.sh
+```
 

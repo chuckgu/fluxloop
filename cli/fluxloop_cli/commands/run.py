@@ -94,7 +94,11 @@ def experiment(
     console.print(f"📋 Loading configuration from: [cyan]{resolved_config}[/cyan]")
     
     try:
-        config = load_experiment_config(resolved_config)
+        config = load_experiment_config(
+            resolved_config,
+            project=project,
+            root=root,
+        )
     except Exception as e:
         console.print(f"[red]Error loading configuration:[/red] {e}")
         raise typer.Exit(1)

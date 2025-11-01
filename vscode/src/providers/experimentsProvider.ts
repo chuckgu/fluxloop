@@ -128,6 +128,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                         '',
                         vscode.TreeItemCollapsibleState.None,
                         'file',
+                        filePath,
                         filePath
                     ));
                 }
@@ -144,7 +145,8 @@ class ExperimentItem extends vscode.TreeItem {
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly type: 'experiment' | 'result' | 'file' | 'run' | 'info',
-        public readonly resourcePath?: string
+        public readonly resourcePath?: string,
+        private readonly openPath?: string
     ) {
         super(label, collapsibleState);
 
