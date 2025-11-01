@@ -32,7 +32,11 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.enableRecording', () => this.enableRecording()),
             vscode.commands.registerCommand('fluxloop.disableRecording', () => this.disableRecording()),
             vscode.commands.registerCommand('fluxloop.showRecordingStatus', () => this.showRecordingStatus()),
-            vscode.commands.registerCommand('fluxloop.openConfig', (projectId?: string) => this.openConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openProjectConfig', (projectId?: string) => this.openProjectConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openInputConfig', (projectId?: string) => this.openInputConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openSimulationConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openEvaluationConfig', (projectId?: string) => this.openEvaluationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
             vscode.commands.registerCommand('fluxloop.showWireframe', () => this.showWireframe()),
             vscode.commands.registerCommand('fluxloop.showInputWizard', () => this.showInputWizard()),
@@ -264,21 +268,23 @@ export class CommandManager {
     }
 
     private async openConfig(projectId?: string) {
-        const project = projectId ? ProjectManager.getInstance().getProjectById(projectId) : ProjectContext.ensureActiveProject();
-        if (!project) {
-            if (projectId) {
-                vscode.window.showWarningMessage('The selected project is no longer available.');
-            }
-            return;
-        }
+        await this.openSimulationConfig(projectId);
+    }
 
-        const configUri = vscode.Uri.joinPath(vscode.Uri.file(project.path), 'configs', 'simulation.yaml');
-        try {
-            const document = await vscode.workspace.openTextDocument(configUri);
-            vscode.window.showTextDocument(document);
-        } catch {
-            vscode.window.showErrorMessage('No configs/simulation.yaml found');
-        }
+    private async openProjectConfig(projectId?: string) {
+        await this.openConfigSection('project', projectId);
+    }
+
+    private async openInputConfig(projectId?: string) {
+        await this.openConfigSection('input', projectId);
+    }
+
+    private async openSimulationConfig(projectId?: string) {
+        await this.openConfigSection('simulation', projectId);
+    }
+
+    private async openEvaluationConfig(projectId?: string) {
+        await this.openConfigSection('evaluation', projectId);
     }
 
     private async enableRecording() {
@@ -392,6 +398,37 @@ export class CommandManager {
             console.error('Failed to parse input configuration', error);
             vscode.window.showWarningMessage('Unable to read configs/input.yaml. Input generation will use defaults.');
             return { path: configPath };
+        }
+    }
+
+    private async openConfigSection(
+        section: 'project' | 'input' | 'simulation' | 'evaluation',
+        projectId?: string
+    ): Promise<void> {
+        const project = projectId ? ProjectManager.getInstance().getProjectById(projectId) : ProjectContext.ensureActiveProject();
+        if (!project) {
+            if (projectId) {
+                vscode.window.showWarningMessage('The selected project is no longer available.');
+            }
+            return;
+        }
+
+        const fileName = `${section}.yaml`;
+        const configUri = vscode.Uri.joinPath(vscode.Uri.file(project.path), 'configs', fileName);
+
+        try {
+            await vscode.workspace.fs.stat(configUri);
+        } catch {
+            vscode.window.showErrorMessage(`No configs/${fileName} found`);
+            return;
+        }
+
+        try {
+            const document = await vscode.workspace.openTextDocument(configUri);
+            await vscode.window.showTextDocument(document);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Unable to open configs/${fileName}`);
+            console.error('Failed to open config section', error);
         }
     }
 

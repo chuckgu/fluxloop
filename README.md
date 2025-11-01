@@ -56,7 +56,7 @@ Manage projects, generate inputs, run experiments, and explore results—all fro
 
 ```
 Init → Input Generation → Experiment → Parse → Evaluate (TBD)
-       ↑ (Optional: Record Mode for complex args)
+                         ↑ (Optional: Record Mode for complex args)
 ```
 
 This is the canonical workflow. Recording is an optional advanced feature for complex argument structures.

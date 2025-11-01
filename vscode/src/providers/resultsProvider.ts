@@ -29,13 +29,28 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
 
         if (!element) {
             const experimentsDir = path.join(projectPath, 'experiments');
+            const configureItem = new ResultItem(
+                'Configure Evaluation…',
+                'Open configs/evaluation.yaml',
+                vscode.TreeItemCollapsibleState.None,
+                'command',
+                undefined,
+                {
+                    command: 'fluxloop.openEvaluationConfig',
+                    title: 'Configure Evaluation'
+                }
+            );
+
             if (!fs.existsSync(experimentsDir)) {
-                return Promise.resolve([new ResultItem(
-                    'No experiment results yet',
-                    'Run FluxLoop: Run Experiment to generate outputs',
-                    vscode.TreeItemCollapsibleState.None,
-                    'info'
-                )]);
+                return Promise.resolve([
+                    configureItem,
+                    new ResultItem(
+                        'No experiment results yet',
+                        'Run FluxLoop: Run Experiment to generate outputs',
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    )
+                ]);
             }
 
             const directories = fs.readdirSync(experimentsDir)
@@ -51,12 +66,15 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
                 .slice(0, 15);
 
             if (directories.length === 0) {
-                return Promise.resolve([new ResultItem(
-                    'No experiment results yet',
-                    'Run FluxLoop: Run Experiment to generate outputs',
-                    vscode.TreeItemCollapsibleState.None,
-                    'info'
-                )]);
+                return Promise.resolve([
+                    configureItem,
+                    new ResultItem(
+                        'No experiment results yet',
+                        'Run FluxLoop: Run Experiment to generate outputs',
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    )
+                ]);
             }
 
             const items = directories.map(entry => {
@@ -72,7 +90,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
                 );
             });
 
-            return Promise.resolve(items);
+            return Promise.resolve([configureItem, ...items]);
         }
 
         if (element.type === 'folder' && element.resourcePath) {
@@ -138,8 +156,9 @@ class ResultItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'folder' | 'file' | 'info',
-        public readonly resourcePath?: string
+        public readonly type: 'folder' | 'file' | 'info' | 'command',
+        public readonly resourcePath?: string,
+        command?: vscode.Command
     ) {
         super(label, collapsibleState);
         this.tooltip = this.label;
@@ -156,6 +175,12 @@ class ResultItem extends vscode.TreeItem {
                         title: 'Open Result File',
                         arguments: [vscode.Uri.file(resourcePath)]
                     };
+                }
+                break;
+            case 'command':
+                this.iconPath = new vscode.ThemeIcon('settings-gear');
+                if (command) {
+                    this.command = command;
                 }
                 break;
             case 'info':

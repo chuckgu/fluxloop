@@ -20,31 +20,29 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
     getChildren(element?: ExperimentItem): Thenable<ExperimentItem[]> {
         if (element) {
-            // Show experiment details
             return Promise.resolve(this.getExperimentDetails(element));
-        } else {
-            // Show list of experiments
-            return Promise.resolve(this.getExperiments());
         }
+
+        return Promise.resolve(this.getRootItems());
     }
 
-    private getExperiments(): ExperimentItem[] {
-        const experiments: ExperimentItem[] = [];
+    private getRootItems(): ExperimentItem[] {
+        const items: ExperimentItem[] = [];
         const workspacePath = ProjectContext.getActiveWorkspacePath();
 
         if (!workspacePath) {
-            experiments.push(new ExperimentItem(
+            items.push(new ExperimentItem(
                 'Select a project to view experiments',
                 '',
                 vscode.TreeItemCollapsibleState.None,
                 'info'
             ));
-            return experiments;
+            return items;
         }
 
         const configInfo = this.resolveSimulationConfig(workspacePath);
         if (configInfo) {
-            experiments.push(new ExperimentItem(
+            items.push(new ExperimentItem(
                 'Current Experiment',
                 configInfo.label,
                 vscode.TreeItemCollapsibleState.Collapsed,
@@ -52,7 +50,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                 configInfo.path
             ));
         } else {
-            experiments.push(new ExperimentItem(
+            items.push(new ExperimentItem(
                 'No simulation configuration found',
                 'Create configs/simulation.yaml to configure experiments',
                 vscode.TreeItemCollapsibleState.None,
@@ -60,53 +58,50 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             ));
         }
 
-        // Check experiments directory
-        const experimentsDir = path.join(workspacePath, 'experiments');
-        if (fs.existsSync(experimentsDir)) {
-            const dirs = fs.readdirSync(experimentsDir)
-                .filter(file => fs.statSync(path.join(experimentsDir, file)).isDirectory())
-                .sort((a, b) => b.localeCompare(a)) // Sort by date (newest first)
-                .slice(0, 10); // Show last 10
+        items.push(new ExperimentItem(
+            'Recording Mode',
+            'Enable, disable, or check recording status',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            'recordingGroup'
+        ));
 
-            for (const dir of dirs) {
-                const summaryPath = path.join(experimentsDir, dir, 'summary.json');
-                let label = dir;
-                let description = '';
+        items.push(...this.getExperimentResults(workspacePath));
+        items.push(...this.getRecordingItems(workspacePath));
 
-                if (fs.existsSync(summaryPath)) {
-                    try {
-                        const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
-                        label = summary.name || dir;
-                        description = `${summary.results?.success_rate ? (summary.results.success_rate * 100).toFixed(1) : 0}% success`;
-                    } catch {
-                        // Ignore parse errors
-                    }
-                }
-
-                experiments.push(new ExperimentItem(
-                    label,
-                    description,
-                    vscode.TreeItemCollapsibleState.Collapsed,
-                    'result',
-                    path.join(experimentsDir, dir)
-                ));
-            }
-        }
-
-        if (experiments.length === 0) {
-            experiments.push(new ExperimentItem(
-                'No experiments found',
-                'Run "FluxLoop: Initialize Project" to get started',
-                vscode.TreeItemCollapsibleState.None,
-                'info'
-            ));
-        }
-
-        return experiments;
+        return items;
     }
 
     private getExperimentDetails(element: ExperimentItem): ExperimentItem[] {
         const details: ExperimentItem[] = [];
+
+        if (element.type === 'recordingGroup') {
+            return [
+                new ExperimentItem(
+                    'Enable Recording Mode',
+                    'fluxloop record enable',
+                    vscode.TreeItemCollapsibleState.None,
+                    'command',
+                    undefined,
+                    'fluxloop.enableRecording'
+                ),
+                new ExperimentItem(
+                    'Disable Recording Mode',
+                    'fluxloop record disable',
+                    vscode.TreeItemCollapsibleState.None,
+                    'command',
+                    undefined,
+                    'fluxloop.disableRecording'
+                ),
+                new ExperimentItem(
+                    'Show Recording Status',
+                    'fluxloop record status',
+                    vscode.TreeItemCollapsibleState.None,
+                    'command',
+                    undefined,
+                    'fluxloop.showRecordingStatus'
+                )
+            ];
+        }
 
         if (element.type === 'experiment') {
             // Show config details
@@ -176,9 +171,140 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                     ));
                 }
             }
+
+                const recordings = this.getRecordingItems(element.resourcePath);
+                details.push(...recordings);
         }
 
         return details;
+    }
+
+    private getExperimentResults(projectPath: string): ExperimentItem[] {
+        const experiments: ExperimentItem[] = [];
+        const experimentsDir = path.join(projectPath, 'experiments');
+        if (!fs.existsSync(experimentsDir)) {
+            experiments.push(new ExperimentItem(
+                'No experiments found',
+                'Run "FluxLoop: Run Experiment" to get started',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
+            ));
+            return experiments;
+        }
+
+        const dirs = fs.readdirSync(experimentsDir)
+            .filter(file => fs.statSync(path.join(experimentsDir, file)).isDirectory())
+            .sort((a, b) => b.localeCompare(a))
+            .slice(0, 10);
+
+        for (const dir of dirs) {
+            const experimentPath = path.join(experimentsDir, dir);
+            const summaryPath = path.join(experimentPath, 'summary.json');
+            let label = dir;
+            let description = '';
+
+            if (fs.existsSync(summaryPath)) {
+                try {
+                    const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+                    label = summary.name || dir;
+                    description = `${summary.results?.success_rate ? (summary.results.success_rate * 100).toFixed(1) : 0}% success`;
+                } catch {
+                    // Ignore parse errors
+                }
+            }
+
+            experiments.push(new ExperimentItem(
+                label,
+                description,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'result',
+                experimentPath
+            ));
+        }
+
+        if (experiments.length === 0) {
+            experiments.push(new ExperimentItem(
+                'No experiments found',
+                'Run "FluxLoop: Run Experiment" to get started',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
+            ));
+        }
+
+        return experiments;
+    }
+
+    private getRecordingItems(basePath: string): ExperimentItem[] {
+        const recordings: ExperimentItem[] = [];
+
+        const recordingsDir = path.join(basePath, 'recordings');
+        if (!fs.existsSync(recordingsDir)) {
+            // Try project-level recordings directory
+            if (basePath === ProjectContext.getActiveWorkspacePath()) {
+                const projectLevelDir = path.join(basePath, 'recordings');
+                if (!fs.existsSync(projectLevelDir)) {
+                    recordings.push(new ExperimentItem(
+                        'No recordings found',
+                        'Enable Record Mode to capture inputs',
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    ));
+                    return recordings;
+                }
+            } else {
+                return recordings;
+            }
+        }
+
+        const dir = fs.existsSync(recordingsDir) ? recordingsDir : path.join(basePath, 'recordings');
+        if (!fs.existsSync(dir)) {
+            recordings.push(new ExperimentItem(
+                'No recordings found',
+                'Enable Record Mode to capture inputs',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
+            ));
+            return recordings;
+        }
+
+        const files = fs.readdirSync(dir)
+            .filter(file => fs.statSync(path.join(dir, file)).isFile())
+            .sort((a, b) => b.localeCompare(a))
+            .slice(0, 10);
+
+        if (files.length === 0) {
+            recordings.push(new ExperimentItem(
+                'No recordings found',
+                'Enable Record Mode to capture inputs',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
+            ));
+            return recordings;
+        }
+
+        if (basePath === ProjectContext.getActiveWorkspacePath()) {
+            recordings.push(new ExperimentItem(
+                'Recordings',
+                dir,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'recordings',
+                dir
+            ));
+        } else {
+            for (const file of files) {
+                const filePath = path.join(dir, file);
+                recordings.push(new ExperimentItem(
+                    file,
+                    '',
+                    vscode.TreeItemCollapsibleState.None,
+                    'file',
+                    filePath,
+                    filePath
+                ));
+            }
+        }
+
+        return recordings;
     }
 
     private resolveSimulationConfig(projectPath: string): { path: string; label: string } | undefined {
@@ -261,9 +387,9 @@ class ExperimentItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'experiment' | 'result' | 'file' | 'run' | 'info',
+        public readonly type: 'experiment' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup',
         public readonly resourcePath?: string,
-        private readonly openPath?: string
+        private readonly commandId?: string
     ) {
         super(label, collapsibleState);
 
@@ -289,11 +415,26 @@ class ExperimentItem extends vscode.TreeItem {
                 }
                 break;
             case 'run':
-                this.iconPath = new vscode.ThemeIcon('run');
+                this.iconPath = new vscode.ThemeIcon('debug-start');
                 this.command = {
                     command: 'fluxloop.runExperiment',
                     title: 'Run Experiment'
                 };
+                break;
+            case 'command':
+                this.iconPath = new vscode.ThemeIcon('debug-start');
+                if (commandId) {
+                    this.command = {
+                        command: commandId,
+                        title: label
+                    };
+                }
+                break;
+            case 'recordings':
+                this.iconPath = new vscode.ThemeIcon('record');
+                break;
+            case 'recordingGroup':
+                this.iconPath = new vscode.ThemeIcon('record');
                 break;
             case 'info':
                 this.iconPath = new vscode.ThemeIcon('info');

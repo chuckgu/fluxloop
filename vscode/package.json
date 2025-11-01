@@ -108,6 +108,26 @@
         "category": "FluxLoop"
       },
       {
+        "command": "fluxloop.openProjectConfig",
+        "title": "Open Project Configuration",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.openInputConfig",
+        "title": "Open Input Configuration",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.openSimulationConfig",
+        "title": "Open Experiment Configuration",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.openEvaluationConfig",
+        "title": "Open Evaluation Configuration",
+        "category": "FluxLoop"
+      },
+      {
         "command": "fluxloop.selectEnvironment",
         "title": "Select Execution Environment",
         "category": "FluxLoop"
@@ -147,27 +167,7 @@
         }
       ],
       "view/title": [
-        {
-          "command": "fluxloop.generateInputs",
-          "when": "view == fluxloop.inputs",
-          "group": "navigation@1"
-        },
-        {
-          "command": "fluxloop.enableRecording",
-          "when": "view == fluxloop.experiments",
-          "group": "navigation@2"
-        },
-        {
-          "command": "fluxloop.disableRecording",
-          "when": "view == fluxloop.experiments",
-          "group": "navigation@3"
-        },
-        {
-          "command": "fluxloop.showRecordingStatus",
-          "when": "view == fluxloop.experiments",
-          "group": "navigation@4"
-        }
-      ],
+       ],
       "editor/context": [
         {
           "when": "resourceExtname == .py",

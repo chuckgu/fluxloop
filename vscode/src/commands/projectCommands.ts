@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
-import { ProjectManager } from '../project/projectManager';
+import { ProjectManager, ProjectEntry } from '../project/projectManager';
 import { ProjectContext } from '../project/projectContext';
 import { CLIManager } from '../cli/cliManager';
 
@@ -140,44 +140,22 @@ export class ProjectCommands {
 
     private async showProjectQuickPick(): Promise<void> {
         const manager = ProjectManager.getInstance();
-        const projects = manager.getProjects();
+        const project = await this.pickProject('Select FluxLoop project');
 
-        if (projects.length === 0) {
-            const create = await vscode.window.showInformationMessage('No FluxLoop projects registered. Create one now?', 'Create Project', 'Add Existing');
-            if (create === 'Create Project') {
-                await this.createProject();
-            } else if (create === 'Add Existing') {
-                await this.addExistingProject();
-            }
-            return;
-        }
-
-        const activeProject = manager.getActiveProject();
-
-        const pick = await vscode.window.showQuickPick(
-            projects.map(project => ({
-                label: project.name,
-                description: project.path,
-                detail: project.hasConfig ? undefined : 'FluxLoop configs missing',
-                picked: project.id === activeProject?.id,
-                projectId: project.id
-            })),
-            {
-                placeHolder: 'Select FluxLoop project'
-            }
-        );
-
-        if (pick?.projectId) {
-            manager.setActiveProject(pick.projectId);
+        if (project) {
+            manager.setActiveProject(project.id);
+            vscode.window.showInformationMessage(`Active FluxLoop project set to ${project.name}`);
         }
     }
 
     private async removeProject(projectId?: string): Promise<void> {
         const manager = ProjectManager.getInstance();
-        const targetProject = projectId ? manager.getProjectById(projectId) : undefined;
+
+        const targetProject = projectId
+            ? manager.getProjectById(projectId)
+            : await this.pickProject('Select a project to remove');
 
         if (!targetProject) {
-            await this.showProjectQuickPick();
             return;
         }
 
@@ -238,6 +216,38 @@ export class ProjectCommands {
             console.warn('Failed to read project.yaml', error);
             return undefined;
         }
+    }
+
+    private async pickProject(placeHolder: string): Promise<ProjectEntry | undefined> {
+        const manager = ProjectManager.getInstance();
+        const projects = manager.getProjects();
+
+        if (projects.length === 0) {
+            const create = await vscode.window.showInformationMessage('No FluxLoop projects registered. Create one now?', 'Create Project', 'Add Existing');
+            if (create === 'Create Project') {
+                await this.createProject();
+            } else if (create === 'Add Existing') {
+                await this.addExistingProject();
+            }
+            return;
+        }
+
+        const activeProject = manager.getActiveProject();
+
+        const pick = await vscode.window.showQuickPick(
+            projects.map(project => ({
+                label: project.name,
+                description: project.path,
+                detail: project.hasConfig ? undefined : 'Configs missing',
+                picked: project.id === activeProject?.id,
+                project
+            })),
+            {
+                placeHolder
+            }
+        );
+
+        return pick?.project;
     }
 }
 

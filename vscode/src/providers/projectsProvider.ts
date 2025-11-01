@@ -72,12 +72,27 @@ export class ProjectsProvider implements vscode.TreeDataProvider<ProjectTreeItem
                 title: 'Set Active FluxLoop Project',
                 arguments: [project.id]
             }),
-            new CommandTreeItem('Configure Project', undefined, '$(gear)', {
-                command: 'fluxloop.openConfig',
-                title: 'Open FluxLoop Configuration',
+            new CommandTreeItem('Configure Project', undefined, '$(tools)', {
+                command: 'fluxloop.openProjectConfig',
+                title: 'Open FluxLoop Project Configuration',
                 arguments: [project.id]
             }),
-            new CommandTreeItem('Run Experiment', undefined, '$(beaker)', {
+            new CommandTreeItem('Configure Inputs', undefined, '$(list-unordered)', {
+                command: 'fluxloop.openInputConfig',
+                title: 'Open FluxLoop Input Configuration',
+                arguments: [project.id]
+            }),
+            new CommandTreeItem('Configure Experiment', undefined, '$(beaker)', {
+                command: 'fluxloop.openSimulationConfig',
+                title: 'Open FluxLoop Experiment Configuration',
+                arguments: [project.id]
+            }),
+            new CommandTreeItem('Configure Evaluation', undefined, '$(graph)', {
+                command: 'fluxloop.openEvaluationConfig',
+                title: 'Open FluxLoop Evaluation Configuration',
+                arguments: [project.id]
+            }),
+            new CommandTreeItem('Run Experiment', undefined, '$(debug-start)', {
                 command: 'fluxloop.runExperiment',
                 title: 'Run FluxLoop Experiment'
             }),

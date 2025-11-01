@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from . import __version__
-from .commands import config, generate, init, parse, run, status
+from .commands import config, generate, init, parse, run, status, record
 
 # Create the main Typer app
 app = typer.Typer(
@@ -31,6 +31,7 @@ app.add_typer(status.app, name="status", help="Check status and view results")
 app.add_typer(config.app, name="config", help="Manage configuration")
 app.add_typer(generate.app, name="generate", help="Generate input datasets")
 app.add_typer(parse.app, name="parse", help="Parse experiments into readable files")
+app.add_typer(record.app, name="record", help="Manage recording mode and settings")
 
 
 def version_callback(value: bool):

@@ -27,10 +27,10 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
 
         if (!element) {
             return [
-                new CommandItem('Generate New Inputs…', 'fluxloop.generateInputs', 'Start generation wizard'),
+                new CommandItem('Configure Inputs…', 'fluxloop.openInputConfig', 'Open configs/input.yaml', 'gear'),
+                new CommandItem('Generate New Inputs…', 'fluxloop.generateInputs', 'Start generation wizard', 'debug-start'),
                 new CategoryItem('Base Inputs', 'base'),
-                new CategoryItem('Generated Inputs', 'generated'),
-                new CategoryItem('Recordings', 'recordings')
+                new CategoryItem('Generated Inputs', 'generated')
             ];
         }
 
@@ -40,8 +40,6 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
                     return this.getBaseInputs(projectPath);
                 case 'generated':
                     return this.getGeneratedInputs(projectPath);
-                case 'recordings':
-                    return this.getRecordings(projectPath);
                 default:
                     return [];
             }
@@ -157,7 +155,7 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
 class CategoryItem extends vscode.TreeItem {
     constructor(
         label: string,
-        public readonly category: 'base' | 'generated' | 'recordings'
+        public readonly category: 'base' | 'generated'
     ) {
         super(label, vscode.TreeItemCollapsibleState.Collapsed);
         this.contextValue = `inputs.category.${category}`;
@@ -194,14 +192,14 @@ class FileItem extends vscode.TreeItem {
 }
 
 class CommandItem extends vscode.TreeItem {
-    constructor(label: string, command: string, tooltip?: string) {
+    constructor(label: string, command: string, tooltip?: string, iconId: string = 'debug-start') {
         super(label, vscode.TreeItemCollapsibleState.None);
         this.command = {
             command,
             title: label
         };
         this.tooltip = tooltip;
-        this.iconPath = new vscode.ThemeIcon('play');
+        this.iconPath = new vscode.ThemeIcon(iconId);
         this.contextValue = 'inputs.command';
     }
 }
