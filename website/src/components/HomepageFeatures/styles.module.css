@@ -1,0 +1,41 @@
+.features {
+  padding: 4rem 0;
+  background-color: var(--ifm-background-surface-color);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-700);
+  max-width: 800px;
+  margin: 1rem auto 3rem;
+}
+
+.featureIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+
+.features h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.features p {
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+}
+
+.features .col {
+  margin-bottom: 2rem;
+}
+
+@media screen and (max-width: 996px) {
+  .features {
+    padding: 2rem 1rem;
+  }
+  
+  .featureIcon {
+    font-size: 3rem;
+  }
+}

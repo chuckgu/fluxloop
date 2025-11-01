@@ -1,0 +1,13 @@
+# Vercel에서 무시할 파일들
+node_modules/
+.docusaurus/
+build/
+.cache/
+.DS_Store
+
+# 상위 디렉토리 (packages의 다른 패키지들)
+../sdk/
+../cli/
+../vscode/
+../docs/
+

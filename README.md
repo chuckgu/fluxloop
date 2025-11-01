@@ -240,25 +240,27 @@ fluxloop/
 ├── packages/
 │   ├── sdk/              # Python SDK (decorators, recording, instrumentation)
 │   ├── cli/              # CLI tool (init, generate, run, record, parse, status)
-│   └── vscode/           # VSCode extension (project management, workflow UI)
+│   ├── vscode/           # VSCode extension (project management, workflow UI)
+│   ├── website/          # Documentation website (Docusaurus)
+│   └── docs/             # Additional guides and references
 ├── services/
 │   └── collector/        # Trace collection service (optional)
-├── examples/
-│   ├── simple-agent/     # Basic agent examples
-│   └── pluto_duck/       # Complex multi-agent example
-└── docs/
-    ├── guides/           # Integration guides, setup instructions
-    ├── prd/              # Product requirements and design docs
-    └── api/              # API contracts and schemas
+└── examples/
+    ├── simple-agent/     # Basic agent examples
+    └── pluto_duck/       # Complex multi-agent example
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **CLI Reference**: [packages/cli/README.md](packages/cli/README.md)
-- **SDK Reference**: [packages/sdk/README.md](packages/sdk/README.md)
-- **VSCode Extension**: [packages/vscode/README.md](packages/vscode/README.md)
+### Quick Links
+- **📖 Full Documentation**: [https://docs.fluxloop.io](https://docs.fluxloop.io) (or see `packages/website/`)
+- **CLI Reference**: [packages/cli/README.md](cli/README.md)
+- **SDK Reference**: [packages/sdk/README.md](sdk/README.md)
+- **VSCode Extension**: [packages/vscode/README.md](vscode/README.md)
+
+### Design Docs
 - **v0.2.0 Settings & Recording**: [docs/prd/fluxloop_v0.2.0_settings_recording.md](docs/prd/fluxloop_v0.2.0_settings_recording.md)
 - **VSCode Extension Design**: [docs/prd/codex_vscode_extention.md](docs/prd/codex_vscode_extention.md)
 
