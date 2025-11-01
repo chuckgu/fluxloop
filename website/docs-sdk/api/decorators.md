@@ -4,13 +4,15 @@ sidebar_position: 1
 
 # Decorators API
 
-FluxLoop SDK decorators reference.
+FluxLoop SDK decorator reference.
 
 ## @fluxloop.agent()
 
-Mark agent entry points.
+Mark agent entry points for tracing.
 
 ```python
+import fluxloop
+
 @fluxloop.agent()
 def my_agent(prompt: str) -> str:
     return process(prompt)
@@ -22,11 +24,10 @@ Trace any function.
 
 ```python
 @fluxloop.trace()
-def helper_function(data):
+def helper(data):
     return transform(data)
 ```
 
 ## Coming Soon
 
-Full decorator API documentation is in development.
-
+Complete API documentation is in development.
