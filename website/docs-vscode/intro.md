@@ -115,5 +115,5 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
 ---
 
-Need help? Check [Troubleshooting](./troubleshooting) or [GitHub Issues](https://github.com/chuckgu/fluxloop/issues).
+Need help? Check [Troubleshooting](/vscode/troubleshooting) or [GitHub Issues](https://github.com/chuckgu/fluxloop/issues).
 
