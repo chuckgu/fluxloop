@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { parse as parseYaml } from 'yaml';
 import { ProjectContext } from '../project/projectContext';
 
 export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentItem> {
@@ -41,22 +42,26 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             return experiments;
         }
 
-        const workspaceFolder = { uri: vscode.Uri.file(workspacePath) } as vscode.WorkspaceFolder;
-
-        // Check for setting.yaml
-        const configPath = path.join(workspaceFolder.uri.fsPath, 'setting.yaml');
-        if (fs.existsSync(configPath)) {
+        const configInfo = this.resolveSimulationConfig(workspacePath);
+        if (configInfo) {
             experiments.push(new ExperimentItem(
                 'Current Experiment',
-                'setting.yaml',
+                configInfo.label,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'experiment',
-                configPath
+                configInfo.path
+            ));
+        } else {
+            experiments.push(new ExperimentItem(
+                'No simulation configuration found',
+                'Create configs/simulation.yaml to configure experiments',
+                vscode.TreeItemCollapsibleState.None,
+                'info'
             ));
         }
 
         // Check experiments directory
-        const experimentsDir = path.join(workspaceFolder.uri.fsPath, 'experiments');
+        const experimentsDir = path.join(workspacePath, 'experiments');
         if (fs.existsSync(experimentsDir)) {
             const dirs = fs.readdirSync(experimentsDir)
                 .filter(file => fs.statSync(path.join(experimentsDir, file)).isDirectory())
@@ -105,12 +110,50 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         if (element.type === 'experiment') {
             // Show config details
-            details.push(new ExperimentItem(
-                'Configuration',
-                element.resourcePath || '',
-                vscode.TreeItemCollapsibleState.None,
-                'file'
-            ));
+            if (element.resourcePath) {
+                const workspacePath = ProjectContext.getActiveWorkspacePath();
+                const configLabel = workspacePath
+                    ? path.relative(workspacePath, element.resourcePath)
+                    : path.basename(element.resourcePath);
+
+                details.push(new ExperimentItem(
+                    'Open configuration',
+                    configLabel,
+                    vscode.TreeItemCollapsibleState.None,
+                    'file',
+                    element.resourcePath,
+                    element.resourcePath
+                ));
+
+                const configData = this.readSimulationConfig(element.resourcePath);
+                if (configData) {
+                    if (configData.runner?.module_path) {
+                        details.push(new ExperimentItem(
+                            `Runner: ${configData.runner.module_path}`,
+                            configData.runner.function_name ? `Function: ${configData.runner.function_name}` : '',
+                            vscode.TreeItemCollapsibleState.None,
+                            'info'
+                        ));
+                    }
+
+                    if (typeof configData.iterations === 'number') {
+                        details.push(new ExperimentItem(
+                            `Iterations: ${configData.iterations}`,
+                            '',
+                            vscode.TreeItemCollapsibleState.None,
+                            'info'
+                        ));
+                    }
+
+                    const recordStatus = this.getRecordModeStatus(element.resourcePath, configData);
+                    details.push(new ExperimentItem(
+                        recordStatus.label,
+                        recordStatus.description,
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    ));
+                }
+            }
             details.push(new ExperimentItem(
                 'Run Experiment',
                 '',
@@ -136,6 +179,80 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         }
 
         return details;
+    }
+
+    private resolveSimulationConfig(projectPath: string): { path: string; label: string } | undefined {
+        const modernPath = path.join(projectPath, 'configs', 'simulation.yaml');
+        if (fs.existsSync(modernPath)) {
+            return { path: modernPath, label: 'configs/simulation.yaml' };
+        }
+
+        return undefined;
+    }
+
+    private readSimulationConfig(configPath: string): any {
+        try {
+            const raw = fs.readFileSync(configPath, 'utf8');
+            return parseYaml(raw) ?? {};
+        } catch (error) {
+            console.warn(`Failed to read simulation config: ${configPath}`, error);
+            return undefined;
+        }
+    }
+
+    private getRecordModeStatus(configPath: string, config: any): { label: string; description: string } {
+        const projectPath = this.resolveProjectPathFromConfig(configPath);
+        const envRecord = this.readEnvRecordFlag(path.join(projectPath, '.env'));
+        const configRecord = Boolean(config?.replay_args?.enabled);
+        const recordingFile = config?.replay_args?.recording_file || 'recordings/args_recording.jsonl';
+
+        const enabled = envRecord ?? configRecord;
+        if (enabled) {
+            return {
+                label: 'Record Mode: Enabled',
+                description: `Recording to ${recordingFile}`
+            };
+        }
+
+        return {
+            label: 'Record Mode: Disabled',
+            description: 'Toggle via CLI (fluxloop record enable) or VSCode command when available'
+        };
+    }
+
+    private resolveProjectPathFromConfig(configPath: string): string {
+        const normalized = path.resolve(configPath);
+        const configsSegment = `${path.sep}configs${path.sep}`;
+        const index = normalized.lastIndexOf(configsSegment);
+        if (index !== -1) {
+            return normalized.substring(0, index);
+        }
+        return path.dirname(normalized);
+    }
+
+    private readEnvRecordFlag(envPath: string): boolean | undefined {
+        if (!fs.existsSync(envPath)) {
+            return undefined;
+        }
+
+        try {
+            const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
+                    continue;
+                }
+
+                const [key, value] = trimmed.split('=', 2);
+                if (key === 'FLUXLOOP_RECORD_ARGS') {
+                    return value.toLowerCase() === 'true';
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to read .env for record mode status', error);
+        }
+
+        return undefined;
     }
 }
 

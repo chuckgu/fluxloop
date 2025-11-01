@@ -832,7 +832,7 @@ export class WebviewsWireframe {
                         'Import Inputs': 'This would open a file picker for importing inputs',
                         'Edit Input': 'This would open the input editor with pre-filled data',
                         'Delete Input': 'This would show a confirmation dialog',
-                        'Save Configuration': 'This would save the configuration to setting.yaml',
+                        'Save Configuration': 'This would save the configuration to configs/simulation.yaml',
                         'Reset to Defaults': 'This would reset all fields to default values',
                         'Export Configuration': 'This would download the configuration as a file',
                         'Export Results': 'This would export results as CSV/JSON',

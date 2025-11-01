@@ -114,7 +114,7 @@ export class ProjectsProvider implements vscode.TreeDataProvider<ProjectTreeItem
         const descriptionParts = [path.basename(project.path)];
 
         if (!project.hasConfig) {
-            descriptionParts.push('No setting.yaml');
+            descriptionParts.push('Configs missing');
         }
 
         const item = new ProjectTreeItem(

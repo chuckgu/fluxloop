@@ -81,8 +81,8 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         const disposables: vscode.Disposable[] = [];
-
-        const configPattern = new vscode.RelativePattern(project.path, 'setting.{yaml,yml}');
+ 
+        const configPattern = new vscode.RelativePattern(project.path, 'configs/**/*');
         const configWatcher = vscode.workspace.createFileSystemWatcher(configPattern);
         const handleConfigUpdate = () => {
             projectManager.refreshProjectById(project.id);
@@ -95,6 +95,18 @@ export async function activate(context: vscode.ExtensionContext) {
         disposables.push(configWatcher.onDidCreate(handleConfigUpdate));
         disposables.push(configWatcher.onDidChange(handleConfigUpdate));
         disposables.push(configWatcher.onDidDelete(handleConfigUpdate));
+
+        const envPattern = new vscode.RelativePattern(project.path, '.env');
+        const envWatcher = vscode.workspace.createFileSystemWatcher(envPattern);
+        const handleEnvUpdate = () => {
+            experimentsProvider.refresh();
+            statusProvider.refresh();
+        };
+
+        disposables.push(envWatcher);
+        disposables.push(envWatcher.onDidCreate(handleEnvUpdate));
+        disposables.push(envWatcher.onDidChange(handleEnvUpdate));
+        disposables.push(envWatcher.onDidDelete(handleEnvUpdate));
 
         const experimentsPattern = new vscode.RelativePattern(project.path, 'experiments/**');
         const experimentsWatcher = vscode.workspace.createFileSystemWatcher(experimentsPattern);

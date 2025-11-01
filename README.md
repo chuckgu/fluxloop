@@ -48,17 +48,18 @@ Every simulation produces reproducible, auditable artifacts:
 Define complex experiments in YAML, generate input variations with LLM, and run batch simulations—all from the command line.
 
 ### 🔌 VSCode Extension
-Manage experiments, monitor runs, and explore results directly in your IDE.
+Manage projects, generate inputs, run experiments, and explore results—all from your IDE with visual project management and configuration editing.
 
 ---
 
 ## 🧭 End-to-End Flow
 
 ```
-Init → Record → Input Generation → Experiment → Parse (human-readable) → Evaluate (TBD)
+Init → Input Generation → Experiment → Parse → Evaluate (TBD)
+       ↑ (Optional: Record Mode for complex args)
 ```
 
-This is the canonical workflow. The detailed steps and commands follow below.
+This is the canonical workflow. Recording is an optional advanced feature for complex argument structures.
 
 ## Getting Started
 
@@ -75,12 +76,16 @@ fluxloop init project --name my-agent
 cd fluxloop/my-agent
 ```
 
-**Generated structure:**
+**Generated structure (v0.2.0):**
 ```
 fluxloop/
 ├── .env                      # Global environment variables
 └── my-agent/
-    ├── setting.yaml          # Experiment configuration
+    ├── configs/              # Separated configuration files
+    │   ├── project.yaml      # Project metadata, collector settings
+    │   ├── input.yaml        # Personas, base inputs, generation settings
+    │   ├── simulation.yaml   # Runner, iterations, replay args
+    │   └── evaluation.yaml   # Evaluator definitions
     ├── .env                  # Project-specific overrides
     ├── examples/
     │   └── simple_agent.py   # Sample instrumented agent
@@ -102,11 +107,32 @@ def run(input_text: str) -> str:
     return f"Response to: {input_text}"
 ```
 
-### 4. Configure Credentials
+### 4. Review Configuration
+
+Edit `configs/input.yaml` to set up personas, base inputs, and LLM provider:
+
+```yaml
+# configs/input.yaml
+personas:
+  - name: novice_user
+    description: A user new to the system
+    ...
+
+base_inputs:
+  - input: "How do I get started?"
+    expected_intent: help
+
+input_generation:
+  mode: llm
+  llm:
+    provider: openai
+    model: gpt-4o-mini
+```
+
+Configure credentials in `.env` or using CLI:
 
 ```bash
 # Add to .env
-FLUXLOOP_COLLECTOR_URL=http://localhost:8000
 OPENAI_API_KEY=sk-...
 
 # Or use CLI helper
@@ -116,17 +142,18 @@ fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
 ### 5. Generate Inputs
 
 ```bash
-fluxloop generate inputs \
-  --config setting.yaml \
-  --from-recording recordings/args.jsonl \
-  --limit 50
+fluxloop generate inputs --limit 50
 ```
+
+This reads from `configs/input.yaml` and produces `inputs/generated.yaml` with LLM-generated variations.
 
 ### 6. Run Experiment
 
 ```bash
-fluxloop run experiment --config setting.yaml
+fluxloop run experiment
 ```
+
+This loads merged configuration from `configs/` and runs the experiment.
 
 **Results** → `experiments/my_agent_experiment_YYYYMMDD_HHMMSS/`
 
@@ -135,67 +162,47 @@ fluxloop run experiment --config setting.yaml
 Convert raw JSONL artifacts into per-trace Markdown timelines:
 
 ```bash
-fluxloop parse experiment experiments/<your_experiment_dir> --output per_trace_analysis --overwrite
+fluxloop parse experiment experiments/<your_experiment_dir>
 ```
 
 Each trace gets a timeline file under `per_trace_analysis/` showing step-by-step inputs/outputs.
 
 ---
 
-## 🎬 Argument Replay Workflow
+## 🎬 Argument Replay Workflow (Advanced/Optional)
 
-For complex agents with many parameters (e.g., WebSocket handlers, class methods):
+For agents with complex call signatures (e.g., WebSocket handlers with callbacks), you can record actual arguments and replay them during experiments. **Most projects won't need this feature.**
 
-### Step 1: Record (Staging)
-
-```python
-import fluxloop
-
-# Enable recording
-fluxloop.configure(record_args=True, recording_file="/tmp/args.jsonl")
-
-class MessageHandler:
-    async def handle_message(
-        self,
-        connection_id: str,
-        data: Dict[str, Any],
-        user_connection: Dict[str, Any],
-        send_callback: Callable,
-        error_callback: Callable
-    ):
-        # Record arguments
-        fluxloop.record_call_args(
-            target="app.handler:MessageHandler.handle_message",
-            connection_id=connection_id,
-            data=data,
-            user_connection=user_connection,
-            send_callback=send_callback,
-            error_callback=error_callback,
-        )
-        # ... existing logic
-```
-
-Deploy to staging, trigger a test request, then download:
-```bash
-scp staging:/tmp/args.jsonl ./recordings/
-```
-
-### Step 2: Generate (Local)
+### Step 1: Enable Recording Mode
 
 ```bash
-fluxloop generate inputs \
-  --config setting.yaml \
-  --from-recording recordings/args.jsonl \
-  --limit 50
+fluxloop record enable
 ```
 
-### Step 3: Configure (Local)
+This updates `.env` and `configs/simulation.yaml` to enable argument recording.
 
+### Step 2: Execute Your Service
+
+Run your application with recording hooks enabled. Arguments will be saved to `recordings/args_recording.jsonl`.
+
+### Step 3: Disable Recording
+
+```bash
+fluxloop record disable
+```
+
+Verify recorded data:
+```bash
+fluxloop record status
+```
+
+### Step 4: Configure Replay
+
+Edit `configs/simulation.yaml`:
 ```yaml
-# setting.yaml
+# configs/simulation.yaml
 runner:
   target: "app.handler:MessageHandler.handle_message"
-  working_directory: "."
 
 replay_args:
   enabled: true
@@ -204,16 +211,12 @@ replay_args:
     send_callback: "builtin:collector.send"
     error_callback: "builtin:collector.error"
   override_param_path: "data.content"
-
-inputs_file: "inputs/generated.yaml"
-iterations: 50
-output_directory: "experiments"
 ```
 
-### Step 4: Simulate (Local)
+### Step 5: Run Experiment
 
 ```bash
-fluxloop run experiment --config setting.yaml
+fluxloop run experiment
 ```
 
 The CLI will:
@@ -235,25 +238,29 @@ The CLI will:
 ```
 fluxloop/
 ├── packages/
-│   ├── sdk/              # Python SDK (decorators, recording)
-│   ├── cli/              # CLI tool (generate, run, status)
-│   └── vscode/           # VSCode extension
+│   ├── sdk/              # Python SDK (decorators, recording, instrumentation)
+│   ├── cli/              # CLI tool (init, generate, run, record, parse, status)
+│   └── vscode/           # VSCode extension (project management, workflow UI)
 ├── services/
-│   └── collector/        # Trace collection service
+│   └── collector/        # Trace collection service (optional)
 ├── examples/
-│   ├── simple-agent/     # Basic examples
+│   ├── simple-agent/     # Basic agent examples
 │   └── pluto_duck/       # Complex multi-agent example
 └── docs/
-    ├── guides/           # Integration guides
-    ├── prd/              # Product specs
-    └── api/              # API contracts
+    ├── guides/           # Integration guides, setup instructions
+    ├── prd/              # Product requirements and design docs
+    └── api/              # API contracts and schemas
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **End-to-End Workflow**: [Full pipeline](docs/guides/end-to-end-workflow.md)
+- **CLI Reference**: [packages/cli/README.md](packages/cli/README.md)
+- **SDK Reference**: [packages/sdk/README.md](packages/sdk/README.md)
+- **VSCode Extension**: [packages/vscode/README.md](packages/vscode/README.md)
+- **v0.2.0 Settings & Recording**: [docs/prd/fluxloop_v0.2.0_settings_recording.md](docs/prd/fluxloop_v0.2.0_settings_recording.md)
+- **VSCode Extension Design**: [docs/prd/codex_vscode_extention.md](docs/prd/codex_vscode_extention.md)
 
 ---
 
@@ -283,22 +290,25 @@ def run(input_text: str) -> str:
 ```
 
 ```bash
-fluxloop run experiment --config setting.yaml
+fluxloop generate inputs --limit 50
+fluxloop run experiment
 # → Tests function with 50 input variations
 ```
 
-### Use Case 2: Complex WebSocket Handler
+### Use Case 2: Advanced Recording Workflow
 
-Record from staging:
+Enable recording, run service to capture args, then use in experiments:
 ```python
-fluxloop.record_call_args(target="app:Handler.handle", **all_args)
+# In your agent code
+fluxloop.record_call_args(target="app:Handler.handle", **kwargs)
 ```
 
-Replay locally:
 ```bash
-fluxloop generate inputs --from-recording recordings/args.jsonl --limit 100
-fluxloop run experiment --config setting.yaml
-# → Simulates 100 realistic scenarios offline
+fluxloop record enable
+# ... run your service ...
+fluxloop record disable
+fluxloop run experiment
+# → Replays recorded args with different inputs
 ```
 
 ### Use Case 3: Multi-Agent System

@@ -29,6 +29,9 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.runSingle', () => this.runSingle()),
             vscode.commands.registerCommand('fluxloop.generateInputs', () => this.generateInputs()),
             vscode.commands.registerCommand('fluxloop.showStatus', () => this.showStatus()),
+            vscode.commands.registerCommand('fluxloop.enableRecording', () => this.enableRecording()),
+            vscode.commands.registerCommand('fluxloop.disableRecording', () => this.disableRecording()),
+            vscode.commands.registerCommand('fluxloop.showRecordingStatus', () => this.showRecordingStatus()),
             vscode.commands.registerCommand('fluxloop.openConfig', (projectId?: string) => this.openConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
             vscode.commands.registerCommand('fluxloop.showWireframe', () => this.showWireframe()),
@@ -269,13 +272,42 @@ export class CommandManager {
             return;
         }
 
-        const configUri = vscode.Uri.joinPath(vscode.Uri.file(project.path), 'setting.yaml');
+        const configUri = vscode.Uri.joinPath(vscode.Uri.file(project.path), 'configs', 'simulation.yaml');
         try {
             const document = await vscode.workspace.openTextDocument(configUri);
             vscode.window.showTextDocument(document);
         } catch {
-            vscode.window.showErrorMessage('No setting.yaml found');
+            vscode.window.showErrorMessage('No configs/simulation.yaml found');
         }
+    }
+
+    private async enableRecording() {
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
+            return;
+        }
+
+        await this.cliManager.runCommand(['record', 'enable'], project.path);
+        this.statusProvider?.refresh();
+    }
+
+    private async disableRecording() {
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
+            return;
+        }
+
+        await this.cliManager.runCommand(['record', 'disable'], project.path);
+        this.statusProvider?.refresh();
+    }
+
+    private async showRecordingStatus() {
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
+            return;
+        }
+
+        await this.cliManager.runCommand(['record', 'status'], project.path);
     }
 
     private async selectEnvironment() {
@@ -346,26 +378,21 @@ export class CommandManager {
     }
 
     private async loadProjectConfig(projectPath: string): Promise<{ data?: Record<string, any>; path?: string } | undefined> {
-        const candidates = ['setting.yaml', 'setting.yml', 'fluxloop.yaml', 'fluxloop.yml'];
-        for (const candidate of candidates) {
-            const fullPath = path.join(projectPath, candidate);
-            if (!fs.existsSync(fullPath)) {
-                continue;
-            }
-
-            try {
-                const raw = await fs.promises.readFile(fullPath, 'utf8');
-                const parsed = parseYaml(raw) as Record<string, any> | undefined;
-                return { data: parsed, path: fullPath };
-            } catch (error) {
-                console.error('Failed to parse project configuration', error);
-                vscode.window.showWarningMessage('Unable to read setting.yaml. Input generation will use defaults.');
-                return { path: fullPath };
-            }
+        const configPath = path.join(projectPath, 'configs', 'input.yaml');
+        if (!fs.existsSync(configPath)) {
+            vscode.window.showWarningMessage('No configs/input.yaml found. Input generation will use defaults.');
+            return undefined;
         }
 
-        vscode.window.showWarningMessage('No setting.yaml found. Input generation will use defaults.');
-        return undefined;
+        try {
+            const raw = await fs.promises.readFile(configPath, 'utf8');
+            const parsed = parseYaml(raw) as Record<string, any> | undefined;
+            return { data: parsed, path: configPath };
+        } catch (error) {
+            console.error('Failed to parse input configuration', error);
+            vscode.window.showWarningMessage('Unable to read configs/input.yaml. Input generation will use defaults.');
+            return { path: configPath };
+        }
     }
 
     private getConfigMode(config: Record<string, any> | undefined): string | undefined {
@@ -402,7 +429,7 @@ export class CommandManager {
         const items: ModeItem[] = [
             {
                 label: defaultMode ? `Use configuration default (${defaultMode})` : 'Use configuration default',
-                description: 'Do not override mode from setting.yaml'
+                description: 'Do not override mode from configs/input.yaml'
             },
             {
                 label: 'Deterministic',

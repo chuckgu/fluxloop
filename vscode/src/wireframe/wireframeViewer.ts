@@ -210,7 +210,7 @@ export class WireframeViewer {
                 <!-- Experiments Panel -->
                 <div class="panel">
                     <div class="panel-title" data-icon="🧪">Experiments</div>
-                    <div class="tree-item expandable">Current Experiment (setting.yaml)</div>
+                    <div class="tree-item expandable">Current Experiment (configs/simulation.yaml)</div>
                     <div class="tree-item">├── Configuration</div>
                     <div class="tree-item">├── Personas (2)</div>
                     <div class="tree-item">├── Base Inputs (3)</div>
@@ -287,7 +287,7 @@ export class WireframeViewer {
                     <div class="status-item">CLI: Installed (v1.2.3)</div>
                     <div class="status-item">SDK: Check in terminal</div>
                     <div class="status-item">Collector: http://localhost:8000</div>
-                    <div class="status-item">Config: setting.yaml found</div>
+                    <div class="status-item">Config: configs/simulation.yaml found</div>
                     <div class="section-divider"></div>
                     <div class="status-item">Python: 3.11.0</div>
                     <div class="status-item">Environment: Local</div>

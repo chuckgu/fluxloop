@@ -51,28 +51,33 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
     }
 
     private async getBaseInputs(projectPath: string): Promise<InputsTreeItem[]> {
-        const configPath = this.findConfigFile(projectPath);
-        if (!configPath) {
-            return [new InfoItem('No configuration found', 'Add setting.yaml to configure base inputs.')];
+        const configInfo = this.resolveInputConfig(projectPath);
+        if (!configInfo) {
+            return [new InfoItem('No input configuration found', 'Create configs/input.yaml to define base inputs.')];
         }
 
         try {
-            const raw = await fs.promises.readFile(configPath, 'utf8');
-            const parsed = parseYaml(raw) as { base_inputs?: Array<{ input?: string; expected_intent?: string }> } | undefined;
-            const baseInputs = parsed?.base_inputs;
+            const raw = await fs.promises.readFile(configInfo.path, 'utf8');
+            const parsed = parseYaml(raw) as { base_inputs?: Array<{ input?: string; expected_intent?: string }>; input?: { base_inputs?: Array<{ input?: string; expected_intent?: string }> } } | undefined;
+            const baseInputs = Array.isArray(parsed?.base_inputs)
+                ? parsed?.base_inputs
+                : Array.isArray(parsed?.input?.base_inputs)
+                    ? parsed?.input?.base_inputs
+                    : undefined;
 
             if (!Array.isArray(baseInputs) || baseInputs.length === 0) {
-                return [new InfoItem('No base inputs defined', 'Add base_inputs to setting.yaml.')];
+                return [new InfoItem('No base inputs defined', `Add base_inputs to ${configInfo.label}.`)];
             }
 
+            const configUri = vscode.Uri.file(configInfo.path);
             return baseInputs.map((entry, index) => {
                 const label = entry?.input || `Base Input ${index + 1}`;
                 const description = entry?.expected_intent ? `Intent: ${entry.expected_intent}` : undefined;
-                return new BaseInputItem(label, description);
+                return new BaseInputItem(label, description, configUri);
             });
         } catch (error) {
-            console.error('Failed to parse setting.yaml', error);
-            return [new InfoItem('Unable to load base inputs', 'Check setting.yaml for YAML errors.')];
+            console.error('Failed to parse input configuration', error);
+            return [new InfoItem('Unable to load base inputs', `Check ${configInfo.label} for YAML errors.`)];
         }
     }
 
@@ -104,14 +109,14 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
     private async getRecordings(projectPath: string): Promise<InputsTreeItem[]> {
         const recordingsDir = path.join(projectPath, 'recordings');
         if (!fs.existsSync(recordingsDir)) {
-            return [new InfoItem('No recordings found', 'Use Run Single to capture recordings.')];
+            return [new InfoItem('No recordings found', 'Use FluxLoop: Enable Recording or CLI record commands to capture inputs.')];
         }
 
         const entries = await fs.promises.readdir(recordingsDir, { withFileTypes: true });
         const files = entries.filter(entry => entry.isFile());
 
         if (files.length === 0) {
-            return [new InfoItem('No recordings found', 'Use Run Single to capture recordings.')];
+            return [new InfoItem('No recordings found', 'Use FluxLoop: Enable Recording or CLI record commands to capture inputs.')];
         }
 
         return files
@@ -126,14 +131,12 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
             });
     }
 
-    private findConfigFile(projectPath: string): string | undefined {
-        const candidates = ['setting.yaml', 'setting.yml', 'fluxloop.yaml', 'fluxloop.yml'];
-        for (const candidate of candidates) {
-            const fullPath = path.join(projectPath, candidate);
-            if (fs.existsSync(fullPath)) {
-                return fullPath;
-            }
+    private resolveInputConfig(projectPath: string): { path: string; label: string } | undefined {
+        const newPath = path.join(projectPath, 'configs', 'input.yaml');
+        if (fs.existsSync(newPath)) {
+            return { path: newPath, label: 'configs/input.yaml' };
         }
+
         return undefined;
     }
 
@@ -162,13 +165,14 @@ class CategoryItem extends vscode.TreeItem {
 }
 
 class BaseInputItem extends vscode.TreeItem {
-    constructor(label: string, description?: string) {
+    constructor(label: string, description: string | undefined, configUri: vscode.Uri) {
         super(label, vscode.TreeItemCollapsibleState.None);
         this.description = description;
         this.iconPath = new vscode.ThemeIcon('symbol-string');
         this.command = {
-            command: 'fluxloop.openConfig',
-            title: 'Open Configuration'
+            command: 'vscode.open',
+            title: 'Open Input Configuration',
+            arguments: [configUri]
         };
         this.contextValue = 'inputs.baseInput';
     }

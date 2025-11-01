@@ -363,7 +363,7 @@ export class DialogsWireframe {
                         <div class="info-box">
                             This will create a new FluxLoop project with:
                             <ul style="margin: 10px 0; padding-left: 20px;">
-                                <li>setting.yaml configuration file</li>
+                                <li>configs/project.yaml configuration file</li>
                                 <li>src/ directory for your agents</li>
                                 <li>inputs/ directory for test data</li>
                                 <li>experiments/ directory for results</li>
@@ -564,7 +564,7 @@ export class DialogsWireframe {
                         
                         <div class="form-group">
                             <label class="form-label">Error Message</label>
-                            <textarea class="form-input" rows="4" readonly>Failed to load experiment configuration from setting.yaml:
+                            <textarea class="form-input" rows="4" readonly>Failed to load experiment configuration from configs/input.yaml:
 - Missing required field: 'name'
 - Invalid persona configuration: 'expert_user' has no description
 - Base inputs file not found: inputs/base_inputs.yaml</textarea>
@@ -577,7 +577,7 @@ export class DialogsWireframe {
                                     <input type="checkbox" checked>
                                     <div>
                                         <div class="checkbox-label">Open Configuration File</div>
-                                        <div class="checkbox-description">Edit setting.yaml to fix the issues</div>
+                                        <div class="checkbox-description">Edit configs/input.yaml to fix the issues</div>
                                     </div>
                                 </div>
                                 <div class="checkbox-item">
@@ -677,7 +677,7 @@ export class DialogsWireframe {
                         'Parse Results': 'This would execute: fluxloop parse experiment experiments/pluto_experiment_20241201_143022 --output per_trace_analysis',
                         'Cancel Experiment': 'This would send SIGTERM to the running process',
                         'View Logs': 'This would open the Output Channel with experiment logs',
-                        'Fix Configuration': 'This would open setting.yaml in the editor',
+                        'Fix Configuration': 'This would open configs/input.yaml in the editor',
                         'Close': 'This would close the dialog'
                     };
                     

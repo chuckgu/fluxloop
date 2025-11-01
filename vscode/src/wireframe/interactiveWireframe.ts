@@ -476,7 +476,7 @@ export class InteractiveWireframe {
                         
                         <div class="action-buttons">
                             <button class="btn btn-primary" onclick="showNotification('Initialize Project', 'Opening project initialization dialog...')">Initialize Project</button>
-                            <button class="btn btn-secondary" onclick="showNotification('Open Config', 'Opening setting.yaml in editor...')">Open Config</button>
+                            <button class="btn btn-secondary" onclick="showNotification('Open Config', 'Opening configs/simulation.yaml in editor...')">Open Config</button>
                             <button class="btn btn-success" onclick="startExperiment()">Run Experiment</button>
                         </div>
                         
@@ -640,7 +640,7 @@ export class InteractiveWireframe {
                         
                         <div class="status-indicator status-success">
                             <div class="status-dot"></div>
-                            <span>Config: setting.yaml found</span>
+                            <span>Config: configs/simulation.yaml found</span>
                         </div>
                         
                         <div class="status-indicator status-warning">

@@ -205,10 +205,15 @@ export class ProjectManager {
     }
 
     private computeHasConfig(projectPath: string): boolean {
-        const candidates = ['setting.yaml', 'setting.yml', 'fluxloop.yaml', 'fluxloop.yml'];
+        const configDir = path.join(projectPath, 'configs');
+        const requiredConfigFiles = ['project.yaml', 'input.yaml', 'simulation.yaml'];
 
-        for (const file of candidates) {
-            if (fs.existsSync(path.join(projectPath, file))) {
+        if (fs.existsSync(configDir) && fs.statSync(configDir).isDirectory()) {
+            const hasRequired = requiredConfigFiles.every(file =>
+                fs.existsSync(path.join(configDir, file))
+            );
+
+            if (hasRequired) {
                 return true;
             }
         }

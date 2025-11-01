@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import * as which from 'which';
 import { spawnSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import { parse as parseYaml } from 'yaml';
 import { ProjectContext } from '../project/projectContext';
 
 export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
@@ -64,28 +67,32 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
         // Check configuration
         const workspacePath = ProjectContext.getActiveWorkspacePath();
         if (workspacePath) {
-            const configUri = vscode.Uri.joinPath(vscode.Uri.file(workspacePath), 'setting.yaml');
-            try {
-                await vscode.workspace.fs.stat(configUri);
-                items.push(new StatusItem(
-                    'Config',
-                    'setting.yaml found',
-                    'success'
-                ));
-            } catch {
-                items.push(new StatusItem(
-                    'Config',
-                    'No setting.yaml',
-                    'warning',
-                    'Run: FluxLoop: Initialize Project'
-                ));
-            }
+            const configStatus = this.evaluateConfigStatus(workspacePath);
+            items.push(new StatusItem(
+                'Config',
+                configStatus.message,
+                configStatus.status,
+                configStatus.detail
+            ));
+
+            const recordStatus = this.evaluateRecordStatus(workspacePath);
+            items.push(new StatusItem(
+                'Record Mode',
+                recordStatus.message,
+                recordStatus.status,
+                recordStatus.detail
+            ));
         } else {
             items.push(new StatusItem(
                 'Config',
                 'No project selected',
                 'info',
                 'Select a project from the FluxLoop panel'
+            ));
+            items.push(new StatusItem(
+                'Record Mode',
+                'No project selected',
+                'info'
             ));
         }
 
@@ -148,6 +155,106 @@ export class StatusProvider implements vscode.TreeDataProvider<StatusItem> {
             status: 'warning',
             detail: 'Install FluxLoop SDK: pip install fluxloop-sdk'
         };
+    }
+
+    private evaluateConfigStatus(projectPath: string): { status: StatusLevel; message: string; detail?: string } {
+        const configDir = path.join(projectPath, 'configs');
+        const requiredFiles = ['project.yaml', 'input.yaml', 'simulation.yaml'];
+        const optionalFiles = ['evaluation.yaml'];
+
+        if (fs.existsSync(configDir) && fs.statSync(configDir).isDirectory()) {
+            const missing = requiredFiles.filter(file => !fs.existsSync(path.join(configDir, file)));
+            const detailLines = requiredFiles.map(file => `${missing.includes(file) ? '✗' : '✓'} ${file}`);
+
+            for (const optional of optionalFiles) {
+                detailLines.push(`${fs.existsSync(path.join(configDir, optional)) ? '✓' : '○'} ${optional} (optional)`);
+            }
+
+            if (missing.length === 0) {
+                return {
+                    status: 'success',
+                    message: 'configs/ structure ready',
+                    detail: detailLines.join('\n')
+                };
+            }
+
+            return {
+                status: 'warning',
+                message: 'configs/ incomplete',
+                detail: `Missing: ${missing.join(', ')}`
+            };
+        }
+
+        return {
+            status: 'warning',
+            message: 'No configuration found',
+            detail: 'Run FluxLoop: Create Project to scaffold configs/'
+        };
+    }
+
+    private evaluateRecordStatus(projectPath: string): { status: StatusLevel; message: string; detail?: string } {
+        const envValues = this.readEnvFile(path.join(projectPath, '.env'));
+        const envRecord = envValues?.FLUXLOOP_RECORD_ARGS?.toLowerCase() === 'true';
+        const envRecordingFile = envValues?.FLUXLOOP_RECORDING_FILE;
+
+        const simulationPath = path.join(projectPath, 'configs', 'simulation.yaml');
+        const simulationConfig = this.readSimulationConfig(simulationPath);
+        const configRecord = Boolean(simulationConfig?.replay_args?.enabled);
+        const configRecordingFile = simulationConfig?.replay_args?.recording_file;
+
+        const enabled = envRecord ?? configRecord;
+        const recordingFile = envRecordingFile || configRecordingFile || 'recordings/args_recording.jsonl';
+
+        if (enabled) {
+            return {
+                status: 'info',
+                message: 'Enabled',
+                detail: `Recording to ${recordingFile}`
+            };
+        }
+
+        return {
+            status: 'success',
+            message: 'Disabled',
+            detail: 'Enable via CLI (fluxloop record enable) when needed'
+        };
+    }
+
+    private readEnvFile(envPath: string): Record<string, string> | undefined {
+        if (!fs.existsSync(envPath)) {
+            return undefined;
+        }
+
+        const result: Record<string, string> = {};
+        try {
+            const raw = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+            for (const line of raw) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) {
+                    continue;
+                }
+                const [key, value] = trimmed.split('=', 2);
+                result[key.trim()] = value.trim();
+            }
+            return result;
+        } catch (error) {
+            console.warn('Failed to parse .env file', error);
+            return undefined;
+        }
+    }
+
+    private readSimulationConfig(simulationPath: string): any {
+        if (!fs.existsSync(simulationPath)) {
+            return undefined;
+        }
+
+        try {
+            const raw = fs.readFileSync(simulationPath, 'utf8');
+            return parseYaml(raw) ?? {};
+        } catch (error) {
+            console.warn('Failed to read simulation config for status provider', error);
+            return undefined;
+        }
     }
 }
 

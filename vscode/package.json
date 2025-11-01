@@ -21,11 +21,13 @@
   ],
   "icon": "resources/icon.png",
   "activationEvents": [
-    "workspaceContains:setting.yaml",
-    "workspaceContains:fluxloop.yml",
+    "workspaceContains:configs/project.yaml",
     "onCommand:fluxloop.init",
     "onCommand:fluxloop.runExperiment",
-    "onCommand:fluxloop.generateInputs"
+    "onCommand:fluxloop.generateInputs",
+    "onCommand:fluxloop.enableRecording",
+    "onCommand:fluxloop.disableRecording",
+    "onCommand:fluxloop.showRecordingStatus"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -86,6 +88,21 @@
         "category": "FluxLoop"
       },
       {
+        "command": "fluxloop.enableRecording",
+        "title": "Enable Recording Mode",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.disableRecording",
+        "title": "Disable Recording Mode",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.showRecordingStatus",
+        "title": "Show Recording Status",
+        "category": "FluxLoop"
+      },
+      {
         "command": "fluxloop.openConfig",
         "title": "Open Configuration",
         "category": "FluxLoop"
@@ -124,7 +141,7 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "resourceFilename == setting.yaml || resourceFilename == setting.yml",
+          "when": "resourceFilename == simulation.yaml",
           "command": "fluxloop.runExperiment",
           "group": "fluxloop"
         }
@@ -134,6 +151,21 @@
           "command": "fluxloop.generateInputs",
           "when": "view == fluxloop.inputs",
           "group": "navigation@1"
+        },
+        {
+          "command": "fluxloop.enableRecording",
+          "when": "view == fluxloop.experiments",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fluxloop.disableRecording",
+          "when": "view == fluxloop.experiments",
+          "group": "navigation@3"
+        },
+        {
+          "command": "fluxloop.showRecordingStatus",
+          "when": "view == fluxloop.experiments",
+          "group": "navigation@4"
         }
       ],
       "editor/context": [

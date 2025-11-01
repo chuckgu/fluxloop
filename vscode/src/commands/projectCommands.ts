@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as yaml from 'yaml';
 import { ProjectManager } from '../project/projectManager';
 import { ProjectContext } from '../project/projectContext';
 import { CLIManager } from '../cli/cliManager';
@@ -26,15 +28,20 @@ export class ProjectCommands {
             canSelectFolders: true,
             canSelectFiles: false,
             canSelectMany: false,
-            openLabel: 'Select Project Folder'
+            openLabel: 'Select FluxLoop root folder (new project will be created inside)'
         });
 
         if (!projectFolder || projectFolder.length === 0) {
             return;
         }
 
-        const projectPath = projectFolder[0].fsPath;
-        const defaultName = path.basename(projectPath);
+        const selectedPath = projectFolder[0].fsPath;
+        if (this.looksLikeFluxloopProject(selectedPath)) {
+            void vscode.window.showErrorMessage('Selected folder already contains a FluxLoop project. Use "Add Existing Project" instead.');
+            return;
+        }
+
+        const defaultName = path.basename(selectedPath);
 
         const projectName = await vscode.window.showInputBox({
             prompt: 'Project name',
@@ -50,15 +57,20 @@ export class ProjectCommands {
             placeHolder: 'Would you like to include the example agent?'
         });
 
-        const args = ['init', 'project', projectPath, '--name', projectName];
+        const { rootDir, projectRoot } = this.resolvePathsForNewProject(selectedPath, projectName);
+
+        const args = ['init', 'project', rootDir, '--name', projectName];
         if (includeExample === 'Skip example agent') {
             args.push('--no-example');
         }
 
-        await this.cliManager.runCommand(args, projectPath);
+        await this.cliManager.runCommand(args, rootDir);
+
+        if (!this.looksLikeFluxloopProject(projectRoot)) {
+            void vscode.window.showWarningMessage('Project initialized, but expected FluxLoop config files were not found. Please check the CLI output.');
+        }
 
         const manager = ProjectManager.getInstance();
-        const projectRoot = path.join(projectPath, projectName);
         manager.addProject({ name: projectName, path: projectRoot, setActive: true });
 
         const openAction = await vscode.window.showQuickPick(['Open in current window', 'Open in new window', 'Stay in current workspace'], {
@@ -88,9 +100,17 @@ export class ProjectCommands {
         }
 
         const projectPath = projectFolder[0].fsPath;
+
+        if (!this.looksLikeFluxloopProject(projectPath)) {
+            void vscode.window.showErrorMessage('Selected folder does not appear to be a FluxLoop project (configs/ missing).');
+            return;
+        }
+
+        const inferredName = this.readProjectName(projectPath) ?? path.basename(projectPath);
+
         const projectName = await vscode.window.showInputBox({
             prompt: 'Project name',
-            value: path.basename(projectPath),
+            value: inferredName,
             validateInput: value => value ? undefined : 'Project name is required'
         });
 
@@ -99,6 +119,7 @@ export class ProjectCommands {
         }
 
         ProjectManager.getInstance().addProject({ name: projectName, path: projectPath, setActive: true });
+        vscode.window.showInformationMessage(`FluxLoop project "${projectName}" added.`);
     }
 
     private async selectProject(projectId?: string): Promise<void> {
@@ -137,7 +158,7 @@ export class ProjectCommands {
             projects.map(project => ({
                 label: project.name,
                 description: project.path,
-                detail: project.hasConfig ? undefined : 'No setting.yaml detected',
+                detail: project.hasConfig ? undefined : 'FluxLoop configs missing',
                 picked: project.id === activeProject?.id,
                 projectId: project.id
             })),
@@ -173,6 +194,50 @@ export class ProjectCommands {
 
     private async openProject(uri: vscode.Uri, newWindow: boolean): Promise<void> {
         await vscode.commands.executeCommand('vscode.openFolder', uri, newWindow);
+    }
+
+    private looksLikeFluxloopProject(projectPath: string): boolean {
+        const configDir = path.join(projectPath, 'configs');
+        const requiredFiles = ['project.yaml', 'input.yaml', 'simulation.yaml'];
+        if (!fs.existsSync(configDir) || !fs.statSync(configDir).isDirectory()) {
+            return false;
+        }
+
+        return requiredFiles.every(file => fs.existsSync(path.join(configDir, file)));
+    }
+
+    private resolvePathsForNewProject(selectedPath: string, projectName: string): { rootDir: string; projectRoot: string } {
+        const normalized = path.resolve(selectedPath);
+        const baseName = path.basename(normalized);
+
+        if (baseName === projectName) {
+            const parentDir = path.dirname(normalized);
+            return {
+                rootDir: parentDir,
+                projectRoot: normalized
+            };
+        }
+
+        return {
+            rootDir: normalized,
+            projectRoot: path.join(normalized, projectName)
+        };
+    }
+
+    private readProjectName(projectPath: string): string | undefined {
+        try {
+            const configPath = path.join(projectPath, 'configs', 'project.yaml');
+            if (!fs.existsSync(configPath)) {
+                return undefined;
+            }
+
+            const content = fs.readFileSync(configPath, 'utf-8');
+            const data = yaml.parse(content) as { name?: string } | undefined;
+            return data?.name;
+        } catch (error) {
+            console.warn('Failed to read project.yaml', error);
+            return undefined;
+        }
     }
 }
 
