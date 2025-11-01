@@ -6,6 +6,17 @@ sidebar_position: 3
 
 Configure `configs/simulation.yaml`.
 
-## Coming Soon
+## Example
 
-Documentation in progress.
+```yaml
+runner:
+  target: "examples.agent:run"
+  iterations: 10
+
+output:
+  directory: "experiments"
+```
+
+## Next Steps
+
+- [Run Command](../commands/run)

@@ -8,4 +8,4 @@ Results view documentation.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

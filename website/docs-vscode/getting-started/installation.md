@@ -6,14 +6,19 @@ sidebar_position: 1
 
 Install the FluxLoop VSCode extension.
 
-## Install from Marketplace
+## From Marketplace
 
 1. Open VSCode
-2. Go to Extensions (Cmd+Shift+X)
-3. Search for "FluxLoop"
-4. Click Install
+2. Extensions (Cmd+Shift+X)
+3. Search "FluxLoop"
+4. Install
+
+## Prerequisites
+
+```bash
+pip install fluxloop-cli fluxloop
+```
 
 ## Next Steps
 
-- [Creating First Project](./creating-first-project)
-- [Running Experiments](./running-experiments)
+- [Creating Projects](../user-guide/creating-projects)

@@ -4,8 +4,8 @@ sidebar_position: 1
 
 # Project Commands
 
-VSCode extension project commands.
+VSCode project management commands.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

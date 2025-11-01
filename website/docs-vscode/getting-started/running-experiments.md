@@ -6,6 +6,12 @@ sidebar_position: 3
 
 Run experiments from VSCode.
 
+## Steps
+
+1. Generate inputs
+2. Click "Run Experiment"
+3. View results
+
 ## Coming Soon
 
-Documentation in progress.
+Detailed guide is in development.

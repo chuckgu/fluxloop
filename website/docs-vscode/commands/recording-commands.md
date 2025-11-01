@@ -8,4 +8,4 @@ Recording mode commands.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

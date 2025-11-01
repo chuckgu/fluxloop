@@ -8,4 +8,4 @@ Configure `configs/evaluation.yaml`.
 
 ## Coming Soon
 
-Documentation in progress.
+Evaluation configuration documentation is in development.

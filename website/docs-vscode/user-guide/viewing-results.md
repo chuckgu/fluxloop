@@ -4,8 +4,8 @@ sidebar_position: 4
 
 # Viewing Results
 
-Results viewing guide.
+View and analyze experiment results.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

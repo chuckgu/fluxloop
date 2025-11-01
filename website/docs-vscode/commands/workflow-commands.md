@@ -4,8 +4,8 @@ sidebar_position: 2
 
 # Workflow Commands
 
-Workflow-related commands.
+Workflow commands in VSCode.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

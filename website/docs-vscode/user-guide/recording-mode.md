@@ -4,8 +4,8 @@ sidebar_position: 5
 
 # Recording Mode
 
-Recording mode guide.
+Advanced recording mode in VSCode.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

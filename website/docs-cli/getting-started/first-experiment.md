@@ -4,8 +4,23 @@ sidebar_position: 3
 
 # First Experiment
 
-Run your first experiment.
+Run your first FluxLoop experiment.
 
-## Coming Soon
+## Quick Start
 
-Tutorial is in development.
+```bash
+# 1. Create project
+fluxloop init project --name my-agent
+cd fluxloop/my-agent
+
+# 2. Generate inputs
+fluxloop generate inputs --limit 10
+
+# 3. Run experiment
+fluxloop run experiment
+```
+
+## Next Steps
+
+- [Commands Reference](../commands/init)
+- [Configuration](../configuration/project-config)

@@ -4,8 +4,15 @@ sidebar_position: 2
 
 # Creating First Project
 
-Create a FluxLoop project from VSCode.
+Create your first FluxLoop project in VSCode.
 
-## Coming Soon
+## Quick Start
 
-Documentation in progress.
+1. Open FluxLoop Activity Bar
+2. Click "Create New Project"
+3. Enter project name
+4. Start building!
+
+## Next Steps
+
+- [Running Experiments](./running-experiments)

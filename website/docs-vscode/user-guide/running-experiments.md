@@ -4,8 +4,8 @@ sidebar_position: 3
 
 # Running Experiments
 
-Experiment execution guide.
+Execute experiments from VSCode.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

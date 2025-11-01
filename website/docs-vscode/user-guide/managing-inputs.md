@@ -4,8 +4,8 @@ sidebar_position: 2
 
 # Managing Inputs
 
-Input management guide.
+Manage inputs in VSCode.
 
 ## Coming Soon
 
-Documentation in progress.
+Documentation in development.

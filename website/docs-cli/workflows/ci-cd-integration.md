@@ -8,4 +8,4 @@ Integrate FluxLoop into CI/CD pipelines.
 
 ## Coming Soon
 
-Documentation in progress.
+CI/CD integration guide is in development.
