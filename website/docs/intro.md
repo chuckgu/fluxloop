@@ -37,8 +37,8 @@ fluxloop run experiment
 
 ## Documentation Structure
 
-- **[Getting Started](./getting-started/installation)** - Installation and setup
-- **[Guides](./guides/end-to-end-workflow)** - Step-by-step tutorials
+- **[Getting Started](/docs/getting-started/installation)** - Installation and setup
+- **[Guides](/docs/guides/end-to-end-workflow)** - Step-by-step tutorials
 - **[SDK Reference](/sdk/)** - Python SDK documentation
 - **[CLI Reference](/cli/)** - Command-line tool documentation
 - **[VSCode Extension](/vscode/)** - IDE integration guide
@@ -85,9 +85,9 @@ Every simulation produces auditable artifacts:
 
 Choose your path:
 
-- **New to FluxLoop?** → [Installation](./getting-started/installation)
-- **Ready to code?** → [Quick Start Guide](./getting-started/quick-start)
-- **Want examples?** → [Guides](./guides/end-to-end-workflow)
+- **New to FluxLoop?** → [Installation](/docs/getting-started/installation)
+- **Ready to code?** → [Quick Start Guide](/docs/getting-started/quick-start)
+- **Want examples?** → [Guides](/docs/guides/end-to-end-workflow)
 - **Need API reference?** → [SDK](/sdk/), [CLI](/cli/), [VSCode](/vscode/)
 
 ---

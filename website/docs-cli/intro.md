@@ -102,10 +102,10 @@ FluxLoop CLI uses a multi-file configuration structure:
 
 ## What's Next?
 
-- **[Installation](./getting-started/installation)** - Detailed installation guide
-- **[Project Setup](./getting-started/project-setup)** - Initialize your first project
-- **[Commands Reference](./commands/init)** - Full command documentation
-- **[Configuration](./configuration/project-config)** - Config file reference
+- **[Installation](/cli/getting-started/installation)** - Detailed installation guide
+- **[Project Setup](/cli/getting-started/project-setup)** - Initialize your first project
+- **[Commands Reference](/cli/commands/init)** - Full command documentation
+- **[Configuration](/cli/configuration/project-config)** - Config file reference
 
 ---
 

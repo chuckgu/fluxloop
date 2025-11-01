@@ -108,10 +108,10 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
 ## What's Next?
 
-- **[Installation](./getting-started/installation)** - Detailed setup guide
-- **[User Guide](./user-guide/creating-projects)** - Step-by-step tutorials
-- **[Commands](./commands/project-commands)** - All available commands
-- **[API Reference](./api)** - TypeScript API documentation (auto-generated)
+- **[Installation](/vscode/getting-started/installation)** - Detailed setup guide
+- **[User Guide](/vscode/user-guide/creating-projects)** - Step-by-step tutorials
+- **[Commands](/vscode/commands/project-commands)** - All available commands
+- **[API Reference](/vscode/api)** - TypeScript API documentation (auto-generated)
 
 ---
 

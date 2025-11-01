@@ -64,10 +64,10 @@ response = my_agent("Hello, world!")
 
 ## What's Next?
 
-- **[Installation & Setup](./getting-started/installation)** - Detailed installation guide
-- **[Basic Usage](./getting-started/basic-usage)** - Your first traced agent
-- **[Configuration](./configuration/client-config)** - Client configuration options
-- **[API Reference](./api/decorators)** - Full API documentation
+- **[Installation & Setup](/sdk/getting-started/installation)** - Detailed installation guide
+- **[Basic Usage](/sdk/getting-started/basic-usage)** - Your first traced agent
+- **[Configuration](/sdk/configuration/client-config)** - Client configuration options
+- **[API Reference](/sdk/api/decorators)** - Full API documentation
 
 ---
 
