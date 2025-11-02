@@ -12,6 +12,15 @@ Run experiments from VSCode.
 2. Click "Run Experiment"
 3. View results
 
-## Coming Soon
+## Configure the Runner
 
-Detailed guide is in development.
+Open `Projects → Configure Experiment` to edit `configs/simulation.yaml`. Set `runner` to your code:
+
+```yaml
+runner:
+  target: "app.main:support_server.respond"
+  working_directory: .
+  # stream_output_path: "message.delta"   # optional for async generators
+```
+
+More patterns (class.method, factory, etc.): see CLI docs → `configuration/runner-targets`.

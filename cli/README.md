@@ -31,6 +31,18 @@ The legacy `setting.yaml` is still supported, but new projects created with
 
 Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
 
+## Runner Integration Patterns
+
+Configure how FluxLoop calls your code in `configs/simulation.yaml`:
+
+- Module + function: `module_path`/`function_name` or `target: "module:function"`
+- Class.method (zero-arg ctor): `target: "module:Class.method"`
+- Module-scoped instance method: `target: "module:instance.method"`
+- Class.method with factory: add `factory: "module:make_instance"` (+ `factory_kwargs`)
+- Async generators: set `runner.stream_output_path` if your streamed event shape differs (default `message.delta`).
+
+See full examples: `packages/website/docs-cli/configuration/runner-targets.md`.
+
 ## Developing
 
 Install dependencies and run tests:

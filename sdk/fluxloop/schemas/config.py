@@ -143,6 +143,23 @@ class RunnerConfig(BaseModel):
             "module_path + function_name."
         ),
     )
+    factory: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional factory to construct instances when target references a class or bound method. "
+            "Use 'module:callable' format; callable must return the instance."
+        ),
+    )
+    factory_kwargs: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Keyword arguments to pass to the factory callable, if provided.",
+    )
+    stream_output_path: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dot-notation path for extracting text from async generator events (e.g., 'message.delta')."
+        ),
+    )
     
     # Execution environment
     working_directory: Optional[str] = None

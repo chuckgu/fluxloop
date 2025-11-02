@@ -61,6 +61,23 @@ Init → Input Generation → Experiment → Parse → Evaluate (TBD)
 
 This is the canonical workflow. Recording is an optional advanced feature for complex argument structures.
 
+### Runner Integration Patterns (simulation.yaml)
+
+For the final simulation hookup, set `runner` to point at your code. Supported patterns:
+
+1) Module + function
+   - module_path/function_name or `target: "module:function"`
+2) Class.method (zero-arg constructor)
+   - `target: "module:Class.method"`
+3) Module-scoped instance method (bound)
+   - `target: "module:instance.method"`
+4) Class.method with factory (constructor needs dependencies)
+   - `target: "module:Class.method"` + `factory: "module:make_instance"` (+ `factory_kwargs`)
+5) Async generator targets (streamed responses)
+   - Any above can be async generators; CLI will consume stream with `runner.stream_output_path` (default `message.delta`).
+
+See detailed examples: `packages/website/docs-cli/configuration/runner-targets.md`.
+
 ## Getting Started
 
 ### 1. Install Packages

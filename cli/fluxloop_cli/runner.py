@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import inspect
 import time
 from datetime import datetime
 from pathlib import Path
@@ -397,11 +398,20 @@ class ExperimentRunner:
             if callable(error_cb) and hasattr(error_cb, "errors"):
                 callback_store["error"] = error_cb.errors
 
-        if asyncio.iscoroutinefunction(agent_func):
-            return await agent_func(**kwargs)
+        if inspect.isasyncgenfunction(agent_func):
+            return await self._consume_async_gen(agent_func, kwargs)
 
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, lambda: agent_func(**kwargs))
+        if asyncio.iscoroutinefunction(agent_func):
+            result = await agent_func(**kwargs)
+        else:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, lambda: agent_func(**kwargs))
+
+        # If an async generator/iterable is returned, consume it into a string
+        if inspect.isasyncgen(result) or hasattr(result, "__aiter__"):
+            return await self._consume_async_iterable(result)
+
+        return result
 
     async def _wait_for_callbacks(
         self,
@@ -463,6 +473,33 @@ class ExperimentRunner:
             return self._extract_payload(last_args, last_kwargs)
 
         return None
+
+    async def _consume_async_gen(self, func: Callable, kwargs: Dict[str, Any]) -> Any:
+        """Consume an async generator function by joining text chunks resolved from events."""
+        gen = func(**kwargs)
+        return await self._consume_async_iterable(gen)
+
+    async def _consume_async_iterable(self, agen: Any) -> Any:
+        """Consume async iterable items, extracting text via runner.stream_output_path."""
+        path = (getattr(self.config.runner, "stream_output_path", None) or "message.delta").split(".")
+        chunks: List[str] = []
+        async for item in agen:
+            val = self._get_by_path(item, path)
+            if isinstance(val, str) and val:
+                chunks.append(val)
+        return "".join(chunks) if chunks else None
+
+    @staticmethod
+    def _get_by_path(obj: Any, parts: List[str]) -> Any:
+        cur: Any = obj
+        for key in parts:
+            if cur is None:
+                return None
+            if isinstance(cur, dict):
+                cur = cur.get(key)
+            else:
+                cur = getattr(cur, key, None)
+        return cur
 
     @staticmethod
     def _extract_payload(args: Sequence[Any], kwargs: Dict[str, Any]) -> Any:
