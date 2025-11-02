@@ -32,10 +32,20 @@
 /* Custom styles */
 .hero--primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
 }
 
 [data-theme='dark'] .hero--primary {
-  background: linear-gradient(135deg, #434343 0%, #000000 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+}
+
+/* Ensure hero text is always white */
+.hero--primary h1,
+.hero--primary p,
+.hero--primary .hero__title,
+.hero--primary .hero__subtitle {
+  color: #fff !important;
 }
 
 /* Code blocks */

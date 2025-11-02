@@ -69,9 +69,9 @@ def create_input_config() -> str:
             expected_intent: demo
 
         variation_strategies:
-          - type: rephrase
-          - type: verbose
-          - type: error_prone
+          - rephrase
+          - verbose
+          - error_prone
 
         variation_count: 2
         variation_temperature: 0.7

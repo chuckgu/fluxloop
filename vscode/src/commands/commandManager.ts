@@ -202,11 +202,6 @@ export class CommandManager {
             return;
         }
 
-        const fromRecording = await this.promptForRecording(project.path);
-        if (fromRecording === undefined) {
-            return;
-        }
-
         const effectiveMode = mode ?? defaultMode;
         const llmApiKey = await this.resolveLlmApiKey(config, project.path, effectiveMode);
         if (llmApiKey === null) {
@@ -235,10 +230,6 @@ export class CommandManager {
 
         if (dryRun) {
             args.push('--dry-run');
-        }
-
-        if (fromRecording) {
-            args.push('--from-recording', fromRecording);
         }
 
         if (configInfo?.path) {
@@ -493,9 +484,21 @@ export class CommandManager {
     }
 
     private async promptForStrategies(defaultStrategies: string[]): Promise<string[] | null> {
+        const builtinStrategies = [
+            'rephrase',
+            'error_prone',
+            'typo',
+            'verbose',
+            'concise',
+            'persona_based',
+            'adversarial',
+            'multilingual',
+            'custom'
+        ];
+
         const available = defaultStrategies.length
-            ? Array.from(new Set([...defaultStrategies, 'rephrase', 'verbose', 'error_prone', 'concise']))
-            : ['rephrase', 'verbose', 'error_prone', 'concise'];
+            ? Array.from(new Set([...defaultStrategies, ...builtinStrategies]))
+            : builtinStrategies;
 
         const items = available.map<vscode.QuickPickItem>(strategy => ({
             label: strategy,
@@ -536,38 +539,6 @@ export class CommandManager {
         }
 
         return selected.label === 'Yes';
-    }
-
-    private async promptForRecording(projectPath: string): Promise<string | undefined | null> {
-        const recordingsDir = path.join(projectPath, 'recordings');
-        if (!fs.existsSync(recordingsDir)) {
-            return '';
-        }
-
-        const useRecording = await this.promptForBoolean('Use recording as template?', 'Leverage a previous recording to seed generated inputs.');
-        if (useRecording === null) {
-            return undefined;
-        }
-
-        if (!useRecording) {
-            return '';
-        }
-
-        const selection = await vscode.window.showOpenDialog({
-            title: 'Select recording template',
-            canSelectFolders: false,
-            canSelectFiles: true,
-            defaultUri: vscode.Uri.file(recordingsDir),
-            filters: {
-                Recordings: ['jsonl']
-            }
-        });
-
-        if (!selection || selection.length === 0) {
-            return undefined;
-        }
-
-        return selection[0].fsPath;
     }
 
     private resolveOutputFile(projectPath: string, config: Record<string, any> | undefined): string | undefined {

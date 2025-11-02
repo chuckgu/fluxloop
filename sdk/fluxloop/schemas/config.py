@@ -13,6 +13,7 @@ class VariationStrategy(str, Enum):
     """Strategy for generating prompt variations."""
     
     REPHRASE = "rephrase"  # Rephrase the same intent
+    ERROR_PRONE = "error_prone"  # Introduce mistakes to test robustness
     TYPO = "typo"  # Add typos/errors
     VERBOSE = "verbose"  # Make more verbose
     CONCISE = "concise"  # Make more concise

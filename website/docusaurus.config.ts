@@ -99,15 +99,19 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/fluxloop-social-card.jpg',
+    image: 'img/logo.png',
     colorMode: {
       respectPrefersColorScheme: true,
+      defaultMode: 'light',
     },
     navbar: {
       title: 'FluxLoop',
       logo: {
         alt: 'FluxLoop Logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.png',
+        srcDark: 'img/logo.png',
+        width: 32,
+        height: 32,
       },
       items: [
         {

@@ -10,7 +10,12 @@
   margin: 1.5rem auto;
   max-width: 800px;
   color: var(--ifm-hero-text-color);
-  opacity: 0.9;
+  opacity: 0.95;
+}
+
+/* Dark mode fixes */
+[data-theme='dark'] .heroDescription {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .buttons {
@@ -30,7 +35,7 @@
 
 .codeExample pre {
   padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
   text-align: left;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -40,6 +45,16 @@
   font-size: 0.9rem;
   line-height: 1.6;
   color: #fff;
+}
+
+/* Dark mode - lighter code background */
+[data-theme='dark'] .codeExample pre {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .codeExample code {
+  color: rgba(255, 255, 255, 0.95);
 }
 
 @media screen and (max-width: 996px) {

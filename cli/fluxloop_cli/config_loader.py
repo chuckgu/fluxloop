@@ -22,7 +22,7 @@ from .constants import CONFIG_DIRECTORY_NAME
 # Add shared schemas to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
-from fluxloop.schemas import ExperimentConfig
+from fluxloop.schemas import ExperimentConfig, VariationStrategy
 
 
 def load_experiment_config(
@@ -74,6 +74,8 @@ def load_experiment_config(
 
         data = merged
         source_dir = project_root
+
+    _normalize_variation_strategies(data)
 
     # Validate and create config object
     try:
@@ -220,6 +222,66 @@ def _deep_merge(target: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, A
         else:
             target[key] = value
     return target
+
+
+def _normalize_variation_strategies(payload: Dict[str, Any]) -> None:
+    """Ensure variation strategies are represented as enum-compatible strings."""
+
+    strategies = payload.get("variation_strategies")
+    if not isinstance(strategies, list):
+        return
+
+    normalized = []
+    for entry in strategies:
+        if isinstance(entry, VariationStrategy):
+            normalized.append(entry.value)
+            continue
+
+        candidate: Optional[str]
+        if isinstance(entry, str):
+            candidate = entry
+        elif isinstance(entry, dict):
+            candidate = (
+                entry.get("type")
+                or entry.get("name")
+                or entry.get("strategy")
+                or entry.get("value")
+            )
+        else:
+            candidate = str(entry)
+
+        if not candidate:
+            continue
+
+        canonical = (
+            candidate.strip()
+            .lower()
+            .replace(" ", "_")
+            .replace("-", "_")
+        )
+
+        alias_map = {
+            "error_prone": (
+                VariationStrategy.ERROR_PRONE.value
+                if hasattr(VariationStrategy, "ERROR_PRONE")
+                else VariationStrategy.TYPO.value
+            ),
+        }
+
+        canonical = alias_map.get(canonical, canonical)
+
+        normalized.append(canonical)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    deduped = []
+    for item in normalized:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+
+    payload["variation_strategies"] = deduped
 
 
 def _detect_config_context(resolved_path: Path) -> tuple[str, Path, Path]:
