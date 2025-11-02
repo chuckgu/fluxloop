@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, List
 
 from fluxloop.schemas import RunnerConfig
 
@@ -21,11 +21,16 @@ class TargetLoader:
         """Return a callable based on the configured target."""
 
         work_dir = self._resolve_working_directory()
-        remove_path = False
+        added_paths: list[str] = []
 
         if work_dir and work_dir not in sys.path:
             sys.path.insert(0, work_dir)
-            remove_path = True
+            added_paths.append(work_dir)
+
+        for extra in self._resolve_python_paths():
+            if extra not in sys.path:
+                sys.path.insert(0, extra)
+                added_paths.append(extra)
 
         try:
             if self.config.target:
@@ -34,8 +39,9 @@ class TargetLoader:
             module = importlib.import_module(self.config.module_path)
             return getattr(module, self.config.function_name)
         finally:
-            if remove_path:
-                sys.path.remove(work_dir)
+            for path_entry in added_paths:
+                if path_entry in sys.path:
+                    sys.path.remove(path_entry)
 
     def _resolve_working_directory(self) -> str | None:
         if not self.config.working_directory:
@@ -49,6 +55,22 @@ class TargetLoader:
 
         path = raw_path
         return str(path)
+
+    def _resolve_python_paths(self) -> List[str]:
+        resolved: List[str] = []
+        entries = getattr(self.config, "python_path", []) or []
+
+        for entry in entries:
+            raw_path = Path(entry)
+            if not raw_path.is_absolute():
+                base = self.source_dir if self.source_dir else Path.cwd()
+                raw_path = (base / raw_path).resolve()
+            else:
+                raw_path = raw_path.expanduser().resolve()
+
+            resolved.append(str(raw_path))
+
+        return resolved
 
     def _load_from_target(self, target: str) -> Callable:
         """Resolve a callable from target string.

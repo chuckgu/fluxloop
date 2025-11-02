@@ -14,6 +14,39 @@ from pydantic import BaseModel, Field, field_validator
 from .recording import disable_recording, enable_recording
 
 
+def load_env(
+    dotenv_path: Optional[str] = None,
+    *,
+    override: bool = True,
+    refresh_config: bool = True,
+) -> bool:
+    """Load environment variables for FluxLoop.
+
+    Args:
+        dotenv_path: Optional path to a specific `.env` file or containing directory.
+        override: Whether to override existing environment variables.
+        refresh_config: When True (default), rebuild the in-memory SDK config using the
+            newly loaded environment variables (if the config has already been created).
+
+    Returns:
+        True if the env file was found and loaded, False otherwise.
+    """
+
+    if dotenv_path is None:
+        return load_dotenv(override=override)
+
+    candidate = Path(dotenv_path).expanduser()
+    if candidate.is_dir():
+        candidate = candidate / ".env"
+
+    loaded = load_dotenv(dotenv_path=str(candidate), override=override)
+
+    if refresh_config and globals().get("_config") is not None:
+        _refresh_config_from_env()
+
+    return loaded
+
+
 def _resolve_recording_path(path: Optional[str]) -> Path:
     """Resolve the recording file path, creating parent directories."""
 
@@ -42,8 +75,8 @@ def _apply_recording_config(config: "SDKConfig") -> None:
         if config.debug:
             print("🎥 Argument recording disabled")
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (default behaviour on import)
+load_env()
 
 
 class SDKConfig(BaseModel):
@@ -142,6 +175,14 @@ class SDKConfig(BaseModel):
 # Global configuration instance
 _config = SDKConfig()
 _apply_recording_config(_config)
+
+
+def _refresh_config_from_env() -> None:
+    """Rebuild the global SDK configuration from current environment variables."""
+
+    global _config
+    _config = SDKConfig()
+    _apply_recording_config(_config)
 
 
 def configure(**kwargs) -> SDKConfig:

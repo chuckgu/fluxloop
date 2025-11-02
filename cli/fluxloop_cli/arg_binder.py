@@ -7,6 +7,25 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+
+class _AttrDict(dict):
+    """Dictionary that also supports attribute access for keys."""
+
+    def __getattr__(self, item: str) -> Any:  # type: ignore[override]
+        try:
+            return self[item]
+        except KeyError as exc:  # pragma: no cover
+            raise AttributeError(item) from exc
+
+    def __setattr__(self, key: str, value: Any) -> None:  # type: ignore[override]
+        self[key] = value
+
+    def __delattr__(self, item: str) -> None:  # type: ignore[override]
+        try:
+            del self[item]
+        except KeyError as exc:  # pragma: no cover
+            raise AttributeError(item) from exc
+
 from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig
 
 
@@ -97,7 +116,7 @@ class ArgBinder:
 
             self._restore_callables(kwargs, replay)
             self._ensure_no_unmapped_callables(kwargs, replay)
-            return kwargs
+            return self._hydrate_structures(kwargs)
 
         return self._bind_by_signature(func, runtime_input)
 
@@ -141,7 +160,9 @@ class ArgBinder:
         callable_markers = {
             key: value
             for key, value in kwargs.items()
-            if isinstance(value, str) and value.startswith("<")
+            if isinstance(value, str)
+            and value.startswith("<")
+            and not value.startswith("<repr:")
         }
 
         if not callable_markers:
@@ -154,6 +175,20 @@ class ArgBinder:
                 "Missing callable providers for recorded parameters: "
                 f"{', '.join(missing)}. Configure them under replay_args.callable_providers."
             )
+
+    def _hydrate_structures(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return {key: self._hydrate_value(value) for key, value in payload.items()}
+
+    def _hydrate_value(self, value: Any) -> Any:
+        if callable(value):
+            return value
+        if isinstance(value, _AttrDict):
+            return value
+        if isinstance(value, dict):
+            return _AttrDict({k: self._hydrate_value(v) for k, v in value.items()})
+        if isinstance(value, list):
+            return [self._hydrate_value(item) for item in value]
+        return value
 
     def _resolve_builtin_callable(self, provider: str, marker: str) -> Callable:
         is_async = marker.endswith(":async>")
@@ -206,10 +241,30 @@ class ArgBinder:
 
     def _set_by_path(self, payload: Dict[str, Any], path: str, value: Any) -> None:
         parts = path.split(".")
-        current = payload
+        current: Any = payload
+
         for key in parts[:-1]:
-            current = current[key]
-        current[parts[-1]] = value
+            if isinstance(current, list):
+                index = self._coerce_list_index(key)
+                current = current[index]
+            else:
+                current = current[key]
+
+        final_key = parts[-1]
+        if isinstance(current, list):
+            index = self._coerce_list_index(final_key)
+            current[index] = value
+        else:
+            current[final_key] = value
+
+    @staticmethod
+    def _coerce_list_index(key: str) -> int:
+        try:
+            return int(key)
+        except ValueError as exc:
+            raise TypeError(
+                "List index segments in override_param_path must be integers"
+            ) from exc
 
     def _resolve_config_target(self) -> Optional[str]:
         runner = self.config.runner

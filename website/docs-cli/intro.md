@@ -106,6 +106,7 @@ FluxLoop CLI uses a multi-file configuration structure:
 - **[Project Setup](/cli/getting-started/project-setup)** - Initialize your first project
 - **[Commands Reference](/cli/commands/init)** - Full command documentation
 - **[Configuration](/cli/configuration/project-config)** - Config file reference
+- **[Runner Targets](/cli/configuration/runner-targets)** - Connect your code to simulations
 
 ---
 

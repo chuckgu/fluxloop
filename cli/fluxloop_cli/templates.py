@@ -108,6 +108,7 @@ def create_simulation_config(project_name: str) -> str:
           function_name: "run"
           target: "examples.simple_agent:run"
           working_directory: .
+          python_path:
           timeout_seconds: 120
           max_retries: 3
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import inspect
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +40,9 @@ class ExperimentRunner:
         self.config = config
         self.no_collector = no_collector
         
+        # Apply project environment (.env + inline environment variables)
+        self._apply_environment()
+
         # Configure output directories (respect config location for relative paths)
         output_base = Path(config.output_directory)
         if not output_base.is_absolute():
@@ -51,6 +55,7 @@ class ExperimentRunner:
         output_base.mkdir(parents=True, exist_ok=True)
 
         offline_dir = output_base / "artifacts"
+        offline_dir.mkdir(parents=True, exist_ok=True)
         fluxloop.configure(
             use_collector=not no_collector and bool(config.collector_url),
             collector_url=config.collector_url or None,
@@ -78,6 +83,31 @@ class ExperimentRunner:
         # Helpers for target loading and argument binding
         self._arg_binder = ArgBinder(config)
     
+    def _apply_environment(self) -> None:
+        """Load environment variables from .env and runner settings."""
+
+        source_dir = self.config.get_source_dir()
+        env_candidates: List[Path] = []
+
+        if source_dir:
+            env_candidates.append(source_dir / ".env")
+            parent = source_dir.parent
+            if parent != source_dir:
+                env_candidates.append(parent / ".env")
+
+        for candidate in env_candidates:
+            if candidate.exists():
+                try:
+                    fluxloop.load_env(candidate, override=True, refresh_config=True)
+                except Exception:
+                    console.log(f"[yellow]Warning:[/yellow] Failed to load environment from {candidate}")
+                else:
+                    break
+
+        env_vars = getattr(self.config.runner, "environment_vars", {}) or {}
+        for key, value in env_vars.items():
+            os.environ[key] = str(value)
+
     def _load_agent(self) -> Callable:
         """Load the agent function from module path."""
         loader = TargetLoader(self.config.runner, source_dir=self.config.get_source_dir())
@@ -487,6 +517,11 @@ class ExperimentRunner:
             val = self._get_by_path(item, path)
             if isinstance(val, str) and val:
                 chunks.append(val)
+                continue
+
+            fallback = self._extract_stream_text(item)
+            if fallback:
+                chunks.append(fallback)
         return "".join(chunks) if chunks else None
 
     @staticmethod
@@ -500,6 +535,39 @@ class ExperimentRunner:
             else:
                 cur = getattr(cur, key, None)
         return cur
+
+    @staticmethod
+    def _extract_stream_text(event: Any) -> Optional[str]:
+        """Best-effort extraction of text payloads from streaming events."""
+
+        update = getattr(event, "update", None)
+        if update is not None:
+            delta = getattr(update, "delta", None)
+            if isinstance(delta, str) and delta:
+                return delta
+
+            content = getattr(update, "content", None)
+            text = getattr(content, "text", None) if content is not None else None
+            if isinstance(text, str) and text:
+                return text
+
+        item = getattr(event, "item", None)
+        if item is not None:
+            content = getattr(item, "content", None)
+            if isinstance(content, list):
+                parts: List[str] = []
+                for piece in content:
+                    text = getattr(piece, "text", None)
+                    if isinstance(text, str) and text:
+                        parts.append(text)
+                if parts:
+                    return " ".join(parts)
+
+        text_attr = getattr(event, "text", None)
+        if isinstance(text_attr, str) and text_attr:
+            return text_attr
+
+        return None
 
     @staticmethod
     def _extract_payload(args: Sequence[Any], kwargs: Dict[str, Any]) -> Any:
@@ -591,9 +659,6 @@ class ExperimentRunner:
 
         source_path = self.offline_dir / "observations.jsonl"
         if not source_path.exists():
-            console.print(
-                f"[yellow]⚠️  Observations file not found: {source_path}[/yellow]"
-            )
             return
 
         destination = self.output_dir / "observations.jsonl"

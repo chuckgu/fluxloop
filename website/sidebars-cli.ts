@@ -37,6 +37,7 @@ const sidebars: SidebarsConfig = {
         'configuration/project-config',
         'configuration/input-config',
         'configuration/simulation-config',
+        'configuration/runner-targets',
         'configuration/evaluation-config',
       ],
     },

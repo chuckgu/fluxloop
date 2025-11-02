@@ -19,4 +19,5 @@ output:
 
 ## Next Steps
 
+- [Runner Targets](./runner-targets) – detailed runner integration patterns
 - [Run Command](../commands/run)

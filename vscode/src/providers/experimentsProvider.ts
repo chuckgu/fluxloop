@@ -103,6 +103,48 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             ];
         }
 
+        if (element.type === 'recordings' && element.resourcePath) {
+            const entries: ExperimentItem[] = [];
+
+            try {
+                const files = fs.readdirSync(element.resourcePath)
+                    .filter(file => fs.statSync(path.join(element.resourcePath!, file)).isFile())
+                    .sort((a, b) => b.localeCompare(a))
+                    .slice(0, 20);
+
+                if (files.length === 0) {
+                    entries.push(new ExperimentItem(
+                        'No recordings found',
+                        'Enable Record Mode to capture inputs',
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    ));
+                } else {
+                    for (const file of files) {
+                        const filePath = path.join(element.resourcePath, file);
+                        entries.push(new ExperimentItem(
+                            file,
+                            '',
+                            vscode.TreeItemCollapsibleState.None,
+                            'file',
+                            filePath,
+                            filePath
+                        ));
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to read recordings directory', error);
+                entries.push(new ExperimentItem(
+                    'Failed to load recordings',
+                    'Check recordings directory permissions',
+                    vscode.TreeItemCollapsibleState.None,
+                    'info'
+                ));
+            }
+
+            return entries;
+        }
+
         if (element.type === 'experiment') {
             // Show config details
             if (element.resourcePath) {

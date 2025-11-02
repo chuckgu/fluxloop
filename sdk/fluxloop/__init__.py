@@ -18,10 +18,10 @@ from .schemas import (
     TraceStatus,
 )
 from .client import FluxLoopClient
-from .config import configure, get_config, reset_config
+from .config import configure, get_config, reset_config, load_env
 from .recording import disable_recording, enable_recording, record_call_args, set_recording_options
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 __all__ = [
     # Decorators
@@ -36,6 +36,7 @@ __all__ = [
     "FluxLoopClient",
     # Config
     "configure",
+    "load_env",
     "get_config",
     "reset_config",
     "enable_recording",

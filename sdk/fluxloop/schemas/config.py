@@ -4,7 +4,7 @@ Configuration schemas for experiments and simulations.
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
@@ -163,8 +163,19 @@ class RunnerConfig(BaseModel):
     
     # Execution environment
     working_directory: Optional[str] = None
-    python_path: Optional[str] = None
+    python_path: List[str] = Field(default_factory=list)
     environment_vars: Dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("python_path", mode="before")
+    @classmethod
+    def _coerce_python_path(cls, value: Union[None, str, List[str], tuple]) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple)):
+            return [str(item) for item in value]
+        return [str(value)]
     
     # Dependencies
     requirements_file: Optional[str] = None

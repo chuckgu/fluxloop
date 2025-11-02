@@ -76,6 +76,7 @@ def load_experiment_config(
         source_dir = project_root
 
     _normalize_variation_strategies(data)
+    _normalize_runner_target(data)
 
     # Validate and create config object
     try:
@@ -283,6 +284,27 @@ def _normalize_variation_strategies(payload: Dict[str, Any]) -> None:
 
     payload["variation_strategies"] = deduped
 
+
+def _normalize_runner_target(payload: Dict[str, Any]) -> None:
+    """Populate runner.module_path/function_name when only target is provided."""
+
+    runner = payload.get("runner")
+    if not isinstance(runner, dict):
+        return
+
+    target = runner.get("target")
+    module_path = runner.get("module_path")
+    function_name = runner.get("function_name")
+
+    if target and (not module_path or not function_name):
+        if ":" in target:
+            module_part, attr_part = target.split(":", 1)
+            runner.setdefault("module_path", module_part)
+            if "." in attr_part:
+                # module:Class.method -> record class.method as function placeholder
+                runner.setdefault("function_name", attr_part)
+            else:
+                runner.setdefault("function_name", attr_part)
 
 def _detect_config_context(resolved_path: Path) -> tuple[str, Path, Path]:
     """Determine whether the path points to legacy or multi-section config."""

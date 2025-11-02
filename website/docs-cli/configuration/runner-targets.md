@@ -64,6 +64,7 @@ replay_args:
 
 ## Tips
 - Use `working_directory` if the module is not importable from the current CWD.
+- Use `python_path` (string or list) to prepend additional directories to `sys.path` before import.
 - Use `factory` when your class requires constructor args or external dependencies.
 - Default `stream_output_path` is `message.delta`. Adjust if your streamed event shape differs.
 
