@@ -1,0 +1,66 @@
+# VS Code extension packaging ignore file
+# Files and directories to exclude from the .vsix package
+
+# Source files (TypeScript)
+src/**
+*.ts
+*.tsx
+!out/**/*.js.map
+
+# Development files
+.vscode/**
+.vscode-test/**
+.git/**
+.gitignore
+.gitattributes
+
+# Build artifacts (already compiled)
+*.map
+!out/**/*.js.map
+
+# Test files
+test/**
+tests/**
+*.test.ts
+*.spec.ts
+coverage/**
+
+# Documentation
+# README.md and CHANGELOG.md should be included in the package
+# (commented out so they are included)
+
+# Dependencies
+# Do NOT exclude node_modules so runtime deps (e.g. yaml, which) are packaged
+npm-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.idea/**
+*.iml
+.vscode-test/
+
+# Build scripts (if you don't want them in package)
+tsconfig.json
+.eslintrc.json
+.eslintignore
+
+# Examples and samples (if not needed in package)
+examples/**
+
+# CI/CD
+.github/**
+.circleci/**
+.travis.yml
+.appveyor.yml
+
+# Environment files
+.env
+.env.local
+

@@ -1,4 +1,38 @@
-# PyPI 배포 가이드
+# FluxLoop 배포 가이드
+
+FluxLoop의 모든 패키지(SDK, CLI, VSCode Extension)를 배포하는 종합 가이드입니다.
+
+## 📦 배포 패키지
+
+1. **SDK** (fluxloop) - PyPI
+2. **CLI** (fluxloop-cli) - PyPI  
+3. **VSCode Extension** - GitHub Releases (VSIX) + VS Code Marketplace (선택)
+
+---
+
+## 🚀 빠른 시작
+
+### SDK + CLI 배포 (PyPI)
+
+```bash
+cd packages
+./deploy.sh              # PyPI에 배포
+./deploy.sh --test       # TestPyPI에 배포 (테스트용)
+```
+
+### VSCode Extension 배포
+
+```bash
+cd packages/vscode
+npm install
+npm run compile
+npx vsce package
+# GitHub Release에 VSIX 업로드
+```
+
+---
+
+## 📘 PyPI 배포 (SDK + CLI)
 
 FluxLoop SDK와 CLI를 PyPI에 배포하는 방법입니다.
 
@@ -211,11 +245,102 @@ File already exists.
 ### CLI가 SDK를 찾지 못함
 → SDK를 먼저 배포하고, PyPI에 반영될 때까지 기다려야 합니다.
 
-## 참고 링크
+---
 
+## 🎨 VSCode Extension 배포
+
+FluxLoop VSCode Extension을 GitHub Releases 및 VS Code Marketplace에 배포하는 방법입니다.
+
+### 배포 전략
+
+- **GitHub Releases (VSIX)**: Cursor 사용자를 위한 권장 방식
+- **VS Code Marketplace**: VS Code 사용자를 위한 공식 방식 (선택사항)
+
+### VSIX 빌드 및 배포
+
+```bash
+cd packages/vscode
+
+# 1. 버전 업데이트
+# package.json의 version 필드 수정
+
+# 2. 빌드
+npm install
+npm run compile
+
+# 3. VSIX 패키징
+npx vsce package
+# 출력: fluxloop-0.1.0.vsix
+
+# 4. 로컬 테스트 (Cursor/VS Code)
+# - Extensions → ... → Install from VSIX...
+# - 생성된 VSIX 파일 선택
+
+# 5. GitHub Release 생성
+# 웹사이트에서 또는 CLI 사용:
+gh release create vscode-v0.1.0 \
+  fluxloop-0.1.0.vsix \
+  --title "VSCode Extension v0.1.0" \
+  --notes "릴리스 노트 내용"
+```
+
+### VS Code Marketplace 배포 (선택사항)
+
+```bash
+# vsce 로그인 (한 번만)
+npx vsce login fluxloop
+# Personal Access Token 입력 필요
+
+# Marketplace에 게시
+npx vsce publish
+
+# 또는 버전 자동 증가
+npx vsce publish patch  # 0.1.0 → 0.1.1
+```
+
+### 중요 사항
+
+**✅ 런타임 의존성 포함 필수**
+
+`.vscodeignore` 파일에서 `node_modules`를 제외하지 마세요. `yaml`, `which` 같은 런타임 의존성이 VSIX에 포함되어야 합니다.
+
+```bash
+# .vscodeignore 확인
+# node_modules/** 라인이 주석 처리되어야 함
+```
+
+**🔍 로컬 테스트**
+
+Cursor에서 설치 후 다음 확인:
+- FluxLoop 아이콘이 Activity Bar에 표시
+- Projects/Inputs/Experiments/Results/Status 뷰가 정상 로드
+- 명령 팔레트에서 "FluxLoop" 명령들이 검색됨
+
+### 배포 체크리스트
+
+- [ ] `package.json` 버전 업데이트
+- [ ] `CHANGELOG.md` 변경사항 추가
+- [ ] `npm run compile` 성공
+- [ ] `npx vsce package` 성공
+- [ ] Cursor 및 VS Code에서 VSIX 로컬 테스트
+- [ ] GitHub Release 생성 및 VSIX 업로드
+- [ ] (선택) Marketplace 게시
+
+**자세한 가이드**: `packages/vscode/PUBLISHING.md` 참고
+
+---
+
+## 📚 참고 링크
+
+### PyPI
 - [PyPI](https://pypi.org)
 - [TestPyPI](https://test.pypi.org)
 - [Python Packaging Guide](https://packaging.python.org)
 - [Twine Documentation](https://twine.readthedocs.io)
 - [Semantic Versioning](https://semver.org)
+
+### VSCode Extension
+- [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+- [vsce CLI 문서](https://github.com/microsoft/vscode-vsce)
+- [GitHub Releases 문서](https://docs.github.com/en/repositories/releasing-projects-on-github)
 

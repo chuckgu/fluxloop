@@ -24,15 +24,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Initialize CLI manager
     const cliManager = new CLIManager(context);
-    
-    // Check CLI installation
-    const cliInstalled = await cliManager.checkInstallation();
-    if (!cliInstalled) {
-        const config = vscode.workspace.getConfiguration('fluxloop');
-        if (config.get<boolean>('autoInstallCli')) {
-            await cliManager.promptInstall();
-        }
-    }
 
     // Register tree data providers
     const projectsProvider = new ProjectsProvider();
@@ -41,11 +32,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const resultsProvider = new ResultsProvider();
     const statusProvider = new StatusProvider();
 
-    vscode.window.registerTreeDataProvider('fluxloop.projects', projectsProvider);
-    vscode.window.registerTreeDataProvider('fluxloop.inputs', inputsProvider);
-    vscode.window.registerTreeDataProvider('fluxloop.experiments', experimentsProvider);
-    vscode.window.registerTreeDataProvider('fluxloop.results', resultsProvider);
-    vscode.window.registerTreeDataProvider('fluxloop.status', statusProvider);
+    context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('fluxloop.projects', projectsProvider),
+        vscode.window.registerTreeDataProvider('fluxloop.inputs', inputsProvider),
+        vscode.window.registerTreeDataProvider('fluxloop.experiments', experimentsProvider),
+        vscode.window.registerTreeDataProvider('fluxloop.results', resultsProvider),
+        vscode.window.registerTreeDataProvider('fluxloop.status', statusProvider)
+    );
 
     // Initialize command manager
     const commandManager = new CommandManager(context, cliManager, statusProvider, inputsProvider);
@@ -54,6 +47,18 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register project commands
     const projectCommands = new ProjectCommands(context, cliManager);
     context.subscriptions.push(...projectCommands.register());
+
+    // Check CLI installation (non-blocking)
+    cliManager.checkInstallation().then(cliInstalled => {
+        if (!cliInstalled) {
+            const config = vscode.workspace.getConfiguration('fluxloop');
+            if (config.get<boolean>('autoInstallCli')) {
+                void cliManager.promptInstall();
+            }
+        }
+    }).catch(error => {
+        console.error('FluxLoop CLI check failed', error);
+    });
 
     // Refresh providers when project changes
     const refreshProviders = () => {

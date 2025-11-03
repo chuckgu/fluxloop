@@ -38,8 +38,23 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 
 ## Installation
 
-1. Install the extension from VSCode Marketplace (or VSIX)
-2. Install FluxLoop CLI and SDK:
+### Option 1: From VSIX (Cursor Users - Recommended)
+
+1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/fluxloop/fluxloop/releases)
+2. In Cursor/VS Code:
+   - Extensions → `...` → `Install from VSIX...`
+   - Select the downloaded `.vsix` file
+3. Restart Cursor/VS Code
+
+### Option 2: From VS Code Marketplace
+
+1. Search for "FluxLoop" in the Extensions marketplace
+2. Click Install
+3. Restart VS Code
+
+### Required Dependencies
+
+Install FluxLoop CLI and SDK:
 ```bash
 pip install fluxloop-cli fluxloop
 ```

@@ -27,7 +27,12 @@
     "onCommand:fluxloop.generateInputs",
     "onCommand:fluxloop.enableRecording",
     "onCommand:fluxloop.disableRecording",
-    "onCommand:fluxloop.showRecordingStatus"
+    "onCommand:fluxloop.showRecordingStatus",
+    "onView:fluxloop.projects",
+    "onView:fluxloop.inputs",
+    "onView:fluxloop.experiments",
+    "onView:fluxloop.results",
+    "onView:fluxloop.status"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -166,8 +171,7 @@
           "group": "fluxloop"
         }
       ],
-      "view/title": [
-       ],
+      "view/title": [],
       "editor/context": [
         {
           "when": "resourceExtname == .py",
