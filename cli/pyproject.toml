@@ -56,10 +56,10 @@ anthropic = [
 fluxloop = "fluxloop_cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/fluxloop/fluxloop"
+Homepage = "https://github.com/chuckgu/fluxloop"
 Documentation = "https://docs.fluxloop.dev"
-Repository = "https://github.com/fluxloop/fluxloop"
-Issues = "https://github.com/fluxloop/fluxloop/issues"
+Repository = "https://github.com/chuckgu/fluxloop"
+Issues = "https://github.com/chuckgu/fluxloop/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

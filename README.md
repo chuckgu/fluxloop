@@ -8,7 +8,7 @@
   <a href="https://github.com/chuckgu/fluxloop"><img src="https://img.shields.io/badge/Status-Active-green" alt="Status"/></a>
   <a href="https://github.com/chuckgu/fluxloop/blob/main/packages/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"/></a>
   <a href="https://pypi.org/project/fluxloop/"><img src="https://img.shields.io/pypi/v/fluxloop" alt="PyPI"/></a>
-  <a href="https://github.com/fluxloop/fluxloop/releases"><img src="https://img.shields.io/badge/VSCode-Download_VSIX-007ACC?logo=visualstudiocode" alt="VSCode Extension"/></a>
+  <a href="https://github.com/chuckgu/fluxloop/releases"><img src="https://img.shields.io/badge/VSCode-Download_VSIX-007ACC?logo=visualstudiocode" alt="VSCode Extension"/></a>
 </p>
 
 ## Simulate, Evaluate, and Trust Your AI Agents
@@ -51,7 +51,7 @@ Define complex experiments in YAML, generate input variations with LLM, and run 
 Manage projects, generate inputs, run experiments, and explore results—all from your IDE with visual project management and configuration editing.
 
 **Installation:**
-- **Cursor Users**: Download VSIX from [GitHub Releases](https://github.com/fluxloop/fluxloop/releases) and install manually
+- **Cursor Users**: Download VSIX from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases) and install manually
 - **VS Code Users**: Search "FluxLoop" in Extensions Marketplace or install VSIX
 
 ---
@@ -94,9 +94,10 @@ pip install fluxloop-cli fluxloop
 **VSCode Extension (Optional but Recommended):**
 
 **For Cursor Users:**
-1. Download the latest VSIX from [GitHub Releases](https://github.com/fluxloop/fluxloop/releases)
-2. Cursor → Extensions → `...` → Install from VSIX...
-3. Select the downloaded `.vsix` file and restart
+1. Download the latest VSIX from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases)
+2. Open Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+3. Type and select **"Extensions: Install from VSIX..."**
+4. Select the downloaded `.vsix` file and restart Cursor
 
 **For VS Code Users:**
 - Search "FluxLoop" in Extensions Marketplace, or
@@ -292,7 +293,7 @@ fluxloop/
 - **CLI Reference**: [packages/cli/README.md](cli/README.md)
 - **SDK Reference**: [packages/sdk/README.md](sdk/README.md)
 - **VSCode Extension**: [packages/vscode/README.md](vscode/README.md)
-  - **Download VSIX**: [GitHub Releases](https://github.com/fluxloop/fluxloop/releases) (for Cursor/VS Code)
+  - **Download VSIX**: [GitHub Releases](https://github.com/chuckgu/fluxloop/releases) (for Cursor/VS Code)
 
 ### Design Docs
 - **v0.2.0 Settings & Recording**: [docs/prd/fluxloop_v0.2.0_settings_recording.md](docs/prd/fluxloop_v0.2.0_settings_recording.md)

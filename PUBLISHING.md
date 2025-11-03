@@ -273,8 +273,9 @@ npx vsce package
 # 출력: fluxloop-0.1.0.vsix
 
 # 4. 로컬 테스트 (Cursor/VS Code)
-# - Extensions → ... → Install from VSIX...
-# - 생성된 VSIX 파일 선택
+# - Command Palette (Cmd+Shift+P)
+# - "Extensions: Install from VSIX..." 선택
+# - 생성된 VSIX 파일 선택 후 재시작
 
 # 5. GitHub Release 생성
 # 웹사이트에서 또는 CLI 사용:
@@ -343,4 +344,5 @@ Cursor에서 설치 후 다음 확인:
 - [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
 - [vsce CLI 문서](https://github.com/microsoft/vscode-vsce)
 - [GitHub Releases 문서](https://docs.github.com/en/repositories/releasing-projects-on-github)
+- [FluxLoop Releases](https://github.com/chuckgu/fluxloop/releases)
 

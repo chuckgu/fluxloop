@@ -300,8 +300,8 @@ fluxloop parse experiment experiments/<experiment_dir> --output per_trace_analys
 ## 📞 Support & Community
 
 ### 문제가 있나요?
-- 🐛 **버그 리포트:** [GitHub Issues](https://github.com/fluxloop/fluxloop/issues)
-- 💬 **질문/토론:** [GitHub Discussions](https://github.com/fluxloop/fluxloop/discussions)
+- 🐛 **버그 리포트:** [GitHub Issues](https://github.com/chuckgu/fluxloop/issues)
+- 💬 **질문/토론:** [GitHub Discussions](https://github.com/chuckgu/fluxloop/discussions)
 - 📧 **이메일:** team@fluxloop.dev
 
 ### 문서에서 답을 찾을 수 없나요?

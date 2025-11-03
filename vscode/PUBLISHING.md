@@ -53,15 +53,16 @@ npx vsce package
 
 #### Cursor에서 테스트:
 1. Cursor 실행
-2. Extensions 탭 → `...` → `Install from VSIX...`
-3. 생성된 `fluxloop-0.1.0.vsix` 선택
-4. Cursor 재시작
-5. FluxLoop 패널이 정상 작동하는지 확인
+2. Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+3. **"Extensions: Install from VSIX..."** 입력 및 선택
+4. 생성된 `fluxloop-0.1.0.vsix` 선택
+5. Cursor 재시작
+6. FluxLoop 패널이 정상 작동하는지 확인
 
 #### VS Code에서 테스트:
 1. VS Code 실행
-2. 명령 팔레트 (`Cmd+Shift+P`)
-3. `Extensions: Install from VSIX...`
+2. Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+3. **"Extensions: Install from VSIX..."** 입력 및 선택
 4. VSIX 파일 선택
 5. 재시작 후 확인
 
@@ -134,12 +135,9 @@ Release 페이지에 다음 안내를 추가하세요:
    - [fluxloop-0.1.0.vsix](릴리스 링크) 클릭하여 다운로드
 
 2. **Cursor에 설치**
-   ```
-   Cursor → Extensions (왼쪽 사이드바) 
-   → 상단 메뉴 `...` 클릭
-   → Install from VSIX...
-   → 다운로드한 파일 선택
-   ```
+   - Command Palette 열기 (`Cmd+Shift+P` 또는 `Ctrl+Shift+P`)
+   - **"Extensions: Install from VSIX..."** 입력 및 선택
+   - 다운로드한 `.vsix` 파일 선택
 
 3. **Cursor 재시작**
 
@@ -289,6 +287,7 @@ examples/**
 - [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
 - [vsce CLI 문서](https://github.com/microsoft/vscode-vsce)
 - [GitHub Releases 문서](https://docs.github.com/en/repositories/releasing-projects-on-github)
+- [FluxLoop Releases](https://github.com/chuckgu/fluxloop/releases)
 - [Cursor - VSCode Extension 설치](https://cursor.sh/docs)
 
 ---

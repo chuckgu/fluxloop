@@ -131,9 +131,9 @@ if [ -n "$TAG" ]; then
 
 #### Cursor 사용자
 1. [$VSIX_FILE]을 다운로드
-2. Cursor → Extensions → ... → Install from VSIX...
-3. 다운로드한 파일 선택
-4. 재시작
+2. Command Palette (Cmd+Shift+P 또는 Ctrl+Shift+P)
+3. \"Extensions: Install from VSIX...\" 입력 및 선택
+4. 다운로드한 파일 선택 후 재시작
 
 #### VS Code 사용자
 - Marketplace에서 \"FluxLoop\" 검색 후 설치
@@ -153,7 +153,7 @@ pip install fluxloop-cli fluxloop
                 --title "VSCode Extension v${VERSION}" \
                 --notes "$NOTES"
             
-            echo_success "GitHub Release 생성 완료: https://github.com/fluxloop/fluxloop/releases/tag/${TAG}"
+            echo_success "GitHub Release 생성 완료: https://github.com/chuckgu/fluxloop/releases/tag/${TAG}"
         fi
     fi
     echo ""

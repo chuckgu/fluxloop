@@ -16,7 +16,7 @@ Cursor IDE는 VS Code Marketplace를 직접 지원하지 않으므로, VSIX 파�
 
 #### 1. VSIX 파일 다운로드
 
-[GitHub Releases](https://github.com/fluxloop/fluxloop/releases) 페이지에서 최신 버전의 VSIX 파일을 다운로드합니다.
+[GitHub Releases](https://github.com/chuckgu/fluxloop/releases) 페이지에서 최신 버전의 VSIX 파일을 다운로드합니다.
 
 - 파일명 예시: `fluxloop-0.1.0.vsix`
 - 항상 최신 릴리스를 사용하세요
@@ -24,11 +24,10 @@ Cursor IDE는 VS Code Marketplace를 직접 지원하지 않으므로, VSIX 파�
 #### 2. Cursor에 설치
 
 1. **Cursor 실행**
-2. **Extensions 탭 열기** (왼쪽 사이드바)
-3. **상단 메뉴 `...` 클릭**
-4. **"Install from VSIX..."** 선택
-5. **다운로드한 VSIX 파일 선택**
-6. **Cursor 재시작**
+2. **Command Palette 열기** (`Cmd+Shift+P` 또는 `Ctrl+Shift+P`)
+3. **"Extensions: Install from VSIX..."** 입력 및 선택
+4. **다운로드한 VSIX 파일 선택**
+5. **Cursor 재시작**
 
 #### 3. 설치 확인
 
@@ -136,9 +135,10 @@ pipx install fluxloop-cli
 
 1. GitHub Releases에서 최신 VSIX 다운로드
 2. 기존 Extension 제거:
-   - Extensions → FluxLoop → Uninstall
+   - Extensions 탭에서 FluxLoop 찾기 → Uninstall
 3. Cursor 재시작
-4. 새 VSIX 파일로 재설치
+4. Command Palette (`Cmd+Shift+P`) → **"Extensions: Install from VSIX..."**
+5. 새 VSIX 파일 선택 후 재시작
 
 ### VS Code 사용자
 
