@@ -163,7 +163,7 @@ async def cancel_trip(ctx: RunContextWrapper[AgentContext]) -> dict:
 
 ### Common Errors and Solutions
 
-#### Error: "Unknown tool type: <class 'function'>"
+#### Error: "Unknown tool type: &lt;class 'function'&gt;"
 
 **Cause:** FluxLoop decorator placed outside framework decorator.
 
