@@ -97,8 +97,39 @@ table {
 
 /* Mobile menu */
 @media (max-width: 996px) {
-  .navbar__items {
-    flex-direction: column;
+  /* 모바일에서 네비게이션바 레이아웃 수정 */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+
+  /* 로고와 타이틀 영역 */
+  .navbar__brand {
+    margin-right: auto;
+  }
+
+  /* 햄버거 메뉴 버튼을 왼쪽 끝에 배치 */
+  .navbar__toggle {
+    order: -1;
+    margin-right: 0.5rem;
+  }
+
+  /* 로고를 햄버거 메뉴 옆에 배치 */
+  .navbar__logo {
+    order: 0;
+  }
+
+  /* 오른쪽 아이템들 (언어 선택, GitHub 등) */
+  .navbar__items--right {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* 모바일에서 불필요한 flex-direction 제거 */
+  .navbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
 }
 
