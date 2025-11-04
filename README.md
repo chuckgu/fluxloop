@@ -49,6 +49,11 @@ Every simulation produces reproducible, auditable artifacts:
 Define complex experiments in YAML, generate input variations with LLM, and run batch simulations—all from the command line.
 
 ### 🔌 VSCode/Cursor Extension ⭐
+
+<p align="center">
+  <img src="cursor.png" alt="FluxLoop Extension in Cursor" width="800"/>
+</p>
+
 Manage projects, generate inputs, run experiments, and explore results—all from your IDE with visual project management and configuration editing.
 
 **✨ Now Available in Extension Marketplaces!**
@@ -56,6 +61,8 @@ Manage projects, generate inputs, run experiments, and explore results—all fro
 - **🎯 Cursor Users**: Search **"FluxLoop"** in Extensions (powered by [Open VSX](https://open-vsx.org/extension/fluxloop/fluxloop))
 - **💻 VS Code Users**: Search **"FluxLoop"** in [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)
 - **📦 Manual Install**: Download [VSIX from GitHub Releases](https://github.com/chuckgu/fluxloop/releases) (alternative method)
+
+**✅ Auto-update enabled** for Marketplace installations!
 
 ---
 
@@ -94,23 +101,32 @@ See detailed examples: `packages/website/docs-cli/configuration/runner-targets.m
 pip install fluxloop-cli fluxloop
 ```
 
-**VSCode/Cursor Extension (Optional but Recommended):**
+**🎨 VSCode/Cursor Extension (Highly Recommended):**
+
+<p align="center">
+  <img src="cursor.png" alt="Install FluxLoop in Cursor/VS Code" width="700"/>
+  <br/>
+  <em>FluxLoop Extension with Auto-Update Support</em>
+</p>
 
 **🎯 Cursor Users:**
 1. Open Extensions sidebar (click Extensions icon or `Cmd+Shift+X`)
 2. Search for **"FluxLoop"**
 3. Click **Install** → Extension will be downloaded from Open VSX
 4. Restart Cursor
+5. **✅ Auto-update enabled!**
 
 **💻 VS Code Users:**
 1. Open Extensions (`Cmd+Shift+X` / `Ctrl+Shift+X`)
 2. Search for **"FluxLoop"**
 3. Click **Install**
 4. Restart VS Code
+5. **✅ Auto-update enabled!**
 
 **Alternative: Manual Installation**
 - Download VSIX from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases)
 - Command Palette → **"Extensions: Install from VSIX..."**
+- ⚠️ Manual updates required
 
 ### 2. Initialize Project
 
