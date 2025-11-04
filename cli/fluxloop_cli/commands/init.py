@@ -137,18 +137,27 @@ def project(
         section_path = section_paths[key]
         section_path.write_text(content)
     
-    # Ensure root .env exists, create project override template
+    # Create project .env (unified)
     root_env_file = root_dir / ".env"
-    if not root_env_file.exists():
-        console.print("🔐 Creating root environment template...")
-        root_env_file.write_text(create_env_file())
-
-    console.print("🔐 Creating project .env template...")
+    console.print("🔐 Creating project .env...")
     recordings_dir = project_path / "recordings"
     recordings_dir.mkdir(exist_ok=True)
 
-    project_env_content = "# Project-specific overrides\n"
-    env_file.write_text(project_env_content)
+    # If a root .env exists, seed project .env with its contents so project can override locally
+    if root_env_file.exists():
+        try:
+            root_contents = root_env_file.read_text()
+        except Exception:
+            root_contents = ""
+        merged = (
+            "# Project .env (seeded from FluxLoop root .env)\n"
+            + (root_contents if root_contents.endswith("\n") else root_contents + "\n")
+            + "\n# Project-specific overrides (take precedence)\n"
+        )
+        env_file.write_text(merged)
+        console.print("[dim]Seeded from root .env (project overrides take precedence).[/dim]")
+    else:
+        env_file.write_text(create_env_file())
     
     # Update .gitignore
     if not gitignore_file.exists():

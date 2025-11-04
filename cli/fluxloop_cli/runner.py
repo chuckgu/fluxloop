@@ -99,11 +99,12 @@ class ExperimentRunner:
         source_dir = self.config.get_source_dir()
         env_candidates: List[Path] = []
 
+        # Load parent (root) .env first, then project .env so project overrides take precedence
         if source_dir:
-            env_candidates.append(source_dir / ".env")
             parent = source_dir.parent
             if parent != source_dir:
                 env_candidates.append(parent / ".env")
+            env_candidates.append(source_dir / ".env")
 
         for candidate in env_candidates:
             if candidate.exists():
@@ -111,8 +112,6 @@ class ExperimentRunner:
                     fluxloop.load_env(candidate, override=True, refresh_config=True)
                 except Exception:
                     console.log(f"[yellow]Warning:[/yellow] Failed to load environment from {candidate}")
-                else:
-                    break
 
         env_vars = getattr(self.config.runner, "environment_vars", {}) or {}
         for key, value in env_vars.items():

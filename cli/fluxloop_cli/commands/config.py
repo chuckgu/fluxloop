@@ -3,6 +3,7 @@ Config command for managing configuration.
 """
 
 import os
+import fluxloop
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -174,6 +175,22 @@ def env(
     """
     Show environment variables used by FluxLoop.
     """
+    # Load environment files so values reflect merged root -> project overrides
+    try:
+        from ..project_paths import resolve_root_dir, resolve_project_dir
+        loaded_paths = []
+        root_env = resolve_root_dir(root) / ".env"
+        if root_env.exists():
+            fluxloop.load_env(root_env, override=True, refresh_config=False)
+            loaded_paths.append(str(root_env))
+        if project:
+            project_env = resolve_project_dir(project, root) / ".env"
+            if project_env.exists():
+                fluxloop.load_env(project_env, override=True, refresh_config=False)
+                loaded_paths.append(str(project_env))
+    except Exception:
+        loaded_paths = []
+
     env_vars = [
         ("FLUXLOOP_COLLECTOR_URL", "Collector service URL", "http://localhost:8000"),
         ("FLUXLOOP_API_KEY", "API key for authentication", None),
@@ -214,10 +231,9 @@ def env(
     
     console.print(table)
     
-    # Check for .env file
-    env_file = resolve_env_path(Path(".env"), project, root)
-    if env_file.exists():
-        console.print(f"\n[dim]Loading from:[/dim] {env_file}")
+    # Show loaded env sources (root first, then project)
+    if loaded_paths:
+        console.print("\n[dim]Loaded from:[/dim] " + ", ".join(loaded_paths))
     else:
         console.print("\n[yellow]No .env file found[/yellow]")
         console.print("Create one with: [cyan]fluxloop init project[/cyan]")
