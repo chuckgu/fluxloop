@@ -8,47 +8,55 @@ FluxLoop VSCode Extension 설치 방법을 안내합니다.
 
 ## 설치 방법
 
-FluxLoop Extension은 **두 가지 방법**으로 설치할 수 있습니다:
+FluxLoop Extension은 **Extension Marketplace에서 직접 설치**할 수 있습니다!
 
-### 방법 1: VSIX 파일로 설치 (Cursor 사용자 권장)
+### 🎯 방법 1: Extension Marketplace에서 설치 (권장)
 
-Cursor IDE는 VS Code Marketplace를 직접 지원하지 않으므로, VSIX 파일을 다운로드하여 설치해야 합니다.
+#### Cursor 사용자
+
+1. **Extensions 탭 열기** (왼쪽 사이드바 또는 `Cmd+Shift+X`)
+2. **"FluxLoop" 검색**
+3. **Install 클릭**
+4. **Cursor 재시작**
+
+> ✨ Cursor는 [Open VSX Registry](https://open-vsx.org/extension/fluxloop/fluxloop)에서 자동으로 Extension을 다운로드합니다.
+
+#### VS Code 사용자
+
+1. **Extensions 탭 열기** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+2. **"FluxLoop" 검색**
+3. **Install 클릭**
+4. **VS Code 재시작**
+
+> 또는 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)에서 직접 설치
+
+**또는 명령 팔레트에서:**
+```
+ext install fluxloop.fluxloop
+```
+
+#### 설치 확인
+
+재시작 후:
+- 왼쪽 Activity Bar에 **FluxLoop 아이콘** 표시
+- 아이콘 클릭 시 Projects, Inputs, Experiments, Results, Status 패널 표시
+
+### 📦 방법 2: VSIX 파일로 수동 설치 (대체 방법)
+
+Marketplace를 사용할 수 없는 경우:
 
 #### 1. VSIX 파일 다운로드
 
 [GitHub Releases](https://github.com/chuckgu/fluxloop/releases) 페이지에서 최신 버전의 VSIX 파일을 다운로드합니다.
 
-- 파일명 예시: `fluxloop-0.1.0.vsix`
-- 항상 최신 릴리스를 사용하세요
+- 파일명 예시: `fluxloop-0.1.1.vsix`
 
-#### 2. Cursor에 설치
+#### 2. 설치
 
-1. **Cursor 실행**
-2. **Command Palette 열기** (`Cmd+Shift+P` 또는 `Ctrl+Shift+P`)
-3. **"Extensions: Install from VSIX..."** 입력 및 선택
-4. **다운로드한 VSIX 파일 선택**
-5. **Cursor 재시작**
-
-#### 3. 설치 확인
-
-Cursor 재시작 후:
-- 왼쪽 Activity Bar에 FluxLoop 아이콘이 표시됩니다
-- 아이콘 클릭 시 Projects, Inputs, Experiments, Results, Status 패널이 표시됩니다
-
-### 방법 2: VS Code Marketplace에서 설치 (VS Code 사용자)
-
-VS Code를 사용하는 경우 Marketplace에서 직접 설치할 수 있습니다.
-
-1. **VS Code 실행**
-2. **Extensions 탭** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
-3. **"FluxLoop" 검색**
-4. **Install 클릭**
-5. **재시작**
-
-또는 명령 팔레트에서:
-```
-ext install fluxloop.fluxloop
-```
+1. **Command Palette 열기** (`Cmd+Shift+P` 또는 `Ctrl+Shift+P`)
+2. **"Extensions: Install from VSIX..."** 입력 및 선택
+3. **다운로드한 VSIX 파일 선택**
+4. **재시작**
 
 ## 필수 요구사항
 
@@ -123,27 +131,34 @@ pipx install fluxloop-cli
 
 ### Cursor에서 Extension이 검색되지 않음
 
-**증상**: Cursor Marketplace에서 "FluxLoop" 검색 시 결과 없음
+**증상**: Cursor Extensions에서 "FluxLoop" 검색 시 결과 없음
 
 **해결**:
-- **정상 동작입니다**. Cursor는 VS Code Marketplace를 직접 지원하지 않습니다
-- 대신 **VSIX 파일을 다운로드하여 수동 설치**하세요 (위 방법 1 참고)
+1. Extensions 탭이 제대로 로드되었는지 확인
+2. 검색어를 정확히 **"FluxLoop"**로 입력
+3. Cursor를 최신 버전으로 업데이트
+4. 여전히 안 보이면 [Open VSX 페이지](https://open-vsx.org/extension/fluxloop/fluxloop)에서 직접 VSIX 다운로드 후 수동 설치
 
 ## 업데이트
 
-### Cursor 사용자
+### 자동 업데이트 (Cursor & VS Code)
+
+**Marketplace에서 설치한 경우 자동 업데이트가 지원됩니다:**
+
+- **Cursor**: Open VSX에서 새 버전 감지 시 자동 업데이트 또는 알림 표시
+- **VS Code**: Marketplace에서 새 버전 감지 시 자동 업데이트 또는 알림 표시
+
+Extensions 탭에서 FluxLoop을 찾아 **Update** 버튼이 있으면 클릭하세요.
+
+### 수동 업데이트
+
+VSIX로 설치한 경우:
 
 1. GitHub Releases에서 최신 VSIX 다운로드
-2. 기존 Extension 제거:
-   - Extensions 탭에서 FluxLoop 찾기 → Uninstall
-3. Cursor 재시작
+2. 기존 Extension 제거: Extensions 탭에서 FluxLoop → Uninstall
+3. 재시작
 4. Command Palette (`Cmd+Shift+P`) → **"Extensions: Install from VSIX..."**
 5. 새 VSIX 파일 선택 후 재시작
-
-### VS Code 사용자
-
-- Extensions 탭에서 자동 업데이트 알림 표시
-- 또는 수동 업데이트: Extensions → FluxLoop → Update
 
 ## 다음 단계
 

@@ -5,6 +5,7 @@ Runner modules for executing experiments and agents.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import json
 import inspect
 import os
@@ -56,8 +57,17 @@ class ExperimentRunner:
 
         offline_dir = output_base / "artifacts"
         offline_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure downstream load_env() calls don't re-enable collector unintentionally
+        should_use_collector = (not no_collector) and bool(config.collector_url)
+        if not should_use_collector:
+            os.environ["FLUXLOOP_USE_COLLECTOR"] = "false"
+        else:
+            os.environ["FLUXLOOP_USE_COLLECTOR"] = "true"
+        # Pin offline store dir in env so refresh_config respects our path
+        os.environ.setdefault("FLUXLOOP_OFFLINE_DIR", str(offline_dir))
+        os.environ.setdefault("FLUXLOOP_OFFLINE_ENABLED", "true")
         fluxloop.configure(
-            use_collector=not no_collector and bool(config.collector_url),
+            use_collector=should_use_collector,
             collector_url=config.collector_url or None,
             api_key=config.collector_api_key,
             offline_store_enabled=True,
@@ -346,6 +356,11 @@ class ExperimentRunner:
             final_output = self._extract_final_output(callback_messages, observations)
             if final_output is not None:
                 result = final_output
+            else:
+                # As a fallback, coerce async streams or objects into text
+                coerced = await self._coerce_result_to_text(result)
+                if coerced is not None:
+                    result = coerced
 
             # Mark successful
             self.results["successful"] += 1
@@ -432,10 +447,16 @@ class ExperimentRunner:
             return await self._consume_async_gen(agent_func, kwargs)
 
         if asyncio.iscoroutinefunction(agent_func):
-            result = await agent_func(**kwargs)
+            # Ensure current contextvars are preserved for the coroutine
+            ctx = contextvars.copy_context()
+            result = await ctx.run(lambda: agent_func(**kwargs))
         else:
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, lambda: agent_func(**kwargs))
+            # Preserve contextvars across thread execution
+            ctx = contextvars.copy_context()
+            def _call():
+                return agent_func(**kwargs)
+            result = await loop.run_in_executor(None, lambda: ctx.run(_call))
 
         # If an async generator/iterable is returned, consume it into a string
         if inspect.isasyncgen(result) or hasattr(result, "__aiter__"):
@@ -491,11 +512,15 @@ class ExperimentRunner:
         """Derive the final output from callbacks or observations."""
         for observation in reversed(observations):
             if observation.get("name") == "agent_final_response" and observation.get("output") is not None:
-                return observation.get("output")
+                val = observation.get("output")
+                if not ExperimentRunner._looks_like_generator_repr(val):
+                    return val
 
         for observation in reversed(observations):
             if observation.get("type") == "agent" and observation.get("output") is not None:
-                return observation.get("output")
+                val = observation.get("output")
+                if not ExperimentRunner._looks_like_generator_repr(val):
+                    return val
 
         send_messages = callback_messages.get("send") if callback_messages else None
         if send_messages:
@@ -504,16 +529,36 @@ class ExperimentRunner:
 
         return None
 
+    @staticmethod
+    def _looks_like_generator_repr(value: Any) -> bool:
+        if not isinstance(value, str):
+            return False
+        s = value.strip().lower()
+        return s.startswith("<async_generator ") or s.startswith("<generator ") or " object at 0x" in s
+
     async def _consume_async_gen(self, func: Callable, kwargs: Dict[str, Any]) -> Any:
         """Consume an async generator function by joining text chunks resolved from events."""
         gen = func(**kwargs)
         return await self._consume_async_iterable(gen)
 
     async def _consume_async_iterable(self, agen: Any) -> Any:
-        """Consume async iterable items, extracting text via runner.stream_output_path."""
-        path = (getattr(self.config.runner, "stream_output_path", None) or "message.delta").split(".")
+        """Consume async iterable items, extracting text via runner.stream_output_path.
+
+        Uses a copied contextvars context to ensure FluxLoop context is preserved
+        across async iteration boundaries created by upstream frameworks.
+        """
+        # Prefer ChatKit-like path by default; configurable via runner.stream_output_path
+        path = (getattr(self.config.runner, "stream_output_path", None) or "update.delta").split(".")
         chunks: List[str] = []
-        async for item in agen:
+
+        ctx = contextvars.copy_context()
+
+        while True:
+            try:
+                item = await ctx.run(agen.__anext__)
+            except StopAsyncIteration:
+                break
+
             val = self._get_by_path(item, path)
             if isinstance(val, str) and val:
                 chunks.append(val)
@@ -566,7 +611,58 @@ class ExperimentRunner:
         text_attr = getattr(event, "text", None)
         if isinstance(text_attr, str) and text_attr:
             return text_attr
+        # Final deep fallback: search common fields recursively
+        return ExperimentRunner._deep_extract_text(event)
 
+    @staticmethod
+    def _deep_extract_text(obj: Any, *, _depth: int = 0) -> Optional[str]:
+        if _depth > 3 or obj is None:
+            return None
+        if isinstance(obj, str):
+            return obj if obj else None
+        # dict-like
+        if isinstance(obj, dict):
+            for key in ("delta", "text"):
+                val = obj.get(key)
+                if isinstance(val, str) and val:
+                    return val
+            # content as list of parts with text
+            content = obj.get("content")
+            if isinstance(content, list):
+                parts: List[str] = []
+                for piece in content:
+                    txt = ExperimentRunner._deep_extract_text(piece, _depth=_depth + 1)
+                    if txt:
+                        parts.append(txt)
+                if parts:
+                    return " ".join(parts)
+            # Recurse selected fields
+            for key in ("update", "message", "item", "data"):
+                val = obj.get(key)
+                txt = ExperimentRunner._deep_extract_text(val, _depth=_depth + 1)
+                if txt:
+                    return txt
+            return None
+        # object with attributes
+        for attr in ("delta", "text"):
+            val = getattr(obj, attr, None)
+            if isinstance(val, str) and val:
+                return val
+        for attr in ("content",):
+            val = getattr(obj, attr, None)
+            if isinstance(val, list):
+                parts: List[str] = []
+                for piece in val:
+                    txt = ExperimentRunner._deep_extract_text(piece, _depth=_depth + 1)
+                    if txt:
+                        parts.append(txt)
+                if parts:
+                    return " ".join(parts)
+        for attr in ("update", "message", "item", "data"):
+            val = getattr(obj, attr, None)
+            txt = ExperimentRunner._deep_extract_text(val, _depth=_depth + 1)
+            if txt:
+                return txt
         return None
 
     @staticmethod
@@ -591,6 +687,33 @@ class ExperimentRunner:
             "args": list(args),
             "kwargs": kwargs,
         }
+
+    async def _coerce_result_to_text(self, value: Any) -> Optional[str]:
+        """Best-effort conversion of agent result into text for summaries.
+
+        Handles async generators/iterables, known streaming item shapes, and strings.
+        """
+        import inspect as _inspect
+
+        if value is None:
+            return None
+
+        if isinstance(value, str):
+            return value
+
+        # Async iterable/generator → consume to text
+        if _inspect.isasyncgen(value) or hasattr(value, "__aiter__"):
+            try:
+                return await self._consume_async_iterable(value)
+            except Exception:
+                return None
+
+        # Try extracting text from known event-like objects
+        fallback = self._extract_stream_text(value)
+        if fallback:
+            return fallback
+
+        return None
     
     def _save_results(self) -> None:
         """Save results to output directory."""
@@ -657,26 +780,59 @@ class ExperimentRunner:
         if not trace_ids:
             return
 
-        source_path = self.offline_dir / "observations.jsonl"
-        if not source_path.exists():
+        # Gather candidate offline stores
+        candidates = []
+        try:
+            from fluxloop import get_config as _get_sdk_config  # type: ignore
+            sdk_dir = Path(_get_sdk_config().offline_store_dir)
+            candidates.append(sdk_dir / "observations.jsonl")
+        except Exception:
+            pass
+
+        candidates.append(self.offline_dir / "observations.jsonl")
+        # Legacy fallback removed now that SDK defaults to experiments/artifacts
+
+        # Unique existing paths in priority order
+        seen = set()
+        existing: list[Path] = []
+        for p in candidates:
+            try:
+                rp = p.resolve()
+            except Exception:
+                continue
+            if rp in seen:
+                continue
+            seen.add(rp)
+            if rp.exists():
+                existing.append(rp)
+
+        if not existing:
             return
 
         destination = self.output_dir / "observations.jsonl"
         copied = 0
+        seen_lines = set()
 
-        with source_path.open("r", encoding="utf-8") as src, destination.open(
-            "w", encoding="utf-8"
-        ) as dst:
-            for line in src:
-                if not line.strip():
-                    continue
+        with destination.open("w", encoding="utf-8") as dst:
+            for source_path in existing:
                 try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
+                    with source_path.open("r", encoding="utf-8") as src:
+                        for line in src:
+                            if not line.strip():
+                                continue
+                            try:
+                                record = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            if record.get("trace_id") in trace_ids:
+                                key = (record.get("id"), record.get("start_time"))
+                                if key in seen_lines:
+                                    continue
+                                dst.write(json.dumps(record) + "\n")
+                                seen_lines.add(key)
+                                copied += 1
+                except OSError:
                     continue
-                if record.get("trace_id") in trace_ids:
-                    dst.write(json.dumps(record) + "\n")
-                    copied += 1
 
         console.print(
             f"[green]✅ Saved {copied} observations to {destination.name}[/green]"

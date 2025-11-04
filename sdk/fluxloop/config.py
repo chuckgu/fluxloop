@@ -104,7 +104,7 @@ class SDKConfig(BaseModel):
         default_factory=lambda: os.getenv("FLUXLOOP_OFFLINE_ENABLED", "true").lower() == "true"
     )
     offline_store_dir: str = Field(
-        default_factory=lambda: os.getenv("FLUXLOOP_OFFLINE_DIR", "./fluxloop_artifacts")
+        default_factory=lambda: os.getenv("FLUXLOOP_OFFLINE_DIR", "./experiments/artifacts")
     )
 
     # Argument recording (disabled by default)

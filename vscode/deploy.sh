@@ -29,12 +29,17 @@ echo_error() {
 
 # Parse arguments
 MARKETPLACE=false
+OPENVSX=false
 TAG=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --marketplace)
             MARKETPLACE=true
+            shift
+            ;;
+        --openvsx)
+            OPENVSX=true
             shift
             ;;
         --tag)
@@ -45,8 +50,9 @@ while [[ $# -gt 0 ]]; do
             echo "사용법: $0 [옵션]"
             echo ""
             echo "옵션:"
-            echo "  --marketplace    VS Code Marketplace에도 게시"
-            echo "  --tag TAG        GitHub Release 태그 지정 (예: vscode-v0.1.0)"
+            echo "  --openvsx        Open VSX Registry에 게시 (Cursor용)"
+            echo "  --marketplace    VS Code Marketplace에 게시"
+            echo "  --tag TAG        GitHub Release 태그 지정 (예: vscode-v0.1.1)"
             echo "  --help           도움말 표시"
             exit 0
             ;;
@@ -159,7 +165,25 @@ pip install fluxloop-cli fluxloop
     echo ""
 fi
 
-# Step 6: Publish to Marketplace (if requested)
+# Step 6: Publish to Open VSX (if requested)
+if [ "$OPENVSX" = true ]; then
+    echo_info "🌐 Open VSX Registry에 게시 중..."
+    
+    if [ -z "$OVSX_PAT" ]; then
+        echo_warning "OVSX_PAT 환경변수가 설정되지 않았습니다."
+        echo_info "Open VSX Access Token을 설정하세요:"
+        echo "  export OVSX_PAT=your_token_here"
+        echo ""
+        echo_info "토큰 발급: https://open-vsx.org → Settings → Access Tokens"
+        exit 1
+    fi
+    
+    npx ovsx publish "$VSIX_FILE" -p "$OVSX_PAT"
+    echo_success "Open VSX 게시 완료: https://open-vsx.org/extension/fluxloop/fluxloop"
+    echo ""
+fi
+
+# Step 7: Publish to VS Code Marketplace (if requested)
 if [ "$MARKETPLACE" = true ]; then
     echo_info "🏪 VS Code Marketplace에 게시 중..."
     
@@ -172,7 +196,7 @@ if [ "$MARKETPLACE" = true ]; then
     fi
     
     npx vsce publish
-    echo_success "Marketplace 게시 완료"
+    echo_success "Marketplace 게시 완료: https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop"
     echo ""
 fi
 
@@ -192,12 +216,26 @@ if [ -z "$TAG" ]; then
     echo "     ./deploy.sh --tag vscode-v${VERSION}"
 fi
 
+if [ "$OPENVSX" = false ]; then
+    echo "  2. Open VSX에 게시 (Cursor 사용자용):"
+    echo "     export OVSX_PAT=your_token"
+    echo "     ./deploy.sh --openvsx"
+fi
+
 if [ "$MARKETPLACE" = false ]; then
-    echo "  3. (선택) Marketplace에 게시:"
+    echo "  3. VS Code Marketplace에 게시:"
     echo "     ./deploy.sh --marketplace"
 fi
 
 echo ""
 echo_info "VSIX 파일 위치: ${SCRIPT_DIR}/${VSIX_FILE}"
+echo ""
+echo_info "📦 배포 링크:"
+if [ "$OPENVSX" = true ]; then
+    echo "  - Open VSX: https://open-vsx.org/extension/fluxloop/fluxloop"
+fi
+if [ "$MARKETPLACE" = true ]; then
+    echo "  - VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop"
+fi
 echo ""
 

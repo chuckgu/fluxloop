@@ -270,7 +270,7 @@ npm run compile
 
 # 3. VSIX 패키징
 npx vsce package
-# 출력: fluxloop-0.1.0.vsix
+# 출력: fluxloop-0.1.1.vsix
 
 # 4. 로컬 테스트 (Cursor/VS Code)
 # - Command Palette (Cmd+Shift+P)
@@ -279,13 +279,32 @@ npx vsce package
 
 # 5. GitHub Release 생성
 # 웹사이트에서 또는 CLI 사용:
-gh release create vscode-v0.1.0 \
-  fluxloop-0.1.0.vsix \
-  --title "VSCode Extension v0.1.0" \
+gh release create vscode-v0.1.1 \
+  fluxloop-0.1.1.vsix \
+  --title "VSCode Extension v0.1.1" \
   --notes "릴리스 노트 내용"
 ```
 
-### VS Code Marketplace 배포 (선택사항)
+### Open VSX 배포 (Cursor 사용자용 - 권장)
+
+```bash
+# Open VSX 토큰 설정 (한 번만)
+# https://open-vsx.org → Settings → Access Tokens에서 발급
+export OVSX_PAT=your_token_here
+
+# Open VSX에 게시
+npx ovsx publish fluxloop-0.1.1.vsix -p $OVSX_PAT
+
+# 확인
+npx ovsx view fluxloop.fluxloop
+```
+
+**첫 게시 시 namespace 생성 필요:**
+```bash
+npx ovsx create-namespace fluxloop -p $OVSX_PAT
+```
+
+### VS Code Marketplace 배포 (VS Code 사용자용)
 
 ```bash
 # vsce 로그인 (한 번만)
@@ -296,7 +315,7 @@ npx vsce login fluxloop
 npx vsce publish
 
 # 또는 버전 자동 증가
-npx vsce publish patch  # 0.1.0 → 0.1.1
+npx vsce publish patch  # 0.1.1 → 0.1.2
 ```
 
 ### 중요 사항
@@ -324,8 +343,9 @@ Cursor에서 설치 후 다음 확인:
 - [ ] `npm run compile` 성공
 - [ ] `npx vsce package` 성공
 - [ ] Cursor 및 VS Code에서 VSIX 로컬 테스트
-- [ ] GitHub Release 생성 및 VSIX 업로드
-- [ ] (선택) Marketplace 게시
+- [ ] **Open VSX에 게시** (Cursor 사용자용)
+- [ ] **VS Code Marketplace에 게시** (VS Code 사용자용)
+- [ ] GitHub Release 생성 및 VSIX 업로드 (수동 설치용)
 
 **자세한 가이드**: `packages/vscode/PUBLISHING.md` 참고
 
@@ -341,6 +361,8 @@ Cursor에서 설치 후 다음 확인:
 - [Semantic Versioning](https://semver.org)
 
 ### VSCode Extension
+- [Open VSX Registry](https://open-vsx.org/)
+- [Open VSX Publishing Guide](https://github.com/eclipse/openvsx/wiki/Publishing-Extensions)
 - [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
 - [vsce CLI 문서](https://github.com/microsoft/vscode-vsce)
 - [GitHub Releases 문서](https://docs.github.com/en/repositories/releasing-projects-on-github)
