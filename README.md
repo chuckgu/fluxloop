@@ -54,7 +54,13 @@ Define complex experiments in YAML, generate input variations with LLM, and run 
   <img src="cursor.png" alt="FluxLoop Extension in Cursor" width="800"/>
 </p>
 
-Manage projects, generate inputs, run experiments, and explore results—all from your IDE with visual project management and configuration editing.
+Manage projects, generate inputs, run experiments, parse results, and explore outputs—all from your IDE with visual project management and configuration editing.
+
+**Key Features:**
+- **Parse Results**: Convert experiment traces into human-readable Markdown timelines with one click
+- **Execution Wrapper Support**: Seamless integration with `uv run`, `pipx`, and other Python wrappers via `fluxloop.executionWrapper` setting
+- **Organized Results**: Browse experiment outputs in a structured tree with timestamps and success rates
+- **Multi-environment Support**: Run experiments locally, in Dev Containers, or Docker (coming soon)
 
 **✨ Now Available in Extension Marketplaces!**
 

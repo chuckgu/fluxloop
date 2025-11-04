@@ -20,9 +20,10 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - View runner configuration and iteration settings at a glance
 
 ### 📊 Results Exploration
-- Browse experiment outputs organized by run timestamp
-- Open traces, summaries, and artifacts with one click
-- Parse results into human-readable Markdown timelines
+- Browse experiment outputs organized by run timestamp under an **Experiments** folder
+- Open traces, summaries, observations, and artifacts with one click
+- Parse results into human-readable Markdown timelines with **Parse Results** action
+- View parsed analysis outputs in the `per_trace_analysis/` folder
 
 ### 🔴 Recording Mode (Advanced)
 - Toggle argument recording for complex function signatures
@@ -111,22 +112,27 @@ Generated inputs will appear under **Inputs → Generated Inputs**.
 ### 4. Run Experiment
 
 From the **Experiments** view:
-- Expand **Current Experiment**
-- Click **Run Experiment**
-- Select execution environment (Local Python/Docker/Dev Container)
+- Click **Run Experiment** (located next to **Current Experiment**)
+- Select execution environment (Local Python/Dev Container)
+  - **Local Python**: Runs with your current Python environment
+  - **Dev Container**: Runs inside an active Dev Container
+  - **Docker**: Coming soon
 - Optionally override iterations
 
 Results will be saved to `experiments/` and appear in the **Results** view.
 
 ### 5. View Results
 
-The **Results** view lists recent experiment runs. Expand any run to see:
+The **Results** view lists recent experiment runs under an **Experiments** folder. Expand any run to see:
+- **Parse Results** – Generate human-readable Markdown timelines from traces
+- `per_trace_analysis/` – Parsed analysis outputs (appears after parsing)
 - `summary.json` – aggregate statistics
 - `traces.jsonl` – detailed execution traces
 - `observations.jsonl` – observation stream
 - `errors.json` – error logs (if any)
+- `logs.json` – additional logs
 
-Click any file to open it in the editor.
+Click **Parse Results** to convert experiment outputs into per-trace Markdown files. You can specify a custom output directory or use the default `per_trace_analysis`.
 
 ---
 
@@ -216,6 +222,38 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 **Configuration:**
 - `FluxLoop: Open Configuration`
 - `FluxLoop: Select Execution Environment`
+- `FluxLoop: Configure Execution Wrapper`
+
+**Results:**
+- `FluxLoop: Parse Experiment` – Convert experiment traces to Markdown
+
+---
+
+## Advanced Configuration
+
+### Execution Wrapper (uv, pipx, etc.)
+
+If you use `uv`, `pipx`, or any other wrapper to run FluxLoop CLI, configure it via:
+
+**Command Palette:**
+```
+FluxLoop: Configure Execution Wrapper
+```
+
+Enter the prefix (e.g., `uv run`) and the extension will automatically prepend it to all CLI commands.
+
+**Or manually in `.vscode/settings.json`:**
+```json
+{
+  "fluxloop.executionWrapper": "uv run"
+}
+```
+
+This setting is saved to your workspace and will be applied to all FluxLoop commands.
+
+### Virtual Environments
+
+The extension creates terminals using your workspace's default shell. If you use a virtual environment (venv, conda, etc.), ensure it's activated in your terminal profile or use the `executionWrapper` setting to prefix commands appropriately.
 
 ---
 
@@ -225,6 +263,8 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 Ensure FluxLoop CLI is installed:
 ```bash
 pip install fluxloop-cli
+# Or with uv:
+uv pip install fluxloop-cli
 ```
 
 Check the **Status** panel for installation status.

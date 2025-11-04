@@ -12,13 +12,15 @@ import { ProjectContext } from '../project/projectContext';
 import { ProjectManager } from '../project/projectManager';
 import { StatusProvider } from '../providers/statusProvider';
 import { InputsProvider } from '../providers/inputsProvider';
+import { ResultsProvider } from '../providers/resultsProvider';
 
 export class CommandManager {
     constructor(
         private context: vscode.ExtensionContext,
         private cliManager: CLIManager,
         private statusProvider?: StatusProvider,
-        private inputsProvider?: InputsProvider
+        private inputsProvider?: InputsProvider,
+        private resultsProvider?: ResultsProvider
     ) {}
 
     registerCommands() {
@@ -26,6 +28,7 @@ export class CommandManager {
         this.context.subscriptions.push(
             vscode.commands.registerCommand('fluxloop.init', () => this.initProject()),
             vscode.commands.registerCommand('fluxloop.runExperiment', () => this.runExperiment()),
+            vscode.commands.registerCommand('fluxloop.parseExperiment', (experimentPath?: string) => this.parseExperiment(experimentPath)),
             vscode.commands.registerCommand('fluxloop.runSingle', () => this.runSingle()),
             vscode.commands.registerCommand('fluxloop.generateInputs', () => this.generateInputs()),
             vscode.commands.registerCommand('fluxloop.showStatus', () => this.showStatus()),
@@ -38,6 +41,7 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.openSimulationConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.openEvaluationConfig', (projectId?: string) => this.openEvaluationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
+            vscode.commands.registerCommand('fluxloop.configureExecutionWrapper', () => this.configureExecutionWrapper()),
             vscode.commands.registerCommand('fluxloop.showWireframe', () => this.showWireframe()),
             vscode.commands.registerCommand('fluxloop.showInputWizard', () => this.showInputWizard()),
             vscode.commands.registerCommand('fluxloop.showDialogsWireframe', () => this.showDialogsWireframe()),
@@ -92,6 +96,110 @@ export class CommandManager {
 
         await this.cliManager.runCommand(args, project.path);
         this.statusProvider?.refresh();
+    }
+
+    private async parseExperiment(experimentPath?: string) {
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
+            return;
+        }
+
+        const experimentsDir = path.join(project.path, 'experiments');
+        if (!fs.existsSync(experimentsDir)) {
+            void vscode.window.showWarningMessage('실험 결과 폴더가 없습니다. 먼저 실험을 실행해 주세요.');
+            return;
+        }
+
+        let targetPath = experimentPath && fs.existsSync(experimentPath)
+            ? experimentPath
+            : undefined;
+
+        if (!targetPath) {
+            const directories = fs.readdirSync(experimentsDir)
+                .filter(name => {
+                    try {
+                        return fs.statSync(path.join(experimentsDir, name)).isDirectory();
+                    } catch {
+                        return false;
+                    }
+                })
+                .sort((a, b) => b.localeCompare(a));
+
+            if (directories.length === 0) {
+                void vscode.window.showWarningMessage('파싱할 실험 결과가 없습니다.');
+                return;
+            }
+
+            const pick = await vscode.window.showQuickPick(
+                directories.map(name => ({
+                    label: name,
+                    description: path.join('experiments', name)
+                })),
+                {
+                    title: '실험 결과 선택',
+                    placeHolder: '파싱할 실험 결과 폴더를 선택하세요.'
+                }
+            );
+
+            if (!pick) {
+                return;
+            }
+
+            targetPath = path.join(experimentsDir, pick.label);
+        }
+
+        if (!targetPath || !fs.existsSync(targetPath)) {
+            void vscode.window.showErrorMessage('선택한 실험 결과 폴더를 찾을 수 없습니다.');
+            return;
+        }
+
+        const relativePath = path.relative(project.path, targetPath);
+        const experimentArg = relativePath && !relativePath.startsWith('..') ? relativePath : targetPath;
+
+        const outputDir = await vscode.window.showInputBox({
+            prompt: '결과를 저장할 출력 디렉터리 (옵션)',
+            placeHolder: '예: parsed_results (비워두면 기본값 사용)',
+            ignoreFocusOut: true
+        });
+
+        if (outputDir === undefined) {
+            return;
+        }
+
+        const defaultOutputDir = 'per_trace_analysis';
+        const trimmedOutput = outputDir.trim();
+        const finalOutputDir = trimmedOutput.length > 0 ? trimmedOutput : defaultOutputDir;
+        const resolvedOutputPath = path.isAbsolute(finalOutputDir)
+            ? finalOutputDir
+            : path.join(targetPath, finalOutputDir);
+
+        let overwrite = false;
+        if (fs.existsSync(resolvedOutputPath)) {
+            const overwriteChoice = await vscode.window.showQuickPick<{ label: string; value: 'overwrite' | 'cancel'; description?: string }>(
+                [
+                    { label: '예, 덮어쓰겠습니다', value: 'overwrite' },
+                    { label: '아니요', value: 'cancel' }
+                ],
+                {
+                    title: `${finalOutputDir} 디렉터리가 이미 존재합니다. 덮어쓸까요?`,
+                    placeHolder: '덮어쓰기를 원하지 않으면 "아니요"를 선택하세요.'
+                }
+            );
+
+            if (!overwriteChoice || overwriteChoice.value === 'cancel') {
+                return;
+            }
+
+            overwrite = overwriteChoice.value === 'overwrite';
+        }
+
+        const args = ['parse', 'experiment', experimentArg, '--output', finalOutputDir];
+        if (overwrite) {
+            args.push('--overwrite');
+        }
+
+        await this.cliManager.runCommand(args, project.path);
+        this.resultsProvider?.refresh();
     }
 
     private async runSingle() {
@@ -329,8 +437,8 @@ export class CommandManager {
             },
             {
                 label: 'Docker',
-                description: 'Run in Docker container',
-                detail: 'Requires Docker Desktop',
+                description: 'Run in Docker container (coming soon)',
+                detail: '현재는 지원되지 않습니다',
                 picked: defaultEnv === 'Docker'
             },
             {
@@ -346,7 +454,41 @@ export class CommandManager {
             title: 'FluxLoop Execution Environment'
         });
 
+        if (selected?.label === 'Docker') {
+            void vscode.window.showInformationMessage('Docker 실행은 향후 지원 예정입니다. Local Python 또는 Dev Container를 선택해 주세요.');
+            return undefined;
+        }
+
         return selected?.label;
+    }
+
+    private async configureExecutionWrapper() {
+        const config = vscode.workspace.getConfiguration('fluxloop');
+        const currentWrapper = config.get<string>('executionWrapper') ?? '';
+
+        const input = await vscode.window.showInputBox({
+            title: 'Execution Wrapper 설정',
+            prompt: 'FluxLoop CLI 실행 전에 붙일 명령을 입력하세요 (예: uv run). 비워두면 해제됩니다.',
+            value: currentWrapper,
+            ignoreFocusOut: true,
+            placeHolder: '예: uv run'
+        });
+
+        if (input === undefined) {
+            return;
+        }
+
+        const trimmed = input.trim();
+        try {
+            await config.update('executionWrapper', trimmed, vscode.ConfigurationTarget.Workspace);
+            const message = trimmed
+                ? `Execution Wrapper를 "${trimmed}"로 설정했습니다.`
+                : 'Execution Wrapper를 빈 값으로 설정했습니다.';
+            void vscode.window.showInformationMessage(message);
+        } catch (error) {
+            console.error('Failed to update execution wrapper', error);
+            void vscode.window.showErrorMessage('Execution Wrapper 설정에 실패했습니다.');
+        }
     }
 
     private showWireframe() {

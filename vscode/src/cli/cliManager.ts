@@ -101,7 +101,11 @@ export class CLIManager {
             outputChannel.show();
         }
 
-        outputChannel.appendLine(`\n> fluxloop ${args.join(' ')}`);
+        const executionWrapper = config.get<string>('executionWrapper')?.trim();
+        const baseCommand = `fluxloop ${args.join(' ')}`;
+        const commandLine = executionWrapper ? `${executionWrapper} ${baseCommand}` : baseCommand;
+
+        outputChannel.appendLine(`\n> ${commandLine}`);
         outputChannel.appendLine(`Working directory: ${workspaceFolder}`);
         outputChannel.appendLine('-'.repeat(50));
 
@@ -113,7 +117,7 @@ export class CLIManager {
         });
 
         terminal.show();
-        terminal.sendText(`fluxloop ${args.join(' ')}`);
+        terminal.sendText(commandLine);
     }
 
     private getEnvironmentVariables(): { [key: string]: string } {

@@ -53,9 +53,10 @@ Current version: **0.1.1**
 - View runner configuration and iteration settings at a glance
 
 ### 📊 Results Exploration
-- Browse experiment outputs organized by run timestamp
-- Open traces, summaries, and artifacts with one click
-- Parse results into human-readable Markdown timelines
+- Browse experiment outputs organized by run timestamp under **Experiments** folder
+- Open traces, summaries, observations, and artifacts with one click
+- Parse results into human-readable Markdown timelines with **Parse Results** action
+- View parsed analysis outputs in `per_trace_analysis/` folder
 
 ### 🔴 Recording Mode (Advanced)
 - Toggle argument recording for complex function signatures
@@ -121,6 +122,10 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 **Configuration:**
 - `FluxLoop: Open Configuration`
 - `FluxLoop: Select Execution Environment`
+- `FluxLoop: Configure Execution Wrapper`
+
+**Results:**
+- `FluxLoop: Parse Experiment` - Convert experiment traces to Markdown
 
 ## What's Next?
 

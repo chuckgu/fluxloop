@@ -63,10 +63,6 @@ def create_input_config() -> str:
         base_inputs:
           - input: "How do I get started?"
             expected_intent: help
-          - input: "What can you do?"
-            expected_intent: capabilities
-          - input: "Show me an example"
-            expected_intent: demo
 
         variation_strategies:
           - rephrase

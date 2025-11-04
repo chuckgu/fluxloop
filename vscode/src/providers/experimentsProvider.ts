@@ -49,6 +49,12 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                 'experiment',
                 configInfo.path
             ));
+            items.push(new ExperimentItem(
+                'Run Experiment',
+                '',
+                vscode.TreeItemCollapsibleState.None,
+                'run'
+            ));
         } else {
             items.push(new ExperimentItem(
                 'No simulation configuration found',
@@ -65,7 +71,13 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             'recordingGroup'
         ));
 
-        items.push(...this.getExperimentResults(workspacePath));
+        items.push(new ExperimentItem(
+            'Experiments',
+            'Latest experiment runs',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            'experimentsGroup',
+            workspacePath
+        ));
         items.push(...this.getRecordingItems(workspacePath));
 
         return items;
@@ -73,6 +85,10 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
     private getExperimentDetails(element: ExperimentItem): ExperimentItem[] {
         const details: ExperimentItem[] = [];
+
+        if (element.type === 'experimentsGroup' && element.resourcePath) {
+            return this.getExperimentResults(element.resourcePath);
+        }
 
         if (element.type === 'recordingGroup') {
             return [
@@ -191,15 +207,9 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                     ));
                 }
             }
-            details.push(new ExperimentItem(
-                'Run Experiment',
-                '',
-                vscode.TreeItemCollapsibleState.None,
-                'run'
-            ));
         } else if (element.type === 'result' && element.resourcePath) {
             // Show result files
-            const files = ['summary.json', 'traces.jsonl', 'errors.json'];
+            const files = ['summary.json', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
             for (const file of files) {
                 const filePath = path.join(element.resourcePath, file);
                 if (fs.existsSync(filePath)) {
@@ -243,16 +253,32 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             const experimentPath = path.join(experimentsDir, dir);
             const summaryPath = path.join(experimentPath, 'summary.json');
             let label = dir;
+            const timestampLabel = this.extractTimestampFromExperimentName(dir);
             let description = '';
 
             if (fs.existsSync(summaryPath)) {
                 try {
                     const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
                     label = summary.name || dir;
-                    description = `${summary.results?.success_rate ? (summary.results.success_rate * 100).toFixed(1) : 0}% success`;
+                    const successRate = summary.results?.success_rate;
+                    const successLabel = typeof successRate === 'number'
+                        ? `${this.formatPercentage(successRate)} success`
+                        : '';
+                    const descriptionParts = [];
+                    if (timestampLabel) {
+                        descriptionParts.push(timestampLabel);
+                    }
+                    if (successLabel) {
+                        descriptionParts.push(successLabel);
+                    }
+                    description = descriptionParts.join(' • ');
                 } catch {
                     // Ignore parse errors
                 }
+            }
+
+            if (!description && timestampLabel) {
+                description = timestampLabel;
             }
 
             experiments.push(new ExperimentItem(
@@ -388,6 +414,29 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         };
     }
 
+    private extractTimestampFromExperimentName(name: string): string | undefined {
+        const match = name.match(/_(\d{8})_(\d{6})$/);
+        if (!match) {
+            return undefined;
+        }
+
+        const [, datePart, timePart] = match;
+        const year = datePart.substring(0, 4);
+        const month = datePart.substring(4, 6);
+        const day = datePart.substring(6, 8);
+        const hours = timePart.substring(0, 2);
+        const minutes = timePart.substring(2, 4);
+        const seconds = timePart.substring(4, 6);
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    private formatPercentage(value: number): string {
+        const percentage = value * 100;
+        const formatted = Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1);
+        return `${formatted}%`;
+    }
+
     private resolveProjectPathFromConfig(configPath: string): string {
         const normalized = path.resolve(configPath);
         const configsSegment = `${path.sep}configs${path.sep}`;
@@ -429,7 +478,7 @@ class ExperimentItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'experiment' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup',
+        public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup',
         public readonly resourcePath?: string,
         private readonly commandId?: string
     ) {
@@ -442,6 +491,9 @@ class ExperimentItem extends vscode.TreeItem {
         switch (type) {
             case 'experiment':
                 this.iconPath = new vscode.ThemeIcon('beaker');
+                break;
+            case 'experimentsGroup':
+                this.iconPath = new vscode.ThemeIcon('folder');
                 break;
             case 'result':
                 this.iconPath = new vscode.ThemeIcon('graph');

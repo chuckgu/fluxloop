@@ -5,6 +5,35 @@ All notable changes to the FluxLoop VSCode Extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Parse Experiment Results**: New `Parse Results` action in the Results view to convert experiment traces into human-readable Markdown timelines
+  - Appears at the top of each experiment folder for easy access
+  - Prompts for custom output directory (defaults to `per_trace_analysis`)
+  - Automatically checks for existing output and prompts to overwrite if needed
+  - Parsed results appear in a new `per_trace_analysis/` folder within the Results view
+- **Execution Wrapper Support**: New `fluxloop.executionWrapper` setting to prefix CLI commands
+  - Enables seamless integration with `uv run`, `pipx run`, and other Python environment wrappers
+  - `FluxLoop: Configure Execution Wrapper` command for easy setup via Command Palette
+  - Automatically creates `.vscode/settings.json` with workspace-level configuration
+- **Experiments Folder Grouping**: Experiment results now appear under a collapsible **Experiments** folder in the Results view for better organization
+- **Enhanced File Listings**: Results view now shows `observations.jsonl` and `logs.json` in addition to existing artifact files
+- **Timestamp Display**: Experiment folder descriptions now show formatted timestamps (YYYY-MM-DD HH:MM:SS) extracted from folder names for easier identification
+
+### Changed
+
+- **UX Improvements**:
+  - Moved `Run Experiment` action from inside `Current Experiment` to root level in Experiments view for faster access
+  - Docker execution option now shows "(coming soon)" with explanatory message when selected
+  - Experiment result descriptions now display timestamp before success rate for chronological clarity
+- **Results View Structure**: `per_trace_analysis/` folder is recursively browsable, supporting nested analysis outputs
+
+### Fixed
+
+- Experiments view and Results view now show identical file sets for consistency (`observations.jsonl`, `logs.json` added to Experiments view)
+
 ## [0.1.1] - 2025-11-04
 
 ### Fixed

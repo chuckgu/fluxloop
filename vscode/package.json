@@ -138,6 +138,11 @@
         "category": "FluxLoop"
       },
       {
+        "command": "fluxloop.configureExecutionWrapper",
+        "title": "Configure Execution Wrapper",
+        "category": "FluxLoop"
+      },
+      {
         "command": "fluxloop.showWireframe",
         "title": "Show Wireframe",
         "category": "FluxLoop"
@@ -244,7 +249,7 @@
             "Dev Container"
           ],
           "default": "Local Python",
-          "description": "Default execution environment"
+          "description": "Default execution environment (Docker support coming soon)"
         },
         "fluxloop.autoInstallCli": {
           "type": "boolean",
@@ -255,6 +260,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically show output channel when running experiments"
+        },
+        "fluxloop.executionWrapper": {
+          "type": "string",
+          "default": "",
+          "description": "Command prefix used before running the FluxLoop CLI (e.g. 'uv run')"
         }
       }
     },

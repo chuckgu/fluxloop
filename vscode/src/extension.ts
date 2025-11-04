@@ -41,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // Initialize command manager
-    const commandManager = new CommandManager(context, cliManager, statusProvider, inputsProvider);
+    const commandManager = new CommandManager(context, cliManager, statusProvider, inputsProvider, resultsProvider);
     commandManager.registerCommands();
 
     // Register project commands

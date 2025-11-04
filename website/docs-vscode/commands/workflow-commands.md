@@ -4,8 +4,153 @@ sidebar_position: 2
 
 # Workflow Commands
 
-Workflow commands in VSCode.
+Commands for managing the FluxLoop experiment workflow.
 
-## Coming Soon
+## FluxLoop: Generate Inputs
 
-Documentation in development.
+**Command ID:** `fluxloop.generateInputs`
+
+Generate input variations from base inputs defined in `configs/input.yaml`.
+
+### Usage
+
+1. Open Command Palette (`Cmd+Shift+P`)
+2. Type and select **FluxLoop: Generate Inputs**
+3. Follow the wizard prompts:
+   - **Mode**: Deterministic or LLM-based generation
+   - **Strategies**: Select variation strategies (rephrase, verbose, error_prone, etc.)
+   - **Limit**: Maximum number of inputs to generate (optional)
+   - **Overwrite**: Whether to replace existing output file
+   - **Dry Run**: Preview generation without writing files
+   - **LLM API Key**: Required for LLM mode (saved to VS Code secrets and `.env`)
+
+### Output
+
+Generated inputs are written to the file specified in `configs/input.yaml` (default: `inputs/generated.yaml`).
+
+### Options
+
+- **Mode**:
+  - `deterministic`: Rule-based variations without LLM
+  - `llm`: AI-powered variations using configured LLM provider
+
+- **Strategies**: `rephrase`, `error_prone`, `typo`, `verbose`, `concise`, `persona_based`, `adversarial`, `multilingual`, `custom`
+
+## FluxLoop: Run Experiment
+
+**Command ID:** `fluxloop.runExperiment`
+
+Execute an experiment based on `configs/simulation.yaml`.
+
+### Usage
+
+1. Open Command Palette
+2. Select **FluxLoop: Run Experiment**
+3. Choose execution environment:
+   - **Local Python**: Run with current Python environment
+   - **Dev Container**: Run inside active Dev Container
+   - **Docker**: Coming soon (shows info message)
+4. (Optional) Override iteration count
+
+### Execution
+
+Runs `fluxloop run experiment [--iterations N]` in a new terminal at the project root.
+
+### Environment Selection
+
+The extension remembers your last selected environment. Change the default via:
+```
+FluxLoop: Select Execution Environment
+```
+
+Or manually in settings:
+```json
+{
+  "fluxloop.defaultEnvironment": "Local Python"
+}
+```
+
+### Execution Wrapper
+
+If you use `uv`, `pipx`, or similar wrappers, configure via:
+```
+FluxLoop: Configure Execution Wrapper
+```
+
+Enter prefix (e.g., `uv run`) to prepend to all CLI commands.
+
+## FluxLoop: Parse Experiment
+
+**Command ID:** `fluxloop.parseExperiment`
+
+Convert experiment traces into human-readable Markdown timelines.
+
+### Usage
+
+1. Open Command Palette
+2. Select **FluxLoop: Parse Experiment**
+3. If not invoked from Results view, select experiment folder from list
+4. Enter output directory (default: `per_trace_analysis`)
+5. Confirm overwrite if output already exists
+
+### Output
+
+Generates one Markdown file per trace in the specified output directory:
+- Filename format: `<iteration>_<trace_id>.md`
+- Contains trace metadata, summary, and chronological observation timeline
+- Appears in Results view under `per_trace_analysis/` folder
+
+### CLI Equivalent
+
+```bash
+fluxloop parse experiment experiments/<folder> --output per_trace_analysis [--overwrite]
+```
+
+## FluxLoop: Run Single Execution
+
+**Command ID:** `fluxloop.runSingle`
+
+Run a single agent execution with custom input.
+
+### Usage
+
+1. Open a Python file containing your agent
+2. Open Command Palette
+3. Select **FluxLoop: Run Single Execution**
+4. Enter function name (default: `run`)
+5. Enter input text for the agent
+
+### Requirements
+
+- Active Python file must be within the selected FluxLoop project
+- Function must accept input as first argument
+
+### CLI Equivalent
+
+```bash
+fluxloop run single <module_path> "<input>" --function <function_name>
+```
+
+## FluxLoop: Show Status
+
+**Command ID:** `fluxloop.showStatus`
+
+Check CLI and SDK installation status, along with current configuration.
+
+### Usage
+
+Open Command Palette and select **FluxLoop: Show Status**.
+
+Output is displayed in the integrated terminal.
+
+### CLI Equivalent
+
+```bash
+fluxloop status check --verbose
+```
+
+## Related
+
+- [Recording Commands](./recording-commands.md) - Argument recording workflow
+- [Project Commands](./project-commands.md) - Project management
+- [Results View](../views/results-view.md) - Viewing experiment outputs

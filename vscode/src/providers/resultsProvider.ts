@@ -80,7 +80,8 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
             const items = directories.map(entry => {
                 const summary = this.readSummary(path.join(entry.fullPath, 'summary.json'));
                 const label = summary?.name || entry.name;
-                const description = this.buildResultDescription(summary, entry.fullPath);
+                const timestampLabel = this.extractTimestampFromExperimentName(entry.name);
+                const description = this.buildResultDescription(summary, entry.fullPath, timestampLabel);
                 return new ResultItem(
                     label,
                     description,
@@ -97,6 +98,30 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
             const files = ['summary.json', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
             const items: ResultItem[] = [];
 
+            items.push(new ResultItem(
+                'Parse Results',
+                'fluxloop parse experiment',
+                vscode.TreeItemCollapsibleState.None,
+                'action',
+                element.resourcePath,
+                {
+                    command: 'fluxloop.parseExperiment',
+                    title: 'Parse Experiment Results',
+                    arguments: [element.resourcePath]
+                }
+            ));
+
+            const analysisDir = path.join(element.resourcePath, 'per_trace_analysis');
+            if (fs.existsSync(analysisDir) && fs.statSync(analysisDir).isDirectory()) {
+                items.push(new ResultItem(
+                    'per_trace_analysis',
+                    '',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'analysis',
+                    analysisDir
+                ));
+            }
+
             for (const file of files) {
                 const fullPath = path.join(element.resourcePath, file);
                 if (fs.existsSync(fullPath)) {
@@ -111,6 +136,45 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
             }
 
             return Promise.resolve(items);
+        }
+
+        if (element.type === 'analysis' && element.resourcePath) {
+            try {
+                const entries = fs.readdirSync(element.resourcePath)
+                    .sort((a, b) => a.localeCompare(b));
+                const items = entries.map(entry => {
+                    const entryPath = path.join(element.resourcePath!, entry);
+                    const isDir = fs.statSync(entryPath).isDirectory();
+                    if (isDir) {
+                        return new ResultItem(
+                            entry,
+                            '',
+                            vscode.TreeItemCollapsibleState.Collapsed,
+                            'analysis',
+                            entryPath
+                        );
+                    }
+
+                    return new ResultItem(
+                        entry,
+                        '',
+                        vscode.TreeItemCollapsibleState.None,
+                        'file',
+                        entryPath
+                    );
+                });
+                return Promise.resolve(items);
+            } catch (error) {
+                console.warn('Failed to read analysis directory', error);
+                return Promise.resolve([
+                    new ResultItem(
+                        'Failed to load analysis outputs',
+                        '디렉터리 접근에 실패했습니다.',
+                        vscode.TreeItemCollapsibleState.None,
+                        'info'
+                    )
+                ]);
+            }
         }
 
         return Promise.resolve([]);
@@ -130,9 +194,9 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
         }
     }
 
-    private buildResultDescription(summary: Record<string, any> | undefined, experimentDir: string): string {
+    private buildResultDescription(summary: Record<string, any> | undefined, experimentDir: string, timestampLabel?: string): string {
         if (!summary) {
-            return path.basename(experimentDir);
+            return timestampLabel ? `${timestampLabel} · ${path.basename(experimentDir)}` : path.basename(experimentDir);
         }
 
         const runs = summary.total_runs ?? summary.results?.total_runs;
@@ -140,6 +204,9 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
         const formattedRate = typeof successRate === 'number' ? `${(successRate * 100).toFixed(1)}% success` : undefined;
 
         const parts: string[] = [];
+        if (timestampLabel) {
+            parts.push(timestampLabel);
+        }
         if (runs !== undefined) {
             parts.push(`${runs} runs`);
         }
@@ -149,6 +216,23 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
 
         return parts.join(' · ') || 'Experiment results';
     }
+
+    private extractTimestampFromExperimentName(name: string): string | undefined {
+        const match = name.match(/_(\d{8})_(\d{6})$/);
+        if (!match) {
+            return undefined;
+        }
+
+        const [, datePart, timePart] = match;
+        const year = datePart.substring(0, 4);
+        const month = datePart.substring(4, 6);
+        const day = datePart.substring(6, 8);
+        const hours = timePart.substring(0, 2);
+        const minutes = timePart.substring(2, 4);
+        const seconds = timePart.substring(4, 6);
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
 }
 
 class ResultItem extends vscode.TreeItem {
@@ -156,7 +240,7 @@ class ResultItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'folder' | 'file' | 'info' | 'command',
+        public readonly type: 'folder' | 'file' | 'info' | 'command' | 'action' | 'analysis',
         public readonly resourcePath?: string,
         command?: vscode.Command
     ) {
@@ -182,6 +266,15 @@ class ResultItem extends vscode.TreeItem {
                 if (command) {
                     this.command = command;
                 }
+                break;
+            case 'action':
+                this.iconPath = new vscode.ThemeIcon('debug-start');
+                if (command) {
+                    this.command = command;
+                }
+                break;
+            case 'analysis':
+                this.iconPath = vscode.ThemeIcon.Folder;
                 break;
             case 'info':
             default:
