@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://docs.fluxloop.io/sitemap.xml
+Sitemap: https://fluxloop.io/sitemap.xml
 
 # Explicitly allow major AI/LLM crawlers
 User-agent: GPTBot

@@ -41,12 +41,20 @@ export class ProjectCommands {
             return;
         }
 
-        const defaultName = path.basename(selectedPath);
+        const rootBaseName = path.basename(selectedPath);
 
         const projectName = await vscode.window.showInputBox({
             prompt: 'Project name',
-            value: defaultName,
-            validateInput: value => value ? undefined : 'Project name is required'
+            placeHolder: 'Enter a new project folder name (will be created inside selected folder)',
+            validateInput: value => {
+                if (!value || !value.trim()) {
+                    return 'Project name is required';
+                }
+                if (value.trim() === rootBaseName) {
+                    return 'Project name must be different from the selected folder name';
+                }
+                return undefined;
+            }
         });
 
         if (!projectName) {
@@ -186,16 +194,7 @@ export class ProjectCommands {
 
     private resolvePathsForNewProject(selectedPath: string, projectName: string): { rootDir: string; projectRoot: string } {
         const normalized = path.resolve(selectedPath);
-        const baseName = path.basename(normalized);
-
-        if (baseName === projectName) {
-            const parentDir = path.dirname(normalized);
-            return {
-                rootDir: parentDir,
-                projectRoot: normalized
-            };
-        }
-
+        // Always create the project inside the selected folder
         return {
             rootDir: normalized,
             projectRoot: path.join(normalized, projectName)

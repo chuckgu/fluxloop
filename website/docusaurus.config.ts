@@ -11,7 +11,7 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://docs.fluxloop.io',  // 또는 'https://fluxloop.io'
+  url: 'https://fluxloop.io',  // 또는 'https://docs.fluxloop.io'
   baseUrl: '/',  // Apex/서브도메인 모두 /
 
   organizationName: 'chuckgu',
