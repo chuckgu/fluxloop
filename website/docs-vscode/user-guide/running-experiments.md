@@ -42,7 +42,7 @@ replay_args:
   recording_file: "recordings/args_recording.jsonl"
 ```
 
-See [CLI Runner Configuration](../../cli/configuration/runner-targets.md) for advanced runner patterns.
+See CLI Runner Configuration documentation for advanced runner patterns.
 
 ## Running from Command Palette
 
