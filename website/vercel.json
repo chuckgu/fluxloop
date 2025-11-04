@@ -5,6 +5,8 @@
   "devCommand": "npm start",
   "installCommand": "npm install",
   "regions": ["icn1", "sfo1"],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "github": {
     "silent": false,
     "autoAlias": true
