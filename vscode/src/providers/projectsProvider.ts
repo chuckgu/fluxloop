@@ -56,52 +56,80 @@ export class ProjectsProvider implements vscode.TreeDataProvider<ProjectTreeItem
         const project = element.project;
         const projectUri = vscode.Uri.file(project.path);
 
-        return [
+        const sourceRootLabel = project.sourceRoot ?? 'Not set';
+
+        const items: ProjectTreeItem[] = [];
+
+        items.push(new CommandTreeItem('Target Source Root…', sourceRootLabel, '$(link)', {
+            command: 'fluxloop.setProjectSourceRoot',
+            title: 'Set Target Source Root',
+            arguments: [project.id]
+        }));
+
+        if (project.sourceRoot) {
+            items.push(new CommandTreeItem('Reveal Target Source Root', undefined, '$(file-directory)', {
+                command: 'fluxloop.openProjectSourceRoot',
+                title: 'Reveal Target Source Root',
+                arguments: [project.id]
+            }));
+        }
+
+        items.push(
             new CommandTreeItem('Open in Current Window', undefined, '$(folder)', {
                 command: 'fluxloop.openProject',
                 title: 'Open Project in Current Window',
                 arguments: [projectUri, false]
-            }),
-            new CommandTreeItem('Open in New Window', undefined, '$(window)', {
+            })
+        );
+
+        items.push(new CommandTreeItem('Open in New Window', undefined, '$(window)', {
                 command: 'fluxloop.openProject',
                 title: 'Open Project in New Window',
                 arguments: [projectUri, true]
-            }),
-            new CommandTreeItem('Set Active Project', undefined, '$(check)', {
+            }));
+
+        items.push(new CommandTreeItem('Set Active Project', undefined, '$(check)', {
                 command: 'fluxloop.selectProject',
                 title: 'Set Active FluxLoop Project',
                 arguments: [project.id]
-            }),
-            new CommandTreeItem('Configure Project', undefined, '$(tools)', {
+            }));
+
+        items.push(new CommandTreeItem('Configure Project', undefined, '$(tools)', {
                 command: 'fluxloop.openProjectConfig',
                 title: 'Open FluxLoop Project Configuration',
                 arguments: [project.id]
-            }),
-            new CommandTreeItem('Configure Inputs', undefined, '$(list-unordered)', {
+            }));
+
+        items.push(new CommandTreeItem('Configure Inputs', undefined, '$(list-unordered)', {
                 command: 'fluxloop.openInputConfig',
                 title: 'Open FluxLoop Input Configuration',
                 arguments: [project.id]
-            }),
-            new CommandTreeItem('Configure Experiment', undefined, '$(beaker)', {
+            }));
+
+        items.push(new CommandTreeItem('Configure Experiment', undefined, '$(beaker)', {
                 command: 'fluxloop.openSimulationConfig',
                 title: 'Open FluxLoop Experiment Configuration',
                 arguments: [project.id]
-            }),
-            new CommandTreeItem('Configure Evaluation', undefined, '$(graph)', {
+            }));
+
+        items.push(new CommandTreeItem('Configure Evaluation', undefined, '$(graph)', {
                 command: 'fluxloop.openEvaluationConfig',
                 title: 'Open FluxLoop Evaluation Configuration',
                 arguments: [project.id]
-            }),
-            new CommandTreeItem('Run Experiment', undefined, '$(debug-start)', {
+            }));
+
+        items.push(new CommandTreeItem('Run Experiment', undefined, '$(debug-start)', {
                 command: 'fluxloop.runExperiment',
                 title: 'Run FluxLoop Experiment'
-            }),
-            new CommandTreeItem('Remove from List', undefined, '$(trash)', {
+            }));
+
+        items.push(new CommandTreeItem('Remove from List', undefined, '$(trash)', {
                 command: 'fluxloop.removeProject',
                 title: 'Remove FluxLoop Project',
                 arguments: [project.id]
-            })
-        ];
+            }));
+
+        return items;
     }
 
     private getEmptyStateItems(): ProjectTreeItem[] {
@@ -127,6 +155,10 @@ export class ProjectsProvider implements vscode.TreeDataProvider<ProjectTreeItem
 
     private toProjectItem(project: ProjectEntry, isActive: boolean): ProjectTreeItem {
         const descriptionParts = [path.basename(project.path)];
+
+        if (project.sourceRoot) {
+            descriptionParts.push(`Target: ${project.sourceRoot}`);
+        }
 
         if (!project.hasConfig) {
             descriptionParts.push('Configs missing');

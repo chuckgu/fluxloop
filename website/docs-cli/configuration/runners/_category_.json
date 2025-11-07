@@ -1,0 +1,9 @@
+{
+  "label": "Runner Patterns",
+  "position": 21,
+  "link": {
+    "type": "generated-index",
+    "description": "Detailed documentation for each runner integration pattern. Choose the pattern that matches your agent's implementation."
+  }
+}
+

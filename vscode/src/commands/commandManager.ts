@@ -42,6 +42,8 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.openEvaluationConfig', (projectId?: string) => this.openEvaluationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
             vscode.commands.registerCommand('fluxloop.configureExecutionWrapper', () => this.configureExecutionWrapper()),
+            vscode.commands.registerCommand('fluxloop.setProjectSourceRoot', (projectId?: string) => this.setProjectSourceRoot(projectId)),
+            vscode.commands.registerCommand('fluxloop.openProjectSourceRoot', (projectId?: string) => this.openProjectSourceRoot(projectId)),
             vscode.commands.registerCommand('fluxloop.showWireframe', () => this.showWireframe()),
             vscode.commands.registerCommand('fluxloop.showInputWizard', () => this.showInputWizard()),
             vscode.commands.registerCommand('fluxloop.showDialogsWireframe', () => this.showDialogsWireframe()),
@@ -460,6 +462,143 @@ export class CommandManager {
         }
 
         return selected?.label;
+    }
+
+    private async setProjectSourceRoot(projectId?: string) {
+        const projectManager = ProjectManager.getInstance();
+        const project = projectId
+            ? projectManager.getProjectById(projectId)
+            : ProjectContext.ensureActiveProject();
+
+        if (!project) {
+            return;
+        }
+
+        const configPath = path.join(project.path, 'configs', 'project.yaml');
+        if (!fs.existsSync(configPath)) {
+            void vscode.window.showWarningMessage('configs/project.yaml 파일을 찾을 수 없어 대상 소스 루트를 설정할 수 없습니다.');
+            return;
+        }
+
+        const actions: vscode.QuickPickItem[] = [
+            { label: 'Choose Folder…', description: 'Select new target source root directory' }
+        ];
+
+        if (project.sourceRoot) {
+            actions.push({ label: 'Clear Target Source Root', description: 'Remove the current mapping' });
+        }
+
+        const action = await vscode.window.showQuickPick(actions, {
+            placeHolder: 'Select what you want to do with the target source root',
+            title: project.name
+        });
+
+        if (!action) {
+            return;
+        }
+
+        if (action.label === 'Clear Target Source Root') {
+            this.writeSourceRoot(configPath, '');
+            projectManager.refreshProjectById(project.id);
+            void vscode.window.showInformationMessage(`Target source root cleared for ${project.name}.`);
+            return;
+        }
+
+        const dialogResult = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectMany: false,
+            canSelectFolders: true,
+            openLabel: 'Select',
+            defaultUri: vscode.Uri.file(project.path),
+            title: 'Select Target Source Root Folder'
+        });
+
+        if (!dialogResult || dialogResult.length === 0) {
+            return;
+        }
+
+        const selectedPath = dialogResult[0].fsPath;
+        const relative = path.relative(project.path, selectedPath);
+        let storedValue: string;
+
+        if (!relative || relative === '') {
+            storedValue = '.';
+        } else if (relative.startsWith('..')) {
+            storedValue = selectedPath;
+        } else {
+            storedValue = relative;
+        }
+
+        storedValue = storedValue.replace(/\\/g, '/');
+
+        this.writeSourceRoot(configPath, storedValue);
+        projectManager.refreshProjectById(project.id);
+        void vscode.window.showInformationMessage(`Target source root set to ${storedValue} for ${project.name}.`);
+    }
+
+    private async openProjectSourceRoot(projectId?: string) {
+        const projectManager = ProjectManager.getInstance();
+        const project = projectId
+            ? projectManager.getProjectById(projectId)
+            : ProjectContext.ensureActiveProject();
+
+        if (!project) {
+            return;
+        }
+
+        if (!project.sourceRoot) {
+            void vscode.window.showInformationMessage('Target source root is not set.');
+            return;
+        }
+
+        const resolvedPath = this.resolveSourceRoot(project.path, project.sourceRoot);
+
+        if (!fs.existsSync(resolvedPath)) {
+            void vscode.window.showWarningMessage(`Source root path does not exist: ${resolvedPath}`);
+            return;
+        }
+
+        const targetUri = vscode.Uri.file(resolvedPath);
+
+        try {
+            await vscode.commands.executeCommand('revealFileInOS', targetUri);
+        } catch (error) {
+            console.warn('Failed to reveal source root path', error);
+            void vscode.env.openExternal(targetUri);
+        }
+    }
+
+    private writeSourceRoot(configPath: string, value: string): void {
+        const normalizedValue = value.replace(/\\/g, '/');
+        const newLine = `source_root: "${normalizedValue}"`;
+        const raw = fs.readFileSync(configPath, 'utf8');
+
+        let updated: string;
+        if (/^source_root\s*:.*/m.test(raw)) {
+            updated = raw.replace(/^source_root\s*:.*/m, newLine);
+        } else if (/^name\s*:.*/m.test(raw)) {
+            updated = raw.replace(/^name\s*:.*/m, match => `${match}\n${newLine}`);
+        } else {
+            updated = `${raw.trimEnd()}\n${newLine}\n`;
+        }
+
+        if (!updated.endsWith('\n')) {
+            updated += '\n';
+        }
+
+        fs.writeFileSync(configPath, updated, 'utf8');
+    }
+
+    private resolveSourceRoot(projectPath: string, sourceRoot: string): string {
+        if (!sourceRoot || sourceRoot === '.') {
+            return projectPath;
+        }
+
+        if (path.isAbsolute(sourceRoot)) {
+            return sourceRoot;
+        }
+
+        return path.resolve(projectPath, sourceRoot);
     }
 
     private async configureExecutionWrapper() {

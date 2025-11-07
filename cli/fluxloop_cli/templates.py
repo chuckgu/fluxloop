@@ -15,6 +15,9 @@ def create_project_config(project_name: str) -> str:
         description: AI agent simulation project
         version: 1.0.0
 
+        # FluxLoop VSCode extension will prompt to set this path
+        source_root: ""
+
         collector_url: null
         collector_api_key: null
 

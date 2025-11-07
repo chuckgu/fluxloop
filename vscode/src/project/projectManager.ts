@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { parse as parseYaml } from 'yaml';
 
 export interface ProjectEntry {
     id: string;
@@ -8,6 +9,7 @@ export interface ProjectEntry {
     path: string;
     lastOpened: number;
     hasConfig: boolean;
+    sourceRoot?: string;
 }
 
 const PROJECTS_KEY = 'fluxloop.projects';
@@ -91,7 +93,8 @@ export class ProjectManager {
                 name: options.name,
                 path: normalizedPath,
                 lastOpened: now,
-                hasConfig: this.computeHasConfig(normalizedPath)
+                hasConfig: this.computeHasConfig(normalizedPath),
+                sourceRoot: this.readSourceRoot(normalizedPath)
             };
 
             const index = this.projects.findIndex(project => project.id === existing.id);
@@ -102,7 +105,8 @@ export class ProjectManager {
                 name: options.name,
                 path: normalizedPath,
                 lastOpened: now,
-                hasConfig: this.computeHasConfig(normalizedPath)
+                hasConfig: this.computeHasConfig(normalizedPath),
+                sourceRoot: this.readSourceRoot(normalizedPath)
             };
 
             this.projects.push(entry);
@@ -147,6 +151,7 @@ export class ProjectManager {
             if (project) {
                 project.lastOpened = Date.now();
                 project.hasConfig = this.computeHasConfig(project.path);
+                project.sourceRoot = this.readSourceRoot(project.path);
             }
         }
 
@@ -162,8 +167,10 @@ export class ProjectManager {
         }
 
         const hasConfig = this.computeHasConfig(project.path);
-        if (project.hasConfig !== hasConfig) {
+        const sourceRoot = this.readSourceRoot(project.path);
+        if (project.hasConfig !== hasConfig || project.sourceRoot !== sourceRoot) {
             project.hasConfig = hasConfig;
+            project.sourceRoot = sourceRoot;
             void this.persistState();
             this._onDidChangeProjects.fire();
         }
@@ -176,7 +183,8 @@ export class ProjectManager {
         this.projects = storedProjects.map(project => ({
             ...project,
             lastOpened: project.lastOpened ?? Date.now(),
-            hasConfig: this.computeHasConfig(project.path)
+            hasConfig: this.computeHasConfig(project.path),
+            sourceRoot: this.readSourceRoot(project.path) ?? project.sourceRoot
         }));
 
         this.activeProjectId = storedActiveProject;
@@ -192,9 +200,10 @@ export class ProjectManager {
 
         this.projects = this.projects.map(project => {
             const hasConfig = this.computeHasConfig(project.path);
-            if (hasConfig !== project.hasConfig) {
+            const sourceRoot = this.readSourceRoot(project.path);
+            if (hasConfig !== project.hasConfig || sourceRoot !== project.sourceRoot) {
                 hasChanges = true;
-                return { ...project, hasConfig };
+                return { ...project, hasConfig, sourceRoot };
             }
             return project;
         });
@@ -219,6 +228,28 @@ export class ProjectManager {
         }
 
         return false;
+    }
+
+    private readSourceRoot(projectPath: string): string | undefined {
+        const configPath = path.join(projectPath, 'configs', 'project.yaml');
+        if (!fs.existsSync(configPath)) {
+            return undefined;
+        }
+
+        try {
+            const raw = fs.readFileSync(configPath, 'utf8');
+            const parsed = parseYaml(raw) as any;
+
+            const sourceRoot = parsed?.project?.source_root ?? parsed?.source_root;
+            if (typeof sourceRoot === 'string') {
+                const trimmed = sourceRoot.trim();
+                return trimmed.length > 0 ? trimmed : undefined;
+            }
+        } catch (error) {
+            console.warn('Failed to read project.yaml for source_root', error);
+        }
+
+        return undefined;
     }
 
     private generateId(): string {

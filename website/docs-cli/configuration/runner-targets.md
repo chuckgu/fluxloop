@@ -1,71 +1,120 @@
 ---
-title: Runner Targets (simulation.yaml)
+title: Runner Targets (Overview)
 sidebar_position: 20
 ---
 
-## Runner Integration Patterns
+## 개요
 
-You connect your code to FluxLoop by configuring the `runner` in `configs/simulation.yaml`. These patterns are supported:
+`configs/simulation.yaml`의 `runner` 섹션으로 FluxLoop와 에이전트 코드를 연결합니다. 다양한 언어·프레임워크·실행 환경을 지원하기 위해 여러 통합 패턴을 제공합니다.
 
-1) Module + function (sync/async)
-```yaml
-runner:
-  module_path: "app.agent"
-  function_name: "run"
-  working_directory: .
-```
-or
+## 통합 패턴 분류
+
+### 🟢 P0: 기본 지원 (Production-Ready)
+
+| 패턴 | 사용 시점 | 문서 |
+|------|----------|------|
+| **Python 함수/메서드** | Python 동기/비동기 함수 직접 호출 | [python-function](./runners/python-function) |
+| **Python 클래스** | 클래스 인스턴스 메서드 호출 (팩토리 지원) | [python-class](./runners/python-class) |
+| **Python 비동기 제너레이터** | 스트리밍 응답 (OpenAI/Anthropic SDK 등) | [python-async-generator](./runners/python-async-generator) |
+| **HTTP REST/SSE** | 원격 API 또는 로컬 서버 (스트리밍 포함) | [http-rest](./runners/http-rest), [http-sse](./runners/http-sse) |
+| **WebSocket** | 양방향 스트리밍 (실시간 chat) | [http-websocket](./runners/http-websocket) |
+| **서브프로세스(JSONL)** | 타 언어 런타임 (Node/Go 등) 연동 | [subprocess-jsonl](./runners/subprocess-jsonl) |
+| **스텝 루프** | 다단계 대화/플로우 (`step()` 반복) | [step-loop](./runners/step-loop) |
+| **리소스 가드** | 타임아웃/출력 제한 안전망 | [guards](./runners/guards) |
+
+### 🟡 P1: 고급 기능 (Beta)
+
+| 패턴 | 사용 시점 | 문서 |
+|------|----------|------|
+| **배치 실행** | JSONL/CSV 데이터셋 병렬 평가 | [batch-execution](./runners/batch-execution) |
+| **고급 스트리밍 스키마** | 툴콜/함수콜 이벤트 경로 설정 | [streaming-schema](./runners/streaming-schema) |
+| **입출력 어댑터** | 함수 시그니처 변환 (프레임워크 간 매핑) | [adapters](./runners/adapters) |
+
+### 🔴 P2: 실험적 (Roadmap)
+
+| 패턴 | 사용 시점 | 문서 |
+|------|----------|------|
+| **Docker 컨테이너** | 격리·재현성 (이미지 기반 실행) | [container-docker](./runners/container-docker) |
+| **Redis/SQS 큐** | 프로덕션 스케일 비동기 워커 | [queue-redis](./runners/queue-redis), [queue-sqs](./runners/queue-sqs) |
+| **멀티타깃 컴포지트** | 순차/병렬/앙상블 에이전트 조합 | [multi-target](./runners/multi-target) |
+
+## 빠른 시작
+
+### 1) Python 함수 (가장 간단)
+
 ```yaml
 runner:
   target: "app.agent:run"
   working_directory: .
 ```
 
-2) Class.method (zero-arg constructor)
+### 2) HTTP API (원격 서비스)
+
 ```yaml
 runner:
-  target: "app.agent:Handler.handle"
+  http:
+    method: POST
+    url: "http://localhost:8000/chat"
+    stream: sse
 ```
 
-3) Module-scoped instance method (bound)
+### 3) 서브프로세스 (Node.js 에이전트)
+
 ```yaml
 runner:
-  target: "app.main:support_server.respond"
+  process:
+    command: ["node", "agent.mjs"]
+    protocol: jsonl
 ```
 
-4) Class.method with factory (constructor needs dependencies)
+## 공통 옵션
+
+모든 러너에서 사용 가능:
+
 ```yaml
 runner:
-  target: "app.main:CustomerSupportServer.respond"
-  factory: "app.main:get_server"       # get_server() -> CustomerSupportServer
-  factory_kwargs: {}                     # optional
+  # ... 패턴별 설정 ...
+  
+  # 공통
+  working_directory: .
+  python_path: ["src", "lib"]           # Python 패턴만
+  stream_output_path: "message.delta"   # 스트리밍 러너
+  
+  # 리소스 가드 (선택)
+  guards:
+    max_duration: 120s
+    output_char_limit: 20000
 ```
 
-5) Async generator targets (streamed responses)
+## Argument Replay (선택)
+
+복잡한 kwargs 재사용:
+
 ```yaml
 runner:
-  target: "app.main:support_server.respond"
-  stream_output_path: "message.delta"   # default
-```
-FluxLoop consumes the async stream and joins text found at `stream_output_path` into a single result.
-
-6) Async iterable returned from coroutine
-If your function returns an async generator/iterable, it will also be consumed with the same `stream_output_path`.
-
-## Argument Replay (optional)
-
-Replay recorded kwargs and override only the runtime input.
-```yaml
+  target: "app.agent:run"
+  
 replay_args:
   enabled: true
   recording_file: recordings/args_recording.jsonl
-  # override_param_path: "item.content.0.text"   # if you need to replace nested text
+  # override_param_path: "item.content.0.text"
 ```
 
-## Tips
-- Use `working_directory` if the module is not importable from the current CWD.
-- Use `python_path` (string or list) to prepend additional directories to `sys.path` before import.
-- Use `factory` when your class requires constructor args or external dependencies.
-- Default `stream_output_path` is `message.delta`. Adjust if your streamed event shape differs.
+자세한 내용: [Recording Guide](../../guides/recording)
+
+## 다음 단계
+
+- 패턴별 상세 문서에서 전체 옵션과 예제 확인
+- [Simulation Config](./simulation-config) 전체 구조
+- [Run Command](../commands/run) CLI 사용법
+
+## MCP 서버 통합
+
+본 문서와 하위 패턴 문서들은 FluxLoop MCP 서버의 지식 베이스로 사용됩니다:
+- `analyze_repository` → 프레임워크 탐지 → 적합한 패턴 추천
+- `generate_integration_steps` → 패턴별 체크리스트 생성
+- `faq` → 각 패턴 문서의 트러블슈팅/예제 검색
+
+MCP 서버 계획: [docs/prd/mcp_server_plan.md](https://github.com/your-org/fluxloop/blob/main/docs/prd/mcp_server_plan.md)
 
 
