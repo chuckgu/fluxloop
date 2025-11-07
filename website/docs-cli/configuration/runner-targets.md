@@ -14,29 +14,29 @@ sidebar_position: 20
 | 패턴 | 사용 시점 | 문서 |
 |------|----------|------|
 | **Python 함수/메서드** | Python 동기/비동기 함수 직접 호출 | [python-function](./runners/python-function) |
-| **Python 클래스** | 클래스 인스턴스 메서드 호출 (팩토리 지원) | [python-class](./runners/python-class) |
-| **Python 비동기 제너레이터** | 스트리밍 응답 (OpenAI/Anthropic SDK 등) | [python-async-generator](./runners/python-async-generator) |
-| **HTTP REST/SSE** | 원격 API 또는 로컬 서버 (스트리밍 포함) | [http-rest](./runners/http-rest), [http-sse](./runners/http-sse) |
-| **WebSocket** | 양방향 스트리밍 (실시간 chat) | [http-websocket](./runners/http-websocket) |
+| **Python 클래스** | 클래스 인스턴스 메서드 호출 (팩토리 지원) | _Coming soon_ |
+| **Python 비동기 제너레이터** | 스트리밍 응답 (OpenAI/Anthropic SDK 등) | _Coming soon_ |
+| **HTTP REST/SSE** | 원격 API 또는 로컬 서버 (스트리밍 포함) | [http-sse](./runners/http-sse) |
+| **WebSocket** | 양방향 스트리밍 (실시간 chat) | _Coming soon_ |
 | **서브프로세스(JSONL)** | 타 언어 런타임 (Node/Go 등) 연동 | [subprocess-jsonl](./runners/subprocess-jsonl) |
-| **스텝 루프** | 다단계 대화/플로우 (`step()` 반복) | [step-loop](./runners/step-loop) |
-| **리소스 가드** | 타임아웃/출력 제한 안전망 | [guards](./runners/guards) |
+| **스텝 루프** | 다단계 대화/플로우 (`step()` 반복) | _Coming soon_ |
+| **리소스 가드** | 타임아웃/출력 제한 안전망 | _Coming soon_ |
 
 ### 🟡 P1: 고급 기능 (Beta)
 
 | 패턴 | 사용 시점 | 문서 |
 |------|----------|------|
-| **배치 실행** | JSONL/CSV 데이터셋 병렬 평가 | [batch-execution](./runners/batch-execution) |
-| **고급 스트리밍 스키마** | 툴콜/함수콜 이벤트 경로 설정 | [streaming-schema](./runners/streaming-schema) |
-| **입출력 어댑터** | 함수 시그니처 변환 (프레임워크 간 매핑) | [adapters](./runners/adapters) |
+| **배치 실행** | JSONL/CSV 데이터셋 병렬 평가 | _Coming soon_ |
+| **고급 스트리밍 스키마** | 툴콜/함수콜 이벤트 경로 설정 | _Coming soon_ |
+| **입출력 어댑터** | 함수 시그니처 변환 (프레임워크 간 매핑) | _Coming soon_ |
 
 ### 🔴 P2: 실험적 (Roadmap)
 
 | 패턴 | 사용 시점 | 문서 |
 |------|----------|------|
-| **Docker 컨테이너** | 격리·재현성 (이미지 기반 실행) | [container-docker](./runners/container-docker) |
-| **Redis/SQS 큐** | 프로덕션 스케일 비동기 워커 | [queue-redis](./runners/queue-redis), [queue-sqs](./runners/queue-sqs) |
-| **멀티타깃 컴포지트** | 순차/병렬/앙상블 에이전트 조합 | [multi-target](./runners/multi-target) |
+| **Docker 컨테이너** | 격리·재현성 (이미지 기반 실행) | _Coming soon_ |
+| **Redis/SQS 큐** | 프로덕션 스케일 비동기 워커 | _Coming soon_ |
+| **멀티타깃 컴포지트** | 순차/병렬/앙상블 에이전트 조합 | _Coming soon_ |
 
 ## 빠른 시작
 
@@ -100,7 +100,7 @@ replay_args:
   # override_param_path: "item.content.0.text"
 ```
 
-자세한 내용: [Recording Guide](../../guides/recording)
+자세한 내용은 시뮬레이션 설정 문서를 참조하세요.
 
 ## 다음 단계
 

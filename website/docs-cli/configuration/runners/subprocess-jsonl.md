@@ -321,10 +321,11 @@ runner:
 
 ## 관련 문서
 
-- [HTTP REST](./http-rest) – 원격 서비스 통합
-- [Container Docker](./container-docker) – 격리된 프로세스 실행
-- [Streaming Schema](./streaming-schema) – 고급 델타 경로 설정
-- [Guards](./guards) – 타임아웃/리소스 제한
+- HTTP REST (Coming soon) – 원격 서비스 통합
+- Container Docker (Coming soon) – 격리된 프로세스 실행
+- Streaming Schema (Coming soon) – 고급 델타 경로 설정
+- Guards (Coming soon) – 타임아웃/리소스 제한
+- [Simulation Config](../simulation-config) – 전체 설정 구조
 
 ## MCP 메타데이터
 

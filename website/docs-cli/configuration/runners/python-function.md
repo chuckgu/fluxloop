@@ -217,14 +217,14 @@ runner:
   target: "app.handler:Handler.handle"
 ```
 
-생성자에 인자가 필요하면 [python-factory](./python-factory) 패턴 사용.
+생성자에 인자가 필요하면 Python Factory 패턴 사용 (문서 작성 예정).
 
 ## 관련 문서
 
-- [Python Class with Factory](./python-factory) – 복잡한 생성자 의존성
-- [Python Async Generator](./python-async-generator) – 스트리밍 응답
-- [Guards](./guards) – 리소스 제한
-- [SDK Tracing Guide](../../../docs-sdk/guides/tracing) – 자동 계측
+- Python Class with Factory (Coming soon) – 복잡한 생성자 의존성
+- Python Async Generator (Coming soon) – 스트리밍 응답
+- Guards (Coming soon) – 리소스 제한
+- [Simulation Config](../simulation-config) – 전체 설정 구조
 
 ## MCP 메타데이터
 

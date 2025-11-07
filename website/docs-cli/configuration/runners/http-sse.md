@@ -249,10 +249,11 @@ runner:
 
 ## 관련 문서
 
-- [HTTP REST](./http-rest) – 비스트리밍 HTTP 요청
-- [WebSocket](./http-websocket) – 양방향 스트리밍
-- [Streaming Schema](./streaming-schema) – 고급 이벤트 경로 설정
-- [Guards](./guards) – 타임아웃/출력 제한
+- HTTP REST (Coming soon) – 비스트리밍 HTTP 요청
+- WebSocket (Coming soon) – 양방향 스트리밍
+- Streaming Schema (Coming soon) – 고급 이벤트 경로 설정
+- Guards (Coming soon) – 타임아웃/출력 제한
+- [Simulation Config](../simulation-config) – 전체 설정 구조
 
 ## MCP 메타데이터
 
