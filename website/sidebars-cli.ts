@@ -37,7 +37,20 @@ const sidebars: SidebarsConfig = {
         'configuration/project-config',
         'configuration/input-config',
         'configuration/simulation-config',
-        'configuration/runner-targets',
+        {
+          type: 'category',
+          label: 'Runner Targets',
+          collapsed: false,
+          link: {
+            type: 'doc',
+            id: 'configuration/runner-targets',
+          },
+          items: [
+            'configuration/runners/python-function',
+            'configuration/runners/http-sse',
+            'configuration/runners/subprocess-jsonl',
+          ],
+        },
         'configuration/evaluation-config',
       ],
     },
