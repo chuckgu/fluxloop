@@ -4,18 +4,18 @@ sidebar_position: 1
 tags: [python, sync, async, p0]
 ---
 
-## 개요
+## Overview
 
-- **사용 시점**: Python 모듈의 함수 또는 메서드를 직접 호출
-- **난이도**: ⭐ 초급
-- **우선순위**: P0 (Production-Ready)
-- **의존성**: Python 3.8+, FluxLoop SDK (선택)
+- **When to Use**: Directly call Python module functions or methods
+- **Difficulty**: ⭐ Beginner
+- **Priority**: P0 (Production-Ready)
+- **Dependencies**: Python 3.8+, FluxLoop SDK (optional)
 
-가장 간단하고 일반적인 통합 패턴. 동기/비동기 함수 모두 지원.
+The simplest and most common integration pattern. Supports both sync and async functions.
 
-## 기본 설정
+## Basic Configuration
 
-### 패턴 1: Module + Function (간결)
+### Pattern 1: Module + Function (Concise)
 
 ```yaml
 runner:
@@ -23,7 +23,7 @@ runner:
   working_directory: .
 ```
 
-### 패턴 2: Module + Function (명시)
+### Pattern 2: Module + Function (Explicit)
 
 ```yaml
 runner:
@@ -32,38 +32,38 @@ runner:
   working_directory: .
 ```
 
-## 전체 옵션
+## Full Options
 
 ```yaml
 runner:
-  target: "app.agent:run"           # 또는 module_path + function_name
-  working_directory: .               # 모듈 import 기준 디렉터리
-  python_path:                       # sys.path에 추가할 경로 (선택)
+  target: "app.agent:run"           # or module_path + function_name
+  working_directory: .               # module import base directory
+  python_path:                       # additional paths to sys.path (optional)
     - "src"
     - "lib"
   
-  # 리소스 가드 (선택)
+  # Resource guards (optional)
   guards:
     max_duration: 120s
     output_char_limit: 20000
 ```
 
-## 함수 시그니처 요구사항
+## Function Signature Requirements
 
-### 기본 시그니처 (권장)
+### Basic Signature (Recommended)
 
 ```python
 def run(input: str) -> str:
     """
     Args:
-        input: 시뮬레이션 입력 텍스트
+        input: Simulation input text
     Returns:
-        응답 텍스트
+        Response text
     """
     return f"Response to: {input}"
 ```
 
-### 비동기 함수
+### Async Function
 
 ```python
 async def run(input: str) -> str:
@@ -71,22 +71,22 @@ async def run(input: str) -> str:
     return f"Async response to: {input}"
 ```
 
-### 컨텍스트 포함 (고급)
+### With Context (Advanced)
 
 ```python
 def run(input: str, context: dict = None) -> str:
     """
     Args:
-        input: 시뮬레이션 입력
-        context: 추가 메타데이터 (persona, iteration 등)
+        input: Simulation input
+        context: Additional metadata (persona, iteration, etc)
     """
     persona = context.get("persona", "default") if context else "default"
     return f"[{persona}] Response to: {input}"
 ```
 
-## 예제
+## Examples
 
-### 예제 1: 간단한 Echo 에이전트
+### Example 1: Simple Echo Agent
 
 **app/agent.py**
 ```python
@@ -104,12 +104,12 @@ output:
   directory: "experiments"
 ```
 
-**실행**
+**Execution**
 ```bash
 fluxloop run experiment
 ```
 
-### 예제 2: OpenAI 호출 (비동기)
+### Example 2: OpenAI Call (Async)
 
 **app/openai_agent.py**
 ```python
@@ -135,7 +135,7 @@ runner:
     max_duration: 60s
 ```
 
-### 예제 3: FluxLoop SDK 통합 (트레이싱)
+### Example 3: FluxLoop SDK Integration (Tracing)
 
 **app/traced_agent.py**
 ```python
@@ -143,12 +143,12 @@ from fluxloop_sdk import fluxloop
 
 @fluxloop.trace()
 def run(input: str) -> str:
-    # SDK가 자동으로 입력/출력/타이밍 기록
+    # SDK automatically records input/output/timing
     result = process_request(input)
     return result
 
 def process_request(input: str) -> str:
-    # 비즈니스 로직
+    # Business logic
     return f"Processed: {input}"
 ```
 
@@ -159,23 +159,23 @@ runner:
   working_directory: .
 ```
 
-SDK는 자동으로 컨텍스트를 전파하여 trace/span 정보를 기록합니다.
+SDK automatically propagates context for trace/span recording.
 
-## 트러블슈팅
+## Troubleshooting
 
-| 문제 | 원인 | 해결 |
-|------|------|------|
-| `ModuleNotFoundError` | 모듈 경로 불일치 | `working_directory` 또는 `python_path` 조정 |
-| 함수가 호출되지 않음 | 함수명 오타 | `target` 문자열 확인 (`module:function`) |
-| 비동기 함수 에러 | 이벤트 루프 충돌 | FluxLoop이 자동 처리하지만, 중첩 루프 시 `nest_asyncio` 필요 |
-| 출력이 `None` | `return` 누락 | 함수가 명시적으로 문자열 반환하는지 확인 |
-| 타임아웃 | 장시간 실행 | `guards.max_duration` 늘리거나 함수 최적화 |
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| `ModuleNotFoundError` | Module path mismatch | Adjust `working_directory` or `python_path` |
+| Function not called | Typo in function name | Verify `target` string (`module:function`) |
+| Async function error | Event loop conflict | FluxLoop handles automatically, but may need `nest_asyncio` for nested loops |
+| Output is `None` | Missing `return` | Ensure function explicitly returns string |
+| Timeout | Long-running execution | Increase `guards.max_duration` or optimize function |
 
-## 고급 주제
+## Advanced Topics
 
-### 모듈 스코프 인스턴스 메서드 (Bound Method)
+### Module-Scoped Instance Method (Bound Method)
 
-모듈에 이미 생성된 인스턴스의 메서드를 호출:
+Call a method on an instance already created at module level:
 
 **app/server.py**
 ```python
@@ -186,7 +186,7 @@ class SupportServer:
     def respond(self, input: str) -> str:
         return f"[{self.model}] Response: {input}"
 
-# 모듈 레벨에서 인스턴스 생성
+# Create instance at module level
 support_server = SupportServer(model="gpt-4")
 ```
 
@@ -196,15 +196,15 @@ runner:
   target: "app.server:support_server.respond"
 ```
 
-### 클래스 메서드 (무인자 생성자)
+### Class Method (Zero-Arg Constructor)
 
-클래스를 런타임에 인스턴스화 (생성자 인자 없음):
+Instantiate class at runtime (constructor requires no args):
 
 **app/handler.py**
 ```python
 class Handler:
     def __init__(self):
-        # 무인자 생성자
+        # Zero-arg constructor
         self.config = load_config()
     
     def handle(self, input: str) -> str:
@@ -217,16 +217,16 @@ runner:
   target: "app.handler:Handler.handle"
 ```
 
-생성자에 인자가 필요하면 Python Factory 패턴 사용 (문서 작성 예정).
+For constructors requiring arguments, use Python Factory pattern (docs coming soon).
 
-## 관련 문서
+## Related Documentation
 
-- Python Class with Factory (Coming soon) – 복잡한 생성자 의존성
-- Python Async Generator (Coming soon) – 스트리밍 응답
-- Guards (Coming soon) – 리소스 제한
-- [Simulation Config](../simulation-config) – 전체 설정 구조
+- Python Class with Factory (Coming soon) – complex constructor dependencies
+- Python Async Generator (Coming soon) – streaming responses
+- Guards (Coming soon) – resource limits
+- [Simulation Config](../simulation-config) – full configuration structure
 
-## MCP 메타데이터
+## MCP Metadata
 
 ```json
 {
@@ -248,4 +248,3 @@ runner:
   ]
 }
 ```
-

@@ -4,16 +4,16 @@ sidebar_position: 7
 tags: [subprocess, jsonl, node, go, p0]
 ---
 
-## 개요
+## Overview
 
-- **사용 시점**: 타 언어 런타임(Node.js, Go, Rust 등) 에이전트 연동
-- **난이도**: ⭐⭐ 중급
-- **우선순위**: P0 (Production-Ready)
-- **의존성**: 실행 가능한 바이너리/스크립트, JSONL 프로토콜 구현
+- **When to Use**: Integrate agents in other languages (Node.js, Go, Rust, etc)
+- **Difficulty**: ⭐⭐ Intermediate
+- **Priority**: P0 (Production-Ready)
+- **Dependencies**: Executable binary/script, JSONL protocol implementation
 
-로컬 프로세스를 실행하여 STDIN/STDOUT으로 JSONL(JSON Lines) 메시지를 교환. Python 외 언어로 작성된 에이전트를 통합할 때 사용.
+Execute local processes and exchange JSONL (JSON Lines) messages via STDIN/STDOUT. Use when integrating agents written in languages other than Python.
 
-## 기본 설정
+## Basic Configuration
 
 ```yaml
 runner:
@@ -22,69 +22,69 @@ runner:
     protocol: jsonl
 ```
 
-## 전체 옵션
+## Full Options
 
 ```yaml
 runner:
   process:
-    command: ["node", "agent.mjs"]      # 실행 명령어 (배열)
-    cwd: .                              # 작업 디렉터리
-    env:                                # 환경변수 (선택)
+    command: ["node", "agent.mjs"]      # Command array
+    cwd: .                              # Working directory
+    env:                                # Environment variables (optional)
       NODE_ENV: production
-      API_KEY: "${API_KEY}"             # 환경변수 치환
-    protocol: jsonl                     # 현재 jsonl만 지원
+      API_KEY: "${API_KEY}"             # Environment variable substitution
+    protocol: jsonl                     # Currently only jsonl supported
     
-    stream_output_path: "delta"         # JSONL 이벤트 내 델타 경로
-    ready_pattern: "^READY$"            # 선택: 시작 준비 신호 (정규식)
-    timeout: 120s                       # 전체 실행 타임아웃
+    stream_output_path: "delta"         # Delta path within JSONL events
+    ready_pattern: "^READY$"            # Optional: startup ready signal (regex)
+    timeout: 120s                       # Overall execution timeout
     
-    # 프로세스 관리
-    kill_signal: SIGTERM                # 종료 시그널 (기본)
-    kill_timeout: 5s                    # 강제 종료 대기 시간
+    # Process management
+    kill_signal: SIGTERM                # Termination signal (default)
+    kill_timeout: 5s                    # Force kill wait time
     
   guards:
     max_duration: 180s
 ```
 
-## JSONL 프로토콜 규약
+## JSONL Protocol Convention
 
-### FluxLoop → 프로세스 (STDIN)
+### FluxLoop → Process (STDIN)
 
-**입력 메시지**
+**Input Message**
 ```json
 {"type": "input", "input": "User query here", "context": {"persona": "expert_user", "iteration": 1}}
 ```
 
-### 프로세스 → FluxLoop (STDOUT)
+### Process → FluxLoop (STDOUT)
 
-**스트리밍 델타** (선택)
+**Streaming Delta** (optional)
 ```json
 {"type": "delta", "delta": "First chunk"}
 {"type": "delta", "delta": " second chunk"}
 ```
 
-**최종 응답**
+**Final Response**
 ```json
 {"type": "final", "output": "Complete response text"}
 ```
 
-**에러 보고** (선택)
+**Error Reporting** (optional)
 ```json
 {"type": "error", "error": "Something went wrong", "code": "INTERNAL_ERROR"}
 ```
 
-### 준비 신호 (선택)
+### Ready Signal (Optional)
 
-프로세스가 초기화 완료 후 STDOUT에 출력:
+Process outputs to STDOUT after initialization:
 ```
 READY
 ```
 
-FluxLoop이 이 줄을 감지한 후 입력 메시지를 전송.
+FluxLoop sends input message after detecting this line.
 
-## 예제
+## Examples
 
-### 예제 1: Node.js Echo 에이전트
+### Example 1: Node.js Echo Agent
 
 **agent.mjs**
 ```javascript
@@ -96,7 +96,7 @@ const rl = readline.createInterface({
   terminal: false
 });
 
-// 준비 신호
+// Ready signal
 console.log('READY');
 
 rl.on('line', (line) => {
@@ -118,12 +118,12 @@ runner:
     ready_pattern: "^READY$"
 ```
 
-**실행**
+**Execution**
 ```bash
 fluxloop run experiment
 ```
 
-### 예제 2: Node.js 스트리밍 에이전트 (OpenAI)
+### Example 2: Node.js Streaming Agent (OpenAI)
 
 **streaming_agent.mjs**
 ```javascript
@@ -173,7 +173,7 @@ runner:
     timeout: 120s
 ```
 
-### 예제 3: Go 에이전트
+### Example 3: Go Agent
 
 **agent.go**
 ```go
@@ -219,7 +219,7 @@ func main() {
 }
 ```
 
-**빌드 & 설정**
+**Build & Configure**
 ```bash
 go build -o agent agent.go
 ```
@@ -233,20 +233,20 @@ runner:
     ready_pattern: "^READY$"
 ```
 
-## 트러블슈팅
+## Troubleshooting
 
-| 문제 | 원인 | 해결 |
-|------|------|------|
-| 프로세스 시작 실패 | 명령어 경로 오류 | `command` 절대 경로 사용 또는 `cwd` 조정 |
-| JSONL 파싱 실패 | 잘못된 JSON 형식 | STDERR 로그 확인, 프로세스 디버깅 |
-| 타임아웃 | 응답 느림 또는 무한 대기 | `timeout` 증가, `ready_pattern` 확인 |
-| 준비 신호 미감지 | 패턴 불일치 | 정규식 테스트, STDOUT 버퍼링 해제 |
-| 출력 누락 | STDOUT 버퍼링 | Node: `console.log`, Go: `fmt.Println` 사용 (자동 플러시) |
-| 프로세스 좀비 | 종료 실패 | `kill_signal`/`kill_timeout` 조정 |
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Process fails to start | Command path error | Use absolute path in `command` or adjust `cwd` |
+| JSONL parsing failure | Invalid JSON format | Check STDERR logs, debug process |
+| Timeout | Slow response or infinite wait | Increase `timeout`, verify `ready_pattern` |
+| Ready signal not detected | Pattern mismatch | Test regex, disable STDOUT buffering |
+| Missing output | STDOUT buffering | Node: `console.log`, Go: `fmt.Println` (auto-flush) |
+| Zombie process | Termination failure | Adjust `kill_signal`/`kill_timeout` |
 
-## 고급 주제
+## Advanced Topics
 
-### 환경변수 격리
+### Environment Variable Isolation
 
 ```yaml
 runner:
@@ -254,40 +254,40 @@ runner:
     command: ["node", "agent.mjs"]
     env:
       NODE_ENV: production
-      API_KEY: "${OPENAI_API_KEY}"      # .env 파일에서 로드
-    # 시스템 환경변수는 기본적으로 상속됨
+      API_KEY: "${OPENAI_API_KEY}"      # Load from .env file
+    # System environment variables inherited by default
 ```
 
-### 에러 처리
+### Error Handling
 
-프로세스가 에러를 보고:
+Process reports error:
 
 ```json
 {"type": "error", "error": "API rate limit exceeded", "code": "RATE_LIMIT"}
 ```
 
-FluxLoop은 이를 실험 실패로 기록하고 다음 입력으로 진행.
+FluxLoop records as experiment failure and proceeds to next input.
 
-### 준비 신호 없이 즉시 실행
+### Run Without Ready Signal
 
-간단한 프로세스는 `ready_pattern` 생략 가능:
+Simple processes can omit `ready_pattern`:
 
 ```yaml
 runner:
   process:
     command: ["python", "simple_agent.py"]
     protocol: jsonl
-    # ready_pattern 생략 → 즉시 입력 전송
+    # ready_pattern omitted → send input immediately
 ```
 
-단, 초기화 시간이 긴 프로세스는 첫 입력 손실 가능.
+Note: Processes with long initialization may lose first input.
 
-### 여러 입력 처리 (재사용)
+### Multiple Input Processing (Reuse)
 
-기본적으로 FluxLoop은 각 입력마다 새 프로세스를 실행. 재사용하려면 프로세스가 여러 입력을 순차 처리하도록 구현:
+By default, FluxLoop spawns a new process per input. For reuse, implement multi-input handling:
 
 ```javascript
-// Node.js 재사용 예시
+// Node.js reuse example
 rl.on('line', async (line) => {
   const msg = JSON.parse(line);
   if (msg.type === 'input') {
@@ -297,37 +297,37 @@ rl.on('line', async (line) => {
 });
 ```
 
-설정에서 재사용 모드 활성화 (추후 지원 예정):
+Configure reuse mode (P1 roadmap):
 
 ```yaml
 runner:
   process:
     command: ["node", "agent.mjs"]
     protocol: jsonl
-    reuse: true                         # 프로세스 재사용 (P1 roadmap)
+    reuse: true                         # Process reuse (P1 roadmap)
 ```
 
-## 성능
+## Performance
 
-- **시작 오버헤드**: 프로세스 생성(~10-100ms). 반복 실험 시 누적 가능.
-- **병렬 실행**: `simulation.parallelism`으로 여러 프로세스 동시 실행.
-- **메모리**: 각 프로세스는 독립 메모리 공간 사용.
+- **Startup Overhead**: Process creation (~10-100ms). Accumulates in repeated experiments.
+- **Parallel Execution**: Use `simulation.parallelism` for concurrent processes.
+- **Memory**: Each process uses independent memory space.
 
-## 보안
+## Security
 
-- **입력 검증**: 프로세스는 악의적 입력 가능성 고려해야 함.
-- **샌드박싱**: 컨테이너 환경에서 실행 권장 (P2: Docker 패턴).
-- **로그 민감정보**: API 키 등이 STDOUT/STDERR에 노출되지 않도록 주의.
+- **Input Validation**: Processes should consider malicious input possibilities.
+- **Sandboxing**: Recommend running in container environment (P2: Docker pattern).
+- **Log Sensitive Info**: Ensure API keys not exposed in STDOUT/STDERR.
 
-## 관련 문서
+## Related Documentation
 
-- HTTP REST (Coming soon) – 원격 서비스 통합
-- Container Docker (Coming soon) – 격리된 프로세스 실행
-- Streaming Schema (Coming soon) – 고급 델타 경로 설정
-- Guards (Coming soon) – 타임아웃/리소스 제한
-- [Simulation Config](../simulation-config) – 전체 설정 구조
+- HTTP REST (Coming soon) – remote service integration
+- Container Docker (Coming soon) – isolated process execution
+- Streaming Schema (Coming soon) – advanced delta path configuration
+- Guards (Coming soon) – timeout/resource limits
+- [Simulation Config](../simulation-config) – full configuration structure
 
-## MCP 메타데이터
+## MCP Metadata
 
 ```json
 {
@@ -355,4 +355,3 @@ runner:
   ]
 }
 ```
-
