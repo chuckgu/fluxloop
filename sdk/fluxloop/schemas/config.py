@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_valid
 
 class VariationStrategy(str, Enum):
     """Strategy for generating prompt variations."""
-    
+
     REPHRASE = "rephrase"  # Rephrase the same intent
     ERROR_PRONE = "error_prone"  # Introduce mistakes to test robustness
     TYPO = "typo"  # Add typos/errors
@@ -70,7 +70,7 @@ class InputGenerationConfig(BaseModel):
 
 class PersonaConfig(BaseModel):
     """User persona for simulation."""
-    
+
     name: str
     description: str
     characteristics: List[str] = Field(default_factory=list)
@@ -79,51 +79,51 @@ class PersonaConfig(BaseModel):
     goals: List[str] = Field(default_factory=list)
     constraints: List[str] = Field(default_factory=list)
     custom_attributes: Dict[str, Any] = Field(default_factory=dict)
-    
+
     def to_prompt(self) -> str:
         """Convert persona to a prompt description."""
         prompt_parts = [
             f"User Persona: {self.name}",
             f"Description: {self.description}",
         ]
-        
+
         if self.characteristics:
             prompt_parts.append(f"Characteristics: {', '.join(self.characteristics)}")
-        
+
         if self.goals:
             prompt_parts.append(f"Goals: {', '.join(self.goals)}")
-        
+
         if self.constraints:
             prompt_parts.append(f"Constraints: {', '.join(self.constraints)}")
-        
+
         prompt_parts.append(f"Language: {self.language}")
         prompt_parts.append(f"Expertise Level: {self.expertise_level}")
-        
+
         return "\n".join(prompt_parts)
 
 
 class EvaluatorConfig(BaseModel):
     """Configuration for evaluation methods."""
-    
+
     name: str
     type: str  # "llm_judge", "rule_based", "metric", "custom"
     enabled: bool = True
-    
+
     # For LLM judge
     model: Optional[str] = None
     prompt_template: Optional[str] = None
-    
+
     # For rule-based
     rules: List[Dict[str, Any]] = Field(default_factory=list)
-    
+
     # For metrics
     metric_name: Optional[str] = None
     threshold: Optional[float] = None
-    
+
     # Custom evaluator
     module_path: Optional[str] = None
     class_name: Optional[str] = None
-    
+
     # Common
     weight: float = 1.0
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -131,7 +131,7 @@ class EvaluatorConfig(BaseModel):
 
 class RunnerConfig(BaseModel):
     """Configuration for agent execution."""
-    
+
     # Entry point
     module_path: str  # e.g., "my_agent.main"
     function_name: str = "run"  # Function to call
@@ -160,7 +160,7 @@ class RunnerConfig(BaseModel):
             "Dot-notation path for extracting text from async generator events (e.g., 'message.delta')."
         ),
     )
-    
+
     # Execution environment
     working_directory: Optional[str] = None
     python_path: List[str] = Field(default_factory=list)
@@ -168,7 +168,9 @@ class RunnerConfig(BaseModel):
 
     @field_validator("python_path", mode="before")
     @classmethod
-    def _coerce_python_path(cls, value: Union[None, str, List[str], tuple]) -> List[str]:
+    def _coerce_python_path(
+        cls, value: Union[None, str, List[str], tuple]
+    ) -> List[str]:
         if value is None:
             return []
         if isinstance(value, str):
@@ -176,16 +178,16 @@ class RunnerConfig(BaseModel):
         if isinstance(value, (list, tuple)):
             return [str(item) for item in value]
         return [str(value)]
-    
+
     # Dependencies
     requirements_file: Optional[str] = None
     setup_commands: List[str] = Field(default_factory=list)
-    
+
     # Execution settings
     timeout_seconds: int = 300
     max_retries: int = 3
     retry_delay: int = 5
-    
+
     # Docker settings (optional)
     use_docker: bool = False
     docker_image: Optional[str] = None
@@ -225,7 +227,9 @@ class ExperimentConfig(BaseModel):
     base_inputs: List[Dict[str, Any]] = Field(default_factory=list)
     inputs_file: Optional[str] = None
     input_template: Optional[str] = None
-    input_generation: InputGenerationConfig = Field(default_factory=InputGenerationConfig)
+    input_generation: InputGenerationConfig = Field(
+        default_factory=InputGenerationConfig
+    )
 
     # Runner configuration
     runner: RunnerConfig
@@ -248,14 +252,14 @@ class ExperimentConfig(BaseModel):
     # Metadata
     tags: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    
+
     @field_validator("iterations")
     def validate_iterations(cls, v):
         """Ensure reasonable iteration count."""
         if v > 1000:
             raise ValueError("iterations must be <= 1000 for safety")
         return v
-    
+
     @model_validator(mode="after")
     def validate_input_sources(cls, values: "ExperimentConfig") -> "ExperimentConfig":
         """Ensure at least one input source is configured."""
@@ -307,7 +311,11 @@ class ExperimentConfig(BaseModel):
 
     def get_input_count(self) -> int:
         """Return the effective number of inputs that will be executed."""
-        return self._resolved_input_count if self._resolved_input_count is not None else self._default_input_count()
+        return (
+            self._resolved_input_count
+            if self._resolved_input_count is not None
+            else self._default_input_count()
+        )
 
     def estimate_total_runs(self) -> int:
         """Calculate total number of runs."""
@@ -317,7 +325,7 @@ class ExperimentConfig(BaseModel):
             persona_count = len(self.personas) if self.personas else 1
         input_count = self.get_input_count()
         return self.iterations * persona_count * input_count
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return self.model_dump(exclude_none=True)

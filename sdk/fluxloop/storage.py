@@ -50,4 +50,3 @@ class OfflineStore:
                 payload = serialize_observation(observation)
                 payload["trace_id"] = str(trace_id)
                 fp.write(json.dumps(payload) + os.linesep)
-

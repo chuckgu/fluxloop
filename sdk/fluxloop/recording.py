@@ -21,6 +21,7 @@ _SENSITIVE_KEY_PATTERNS = [
 try:
     from pydantic import BaseModel
 except ImportError:  # pragma: no cover - fallback if optional dependency missing
+
     class BaseModel:  # type: ignore
         def __init__(self, **kwargs):
             for key, value in kwargs.items():
@@ -128,11 +129,15 @@ class ArgsRecorder:
                     result[mask_key] = self._coerce_to_json_safe(item, depth=depth + 1)
             return result
 
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
             return [
-                "***"
-                if self._is_collection_with_sensitive_keys(item)
-                else self._coerce_to_json_safe(item, depth=depth + 1)
+                (
+                    "***"
+                    if self._is_collection_with_sensitive_keys(item)
+                    else self._coerce_to_json_safe(item, depth=depth + 1)
+                )
                 for item in value
             ]
 
@@ -149,7 +154,9 @@ class ArgsRecorder:
         if isinstance(value, Mapping):
             return any(self._is_sensitive_key(str(key)) for key in value.keys())
 
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
             return any(self._is_collection_with_sensitive_keys(item) for item in value)
 
         return False
@@ -160,6 +167,7 @@ class ArgsRecorder:
 
 
 _global_recorder: Optional[ArgsRecorder] = None
+
 
 class RecordingConfig(BaseModel):
     iteration_auto_increment: bool = True
@@ -176,7 +184,9 @@ def enable_recording(output_file: str) -> None:
     _global_recorder = ArgsRecorder(resolved_path)
 
 
-def record_call_args(target: str, *, iteration: Optional[int] = None, **kwargs: Any) -> None:
+def record_call_args(
+    target: str, *, iteration: Optional[int] = None, **kwargs: Any
+) -> None:
     """Record call arguments if recording is enabled."""
 
     if _global_recorder is None:
@@ -201,5 +211,3 @@ def set_recording_options(*, iteration_auto_increment: Optional[bool] = None) ->
 
     if iteration_auto_increment is not None:
         _recording_config.iteration_auto_increment = iteration_auto_increment
-
-

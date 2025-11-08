@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-import fluxloop 
+import fluxloop
 from fluxloop.buffer import EventBuffer
 from fluxloop.context import FluxLoopContext
 from fluxloop.models import ObservationData, ObservationType
@@ -72,4 +72,3 @@ def test_offline_store_on_error(tmp_path: Path):
 
     assert traces_file.exists()
     assert observations_file.exists()
-

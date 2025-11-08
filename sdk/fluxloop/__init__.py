@@ -19,7 +19,12 @@ from .schemas import (
 )
 from .client import FluxLoopClient
 from .config import configure, get_config, reset_config, load_env
-from .recording import disable_recording, enable_recording, record_call_args, set_recording_options
+from .recording import (
+    disable_recording,
+    enable_recording,
+    record_call_args,
+    set_recording_options,
+)
 
 __version__ = "0.1.3"
 

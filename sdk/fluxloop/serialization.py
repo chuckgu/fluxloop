@@ -42,10 +42,7 @@ def _make_json_safe(value: Any) -> Any:
         return {str(key): _make_json_safe(val) for key, val in value.items()}
 
     if isinstance(value, (list, tuple, set, frozenset)):
-        return [
-            _make_json_safe(item)
-            for item in value
-        ]
+        return [_make_json_safe(item) for item in value]
 
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
@@ -113,4 +110,3 @@ def serialize_observation(observation: ObservationData) -> Dict[str, Any]:
         data["llm_parameters"] = _make_json_safe(data["llm_parameters"])
 
     return data
-

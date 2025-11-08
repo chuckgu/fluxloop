@@ -7,7 +7,9 @@ from typing import Optional
 import fluxloop
 
 
-def reset_and_configure(record_args: bool, recording_file: Optional[str] = None) -> None:
+def reset_and_configure(
+    record_args: bool, recording_file: Optional[str] = None
+) -> None:
     """Helper to reset configuration before enabling/disabling recording."""
 
     fluxloop.reset_config()
@@ -138,7 +140,10 @@ def test_iteration_manual_override(tmp_path):
     fluxloop.record_call_args(target="tests.sample:handler", iteration=5)
     fluxloop.record_call_args(target="tests.sample:handler")
 
-    records = [json.loads(line) for line in output_file.read_text(encoding="utf-8").splitlines()]
+    records = [
+        json.loads(line)
+        for line in output_file.read_text(encoding="utf-8").splitlines()
+    ]
     assert records[0]["iteration"] == 5
     assert records[1]["iteration"] == 6
 
@@ -157,5 +162,3 @@ def test_disable_recording(tmp_path):
 
     lines = output_file.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
-
-
