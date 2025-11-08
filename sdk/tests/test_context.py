@@ -1,7 +1,6 @@
 """Tests for context management."""
 
 import pytest
-from uuid import uuid4
 
 import fluxloop 
 from fluxloop.context import FluxLoopContext, get_current_context

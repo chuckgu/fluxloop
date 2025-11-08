@@ -3,12 +3,10 @@ Event buffering and batch sending logic.
 """
 
 import atexit
-import json
 import threading
 import time
 from collections import deque
-from datetime import datetime
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from typing import Deque, List, Optional, Tuple
 from uuid import UUID
 
 from .config import get_config

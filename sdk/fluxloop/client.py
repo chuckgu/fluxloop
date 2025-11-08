@@ -1,8 +1,6 @@
 """
 HTTP client for sending data to the collector.
 """
-
-import json
 from typing import Any, Dict, Optional
 from uuid import UUID
 

@@ -4,10 +4,9 @@ Decorators for instrumenting agent code.
 
 import functools
 import inspect
-import time
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, TypeVar
 from uuid import UUID, uuid4
 
 from .context import get_current_context
@@ -461,5 +460,5 @@ def _serialize_value(value: Any) -> Any:
     # Fallback to string representation
     try:
         return str(value)
-    except:
+    except Exception:
         return f"<{type(value).__name__}>"
