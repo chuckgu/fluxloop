@@ -1,0 +1,9 @@
+{
+  "label": "MCP Server",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "AI-powered integration assistant via Model Context Protocol. Get intelligent guidance for integrating Fluxloop into your projects with automated repository analysis and framework-specific recommendations."
+  }
+}
+
