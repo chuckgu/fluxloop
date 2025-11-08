@@ -6,7 +6,7 @@ import functools
 import inspect
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, TypeVar, cast
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
 from uuid import UUID, uuid4
 
 from .context import get_current_context
