@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import fluxloop 
-from fluxloop.models import ObservationType
 
 
 class TestAgentDecorator:
