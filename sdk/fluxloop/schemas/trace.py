@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class TraceStatus(str, Enum):
@@ -66,16 +66,16 @@ class Score(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     @field_validator("value")
-    def validate_value_type(cls, v, info):
+    def validate_value_type(cls, value: Any, info: ValidationInfo) -> Any:
         """Ensure value matches the declared data type."""
         data_type = info.data.get("data_type")
-        if data_type == ScoreDataType.NUMERIC and not isinstance(v, (int, float)):
+        if data_type == ScoreDataType.NUMERIC and not isinstance(value, (int, float)):
             raise ValueError("Numeric score must be int or float")
-        elif data_type == ScoreDataType.BOOLEAN and not isinstance(v, bool):
+        if data_type == ScoreDataType.BOOLEAN and not isinstance(value, bool):
             raise ValueError("Boolean score must be bool")
-        elif data_type == ScoreDataType.CATEGORICAL and not isinstance(v, str):
+        if data_type == ScoreDataType.CATEGORICAL and not isinstance(value, str):
             raise ValueError("Categorical score must be str")
-        return v
+        return value
 
 
 class Observation(BaseModel):
@@ -166,16 +166,13 @@ class Trace(BaseModel):
             return delta.total_seconds() * 1000
         return None
 
-    def get_observation_tree(self) -> Dict[UUID, List[Observation]]:
+    def get_observation_tree(self) -> Dict[Optional[UUID], List[Observation]]:
         """Build parent-child relationship tree of observations."""
-        tree: Dict[UUID, List[Observation]] = {None: []}
-
-        for obs in self.observations:
-            parent_id = obs.parent_observation_id
-            if parent_id not in tree:
-                tree[parent_id] = []
-            tree[parent_id].append(obs)
-
+        tree: Dict[Optional[UUID], List[Observation]] = {}
+        for observation in self.observations:
+            tree.setdefault(observation.parent_observation_id, []).append(observation)
+        if None not in tree:
+            tree[None] = []
         return tree
 
     def calculate_metrics(self) -> Dict[str, Any]:

@@ -4,7 +4,7 @@ Configuration schemas for experiments and simulations.
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
@@ -254,14 +254,17 @@ class ExperimentConfig(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("iterations")
-    def validate_iterations(cls, v):
+    def validate_iterations(cls, value: int) -> int:
         """Ensure reasonable iteration count."""
-        if v > 1000:
+        if value > 1000:
             raise ValueError("iterations must be <= 1000 for safety")
-        return v
+        return value
 
-    @model_validator(mode="after")
-    def validate_input_sources(cls, values: "ExperimentConfig") -> "ExperimentConfig":
+    @model_validator(mode="after")  # type: ignore[arg-type]
+    def validate_input_sources(
+        cls: Type["ExperimentConfig"],
+        values: "ExperimentConfig",
+    ) -> "ExperimentConfig":
         """Ensure at least one input source is configured."""
         if not values.base_inputs and not values.inputs_file:
             # Allow both sources to be disabled if base_inputs is provided

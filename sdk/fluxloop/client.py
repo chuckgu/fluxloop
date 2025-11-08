@@ -2,7 +2,8 @@
 HTTP client for sending data to the collector.
 """
 
-from typing import Any, Dict, Optional
+from types import TracebackType
+from typing import Any, Dict, Optional, Type, cast
 from uuid import UUID
 
 import httpx
@@ -27,7 +28,8 @@ class FluxLoopClient:
             api_key: Override API key
         """
         self.config = get_config()
-        self.collector_url = collector_url or self.config.collector_url
+        default_url = self.config.collector_url or "http://localhost:8000"
+        self.collector_url = (collector_url or default_url).rstrip("/")
         self.api_key = api_key or self.config.api_key
         self._client: Optional[httpx.Client] = None
         if self.config.use_collector:
@@ -80,7 +82,7 @@ class FluxLoopClient:
         try:
             response = self._client.post("/api/traces", json=payload)
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         except httpx.HTTPError as e:
             if self.config.debug:
                 print(f"Error sending trace: {e}")
@@ -117,7 +119,7 @@ class FluxLoopClient:
                 f"/api/traces/{trace_id}/observations", json=payload
             )
             response.raise_for_status()
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         except httpx.HTTPError as e:
             if self.config.debug:
                 print(f"Error sending observation: {e}")
@@ -166,10 +168,15 @@ class FluxLoopClient:
         if self._client:
             self._client.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "FluxLoopClient":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         """Context manager exit."""
         self.close()

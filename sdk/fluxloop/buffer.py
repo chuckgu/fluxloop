@@ -22,7 +22,7 @@ class EventBuffer:
     _instance: Optional["EventBuffer"] = None
     _lock = threading.Lock()
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the buffer."""
         if EventBuffer._instance is not None:
             raise RuntimeError("Use EventBuffer.get_instance() instead")

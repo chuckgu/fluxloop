@@ -6,7 +6,7 @@ import contextvars
 import random
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
 from uuid import UUID, uuid4
 
 from .buffer import EventBuffer
@@ -183,7 +183,7 @@ def instrument(
     metadata: Optional[Dict[str, Any]] = None,
     tags: Optional[List[str]] = None,
     trace_id: Optional[UUID] = None,
-):
+) -> Iterator[FluxLoopContext]:
     """
     Context manager for instrumenting code blocks.
 

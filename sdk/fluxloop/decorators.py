@@ -6,7 +6,7 @@ import functools
 import inspect
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, TypeVar, cast
 from uuid import UUID, uuid4
 
 from .context import get_current_context
@@ -40,7 +40,7 @@ def agent(
         agent_name = name or func.__name__
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return func(*args, **kwargs)
@@ -90,7 +90,7 @@ def agent(
                 context.pop_observation()
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return await func(*args, **kwargs)
@@ -141,9 +141,8 @@ def agent(
 
         # Return appropriate wrapper based on function type
         if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
@@ -171,7 +170,7 @@ def prompt(
         prompt_name = name or func.__name__
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return func(*args, **kwargs)
@@ -227,7 +226,7 @@ def prompt(
                 context.pop_observation()
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return await func(*args, **kwargs)
@@ -284,9 +283,8 @@ def prompt(
 
         # Return appropriate wrapper based on function type
         if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
@@ -312,7 +310,7 @@ def tool(
         tool_name = name or func.__name__
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return func(*args, **kwargs)
@@ -359,7 +357,7 @@ def tool(
                 context.pop_observation()
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             context = get_current_context()
             if not context or not context.is_enabled():
                 return await func(*args, **kwargs)
@@ -407,14 +405,17 @@ def tool(
 
         # Return appropriate wrapper based on function type
         if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
 
     return decorator
 
 
-def _serialize_arguments(func: Callable, args: tuple, kwargs: dict) -> Dict[str, Any]:
+def _serialize_arguments(
+    func: Callable[..., Any],
+    args: Tuple[Any, ...],
+    kwargs: Dict[str, Any],
+) -> Dict[str, Any]:
     """Serialize function arguments for storage."""
     sig = inspect.signature(func)
     bound = sig.bind(*args, **kwargs)

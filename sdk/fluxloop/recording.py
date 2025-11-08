@@ -23,7 +23,7 @@ try:
 except ImportError:  # pragma: no cover - fallback if optional dependency missing
 
     class BaseModel:  # type: ignore
-        def __init__(self, **kwargs):
+        def __init__(self, **kwargs: Any) -> None:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 

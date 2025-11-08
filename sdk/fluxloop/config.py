@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 SDK Configuration management.
 """
@@ -5,7 +7,7 @@ SDK Configuration management.
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
@@ -151,33 +153,33 @@ class SDKConfig(BaseModel):
     )
 
     @field_validator("collector_url")
-    def validate_collector_url(cls, v):
+    def validate_collector_url(cls, value: Optional[str]) -> Optional[str]:
         """Ensure collector URL is valid."""
-        if v is None:
+        if value is None:
             return None
         try:
-            result = urlparse(v)
+            result = urlparse(value)
             if not all([result.scheme, result.netloc]):
                 raise ValueError("Invalid URL format")
         except Exception as e:
             raise ValueError(f"Invalid collector URL: {e}")
-        return v.rstrip("/")  # Remove trailing slash
+        return value.rstrip("/")  # Remove trailing slash
 
     @field_validator("sample_rate")
-    def validate_sample_rate(cls, v):
+    def validate_sample_rate(cls, value: float) -> float:
         """Ensure sample rate is between 0 and 1."""
-        if not 0 <= v <= 1:
+        if not 0 <= value <= 1:
             raise ValueError("sample_rate must be between 0 and 1")
-        return v
+        return value
 
     @field_validator("batch_size")
-    def validate_batch_size(cls, v):
+    def validate_batch_size(cls, value: int) -> int:
         """Ensure batch size is reasonable."""
-        if v < 1:
+        if value < 1:
             raise ValueError("batch_size must be at least 1")
-        if v > 100:
+        if value > 100:
             raise ValueError("batch_size must not exceed 100")
-        return v
+        return value
 
 
 # Global configuration instance
@@ -193,7 +195,7 @@ def _refresh_config_from_env() -> None:
     _apply_recording_config(_config)
 
 
-def configure(**kwargs) -> SDKConfig:
+def configure(**kwargs: Any) -> SDKConfig:
     """
     Configure the SDK.
 
