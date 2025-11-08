@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sdk-tests:
+    name: SDK Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install SDK dependencies
+      working-directory: sdk
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Lint with ruff
+      working-directory: sdk
+      run: |
+        ruff check fluxloop tests
+
+    - name: Format check with black
+      working-directory: sdk
+      run: |
+        black --check fluxloop tests
+
+    - name: Type check with mypy
+      working-directory: sdk
+      run: |
+        mypy fluxloop
+
+    - name: Run tests with pytest
+      working-directory: sdk
+      run: |
+        pytest --cov=fluxloop --cov-report=xml --cov-report=term
+
+  cli-tests:
+    name: CLI Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Check if CLI exists
+      id: check_cli
+      run: |
+        if [ -f "cli/pyproject.toml" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install CLI dependencies
+      if: steps.check_cli.outputs.exists == 'true'
+      working-directory: cli
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Run CLI tests
+      if: steps.check_cli.outputs.exists == 'true'
+      working-directory: cli
+      run: |
+        pytest
+
+  vscode-build:
+    name: VSCode Extension Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: vscode/package-lock.json
+
+    - name: Check if VSCode extension exists
+      id: check_vscode
+      run: |
+        if [ -f "vscode/package.json" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install dependencies
+      if: steps.check_vscode.outputs.exists == 'true'
+      working-directory: vscode
+      run: npm ci
+
+    - name: Build extension
+      if: steps.check_vscode.outputs.exists == 'true'
+      working-directory: vscode
+      run: npm run compile
+
+    - name: Run tests
+      if: steps.check_vscode.outputs.exists == 'true'
+      working-directory: vscode
+      run: npm test
+
+  mcp-validate:
+    name: MCP Index Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-mcp-${{ hashFiles('mcp/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install MCP dependencies
+      working-directory: mcp
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Rebuild MCP index
+      run: bash mcp/scripts/rebuild_index.sh
+
+    - name: Validate MCP index
+      run: python -m fluxloop_mcp.index.validator --index-dir "$HOME/.fluxloop/mcp/index/dev" --strict
+
