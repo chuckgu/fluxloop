@@ -192,7 +192,7 @@ class FileItem extends vscode.TreeItem {
 }
 
 class CommandItem extends vscode.TreeItem {
-    constructor(label: string, command: string, tooltip?: string, iconId: string = 'debug-start') {
+    constructor(label: string, command: string, tooltip?: string, iconId = 'debug-start') {
         super(label, vscode.TreeItemCollapsibleState.None);
         this.command = {
             command,
