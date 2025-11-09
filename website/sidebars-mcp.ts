@@ -5,6 +5,7 @@ const sidebars: SidebarsConfig = {
     'intro',
     'installation',
     'usage-cursor',
+    'protocol',
     'tools-reference',
     'configuration',
     'examples',

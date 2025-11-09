@@ -122,6 +122,96 @@ pytest
 | `validate_edit_plan` | Verifies plan structure and checks file/anchor existence |
 | `run_integration_workflow` | Executes full pipeline from analysis to validated plan |
 
+## Protocol (stdio)
+
+Fluxloop MCP server follows the [Model Context Protocol](https://modelcontextprotocol.io/) over standard input/output. Each message is a single JSON object terminated by a newline.
+
+### Message Envelope
+
+| Field | Description |
+|-------|-------------|
+| `type` | `"handshake"`, `"request"`, `"response"`, or `"error"` |
+| `id` | Client-supplied identifier used to correlate requests and responses |
+| `tool` | Name of the tool to invoke (`request` messages only) |
+| `params` | JSON payload passed to the tool (`request` messages only) |
+| `result` | Successful tool output (`response` messages only) |
+| `error` | Error metadata (`error` messages only) |
+
+### Handshake
+
+Clients must initiate a handshake before sending tool requests.
+
+```json
+{"type":"handshake","id":"1"}
+```
+
+Handshake response exposes server metadata and supported tools.
+
+```json
+{
+  "type": "response",
+  "id": "1",
+  "result": {
+    "name": "fluxloop-mcp",
+    "version": "0.1.0",
+    "capabilities": {
+      "tools": [
+        "handshake",
+        "faq",
+        "analyze_repository",
+        "detect_frameworks",
+        "generate_integration_steps",
+        "propose_edit_plan",
+        "validate_edit_plan",
+        "run_integration_workflow"
+      ]
+    }
+  }
+}
+```
+
+### Tool Invocation
+
+Request payloads are validated against the tool schema. Successful responses return structured JSON in the `result` field.
+
+```json
+{"type":"request","id":"42","tool":"faq","params":{"query":"How do I integrate FastAPI?"}}
+```
+
+```json
+{
+  "type": "response",
+  "id": "42",
+  "result": {
+    "answer": "- Install fluxloop SDK...\n- Configure `simulation.yaml`...",
+    "citations": [
+      {
+        "path": "packages/website/docs-sdk/integration/fastapi.md",
+        "section": "Installation"
+      }
+    ]
+  }
+}
+```
+
+### Error Response
+
+Errors maintain the same `id` and include a machine-readable `code`.
+
+```json
+{
+  "type": "error",
+  "id": "42",
+  "error": {
+    "code": "tool_not_found",
+    "message": "Unknown tool: faqz",
+    "details": {"availableTools": ["faq","analyze_repository", "..."]}
+  }
+}
+```
+
+Clients should fall back to the next strategy or surface the error to users.
+
 ## Configuration
 
 ### Environment Variables
