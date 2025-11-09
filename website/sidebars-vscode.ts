@@ -39,6 +39,17 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Integration Assistant',
+      items: [
+        'integration-assistant/overview',
+        'integration-assistant/setup',
+        'integration-assistant/knowledge-search',
+        'integration-assistant/flux-agent',
+        'integration-assistant/troubleshooting',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Views',
       items: [
         'views/projects-view',
@@ -46,6 +57,7 @@ const sidebars: SidebarsConfig = {
         'views/experiments-view',
         'views/results-view',
         'views/status-view',
+        'views/integration-view',
       ],
     },
     {

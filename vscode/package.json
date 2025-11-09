@@ -32,7 +32,9 @@
     "onView:fluxloop.inputs",
     "onView:fluxloop.experiments",
     "onView:fluxloop.results",
-    "onView:fluxloop.status"
+    "onView:fluxloop.status",
+    "onView:fluxloop.integration",
+    "onCommand:fluxloop.integration.showSuggestion"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -166,6 +168,36 @@
         "command": "fluxloop.showInteractiveWireframe",
         "title": "Show Interactive Wireframe",
         "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.integration.connectMcp",
+        "title": "Connect MCP",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.runAgent",
+        "title": "Run Flux Agent",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.openKnowledgeSearch",
+        "title": "Open Knowledge Search",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.refresh",
+        "title": "Refresh Integration View",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.showSuggestion",
+        "title": "Show Integration Suggestion",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.clearHistory",
+        "title": "Clear Integration Suggestion History",
+        "category": "FluxLoop Integration"
       }
     ],
     "menus": {
@@ -176,7 +208,45 @@
           "group": "fluxloop"
         }
       ],
-      "view/title": [],
+      "view/title": [
+        {
+          "command": "fluxloop.integration.connectMcp",
+          "when": "view == fluxloop.integration",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fluxloop.integration.openKnowledgeSearch",
+          "when": "view == fluxloop.integration",
+          "group": "navigation@2"
+        },
+        {
+          "command": "fluxloop.integration.runAgent",
+          "when": "view == fluxloop.integration",
+          "group": "navigation@3"
+        },
+        {
+          "command": "fluxloop.integration.refresh",
+          "when": "view == fluxloop.integration",
+          "group": "navigation@4"
+        },
+        {
+          "command": "fluxloop.integration.clearHistory",
+          "when": "view == fluxloop.integration",
+          "group": "navigation@5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "fluxloop.integration.showSuggestion",
+          "when": "view == fluxloop.integration && viewItem == suggestionItem",
+          "group": "inline@1"
+        },
+        {
+          "command": "fluxloop.integration.clearHistory",
+          "when": "view == fluxloop.integration && viewItem == suggestionItem",
+          "group": "inline@2"
+        }
+      ],
       "editor/context": [
         {
           "when": "resourceExtname == .py",
@@ -225,6 +295,12 @@
           "name": "Status",
           "icon": "$(info)",
           "contextualTitle": "System Status"
+        },
+        {
+          "id": "fluxloop.integration",
+          "name": "Integration",
+          "icon": "$(extensions)",
+          "contextualTitle": "FluxLoop Integration"
         }
       ]
     },
@@ -265,6 +341,16 @@
           "type": "string",
           "default": "",
           "description": "Command prefix used before running the FluxLoop CLI (e.g. 'uv run')"
+        },
+        "fluxloop.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key used by Flux Agent (stored securely when possible)"
+        },
+        "fluxloop.openaiModel": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "OpenAI Chat Completions model used for Flux Agent suggestions"
         }
       }
     },

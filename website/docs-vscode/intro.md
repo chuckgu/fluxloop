@@ -63,6 +63,12 @@ Current version: **0.1.1**
 - Enable/disable recording mode from Command Palette or Experiments view
 - Status panel shows current recording state and target file
 
+### 🤖 Integration Assistant
+- AI-powered integration guidance using MCP server and LLM
+- Knowledge search backed by FluxLoop documentation index
+- Flux Agent generates contextualized code suggestions
+- Manual review and application workflow (no automatic changes)
+
 ### ℹ️ System Status
 - Real-time CLI and SDK installation checks
 - Configuration validation for `configs/` structure
@@ -114,6 +120,11 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 - `FluxLoop: Run Single Execution`
 - `FluxLoop: Show Status`
 
+**Integration:**
+- `FluxLoop: Connect MCP`
+- `FluxLoop: Open Knowledge Search`
+- `FluxLoop: Run Flux Agent`
+
 **Recording:**
 - `FluxLoop: Enable Recording Mode`
 - `FluxLoop: Disable Recording Mode`
@@ -130,6 +141,7 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 ## What's Next?
 
 - **[Installation](/vscode/getting-started/installation)** - Detailed setup guide
+- **[Integration Assistant](/vscode/integration-assistant/overview)** - AI-powered integration guidance
 - **[User Guide](/vscode/user-guide/creating-projects)** - Step-by-step tutorials
 - **[Commands](/vscode/commands/project-commands)** - All available commands
 - **[API Reference](/vscode/api)** - TypeScript API documentation (auto-generated)

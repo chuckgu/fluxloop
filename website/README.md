@@ -9,8 +9,8 @@ website/
 ├── docs/                    # Main documentation (getting started, guides)
 ├── docs-sdk/                # SDK documentation (v0.1.3)
 ├── docs-cli/                # CLI documentation (v0.2.1)
-├── docs-vscode/             # VSCode Extension documentation (v0.1.0)
-├── docs-mcp/                # MCP Server documentation (v0.1.0)
+├── docs-vscode/             # VSCode Extension docs (Integration view, Flux Agent guides)
+├── docs-mcp/                # MCP Server docs (RAG pipeline, tooling reference)
 ├── blog/                    # Release notes and tutorials
 ├── src/
 │   ├── components/          # React components
@@ -84,18 +84,20 @@ CLI tool documentation for project management and experiments.
 
 ### VSCode Extension (`/vscode`)
 
-VSCode extension documentation including auto-generated API reference.
+Guides for the FluxLoop VSCode extension, including the Integration Assistant.
+- Covers: project workflow, Integration view, MCP knowledge search, Flux Agent setup
 - Current version: 0.1.0
 - Source: `packages/vscode/`
 - API docs auto-generated from TypeScript source using TypeDoc
 
 ### MCP Server (`/mcp`)
 
-Model Context Protocol server for AI-assisted Fluxloop integration.
+Model Context Protocol server for AI-assisted FluxLoop integration.
 - Current version: 0.1.0
 - Source: `packages/mcp/`
 - Requires: Python 3.11+
-- Provides: Repository analysis, framework detection, integration planning tools
+- Provides: repository analysis, framework detection, integration planning tools
+- Companion docs explain how VSCode’s Flux Agent consumes each MCP tool
 
 ## Generating API Documentation
 
@@ -170,6 +172,8 @@ When adding new documentation:
 3. Update the corresponding sidebar file if needed
 4. Test locally with `npm start`
 5. Submit a pull request
+
+> Flux Agent updates usually touch both `docs-vscode/` (UI workflow) and `docs-mcp/` (tooling reference). Keep them in sync so the assistant guide matches the underlying MCP capabilities.
 
 ## Resources
 

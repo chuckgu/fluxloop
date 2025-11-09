@@ -5,6 +5,7 @@ const sidebars: SidebarsConfig = {
     'intro',
     'installation',
     'usage-cursor',
+    'usage-vscode',
     'protocol',
     'tools-reference',
     'configuration',

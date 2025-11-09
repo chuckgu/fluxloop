@@ -30,10 +30,11 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - Enable/disable recording mode from Command Palette or Experiments view
 - Status panel shows current recording state and target file
 
-### ℹ️ System Status
-- Real-time CLI and SDK installation checks
-- Configuration validation for `configs/` structure
-- Recording mode and environment status at a glance
+### 🤖 Integration Assistant
+- Dedicated **Integration** view with MCP connection status and recent suggestions
+- One-click knowledge search backed by the FluxLoop MCP server
+- Flux Agent combines repository analysis + LLM guidance with rich Markdown output
+- Suggestion history stores file context, selected code, and the generated plan
 
 ---
 
@@ -75,6 +76,23 @@ Install FluxLoop CLI and SDK:
 ```bash
 pip install fluxloop-cli fluxloop
 ```
+
+Install the FluxLoop MCP server:
+```bash
+pip install fluxloop-mcp
+```
+
+Build (or download) the MCP knowledge index:
+```bash
+packages/mcp/scripts/rebuild_index.sh
+```
+
+Verify you have Python 3.11 or newer:
+```bash
+python3 --version
+```
+
+> Flux Agent also requires an OpenAI API key. You can supply it per run or store it securely after the first prompt.
 
 ---
 
@@ -133,6 +151,20 @@ The **Results** view lists recent experiment runs under an **Experiments** folde
 - `logs.json` – additional logs
 
 Click **Parse Results** to convert experiment outputs into per-trace Markdown files. You can specify a custom output directory or use the default `per_trace_analysis`.
+
+---
+
+### 6. Use the Integration Assistant
+
+1. Open the **Integration** view in the FluxLoop activity bar.
+2. Press **Connect MCP** to verify `fluxloop-mcp` is available and the knowledge index is present.
+3. Press **Knowledge Search** to run a one-off documentation query (`fluxloop-mcp --once --query "<question>"`).
+4. Open a file, highlight any relevant snippet, and press **Run Flux Agent** to:
+   - Execute `run_integration_workflow` inside your repo
+   - Collect the result and feed it to the configured OpenAI model
+   - Render the plan (summary, step list, validation checklist) in a dedicated panel
+5. Provide your OpenAI API key when prompted (the extension can store it in Secret Storage).
+6. Revisit previous answers from **Recent Suggestions**; each entry reopens the full plan.
 
 ---
 
@@ -213,6 +245,11 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 - `FluxLoop: Run Experiment`
 - `FluxLoop: Run Single Execution`
 - `FluxLoop: Show Status`
+- `FluxLoop: Connect MCP`
+- `FluxLoop: Open Knowledge Search`
+- `FluxLoop: Run Flux Agent`
+- `FluxLoop: Refresh Integration View`
+- `FluxLoop: Clear Integration Suggestion History`
 
 **Recording:**
 - `FluxLoop: Enable Recording Mode`
@@ -276,6 +313,16 @@ pip install fluxloop
 ```
 
 The **Status** panel will verify SDK availability in your Python environment.
+
+### fluxloop-mcp Not Found
+- Confirm installation: `pip install fluxloop-mcp`
+- Check version: `fluxloop-mcp --version`
+- Rebuild the knowledge index: `packages/mcp/scripts/rebuild_index.sh`
+- The **Integration** view shows the package and index state; refresh with **FluxLoop: Refresh Integration View**
+
+### OpenAI Key Prompt Keeps Appearing
+- Store the key when prompted (Secret Storage) or set `"fluxloop.openaiApiKey": "sk-..."` in `.vscode/settings.json`
+- Review and adjust the model with `"fluxloop.openaiModel": "gpt-4o-mini"` (or any compatible Chat Completions model)
 
 ### No Configuration Found
 Make sure your project has a `configs/` directory with required files:
