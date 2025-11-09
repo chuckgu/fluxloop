@@ -4,6 +4,12 @@
 
 This package exposes tools for documentation Q&A, repository analysis, framework detection, and integration planning. It helps developers integrate Fluxloop into their projects by analyzing code structure and recommending appropriate setup steps.
 
+## Requirements
+
+- Python 3.11+
+- macOS or Linux (Windows users can use WSL2)
+- Git (for local development)
+
 ## Features
 
 ### Implemented (M0-M2)
@@ -41,18 +47,23 @@ pip install fluxloop-mcp
 
 ## Quick Start
 
-### 1. Build the Knowledge Index
+### 1. Install
+```bash
+pip install fluxloop-mcp
+```
+
+### 2. Build the Knowledge Index
 ```bash
 # Default output: ~/.fluxloop/mcp/index/dev
 packages/mcp/scripts/rebuild_index.sh
 ```
 
-### 2. Test FAQ Query
+### 3. Test FAQ Query
 ```bash
 python -m fluxloop_mcp.server --once --query "How to integrate FastAPI?"
 ```
 
-### 3. Run as MCP Server (stdio)
+### 4. Run as MCP Server (stdio)
 Add to `~/.cursor/mcp.json`:
 ```json
 {
@@ -71,7 +82,7 @@ Add to `~/.cursor/mcp.json`:
 
 Restart Cursor/Claude Desktop. The MCP server will be available for queries.
 
-### 4. Analyze a Repository
+### 5. Analyze a Repository
 ```python
 from fluxloop_mcp.tools import AnalyzeRepositoryTool, DetectFrameworksTool
 
@@ -82,12 +93,20 @@ frameworks = DetectFrameworksTool().detect({"repository_profile": profile})
 print(frameworks)
 ```
 
-### 5. Run Full Integration Workflow
+### 6. Run Full Integration Workflow
 ```python
 from fluxloop_mcp.tools import RunIntegrationWorkflowTool
 
 result = RunIntegrationWorkflowTool().run({"root": "."})
 print(result.keys())  # profile, detection, integration_steps, edit_plan, validation
+```
+
+### 7. Local Development Environment
+```bash
+git clone https://github.com/chuckgu/fluxloop.git
+cd fluxloop/packages/mcp
+pip install -e ".[dev]"
+pytest
 ```
 
 ## Available Tools
@@ -111,6 +130,7 @@ print(result.keys())  # profile, detection, integration_steps, edit_plan, valida
 - `MCP_QDRANT_API_KEY`: Qdrant API key
 - `MCP_INDEX_MODE`: `bundled` | `download` | `remote`
 - `MCP_INDEX_PATH`: Custom index directory (default: `~/.fluxloop/mcp/index/dev`)
+- `MCP_AUTO_UPDATE`: `true` to allow automatic index download when newer releases are detected
 
 ## Architecture
 
@@ -155,6 +175,37 @@ fluxloop_mcp/
 - [ ] LLM-enhanced answer synthesis for FAQ
 - [ ] Direct file editing with approval workflow
 - [ ] Integration with VS Code extension for UI-based workflow
+
+## Release Checklist
+
+When publishing to PyPI:
+
+1. Bump the version in `pyproject.toml` and update this README if necessary.
+2. Run the quality checks:
+   ```bash
+   pip install -e ".[dev]"
+   pytest
+   ruff check fluxloop_mcp
+   mypy fluxloop_mcp
+   ```
+3. Verify index rebuild succeeds:
+   ```bash
+   scripts/rebuild_index.sh
+   ```
+4. Build distribution artifacts:
+   ```bash
+   scripts/build.sh
+   ```
+5. Upload to PyPI (optionally via TestPyPI first):
+   ```bash
+   twine upload --repository testpypi dist/*
+   twine upload dist/*
+   ```
+6. Tag the release and push:
+   ```bash
+   git tag mcp-v0.1.0
+   git push origin mcp-v0.1.0
+   ```
 
 ## Contributing
 

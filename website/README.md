@@ -7,9 +7,10 @@ This directory contains the FluxLoop documentation website built with [Docusauru
 ```
 website/
 ├── docs/                    # Main documentation (getting started, guides)
-├── docs-sdk/                # SDK documentation (v0.1.0)
+├── docs-sdk/                # SDK documentation (v0.1.3)
 ├── docs-cli/                # CLI documentation (v0.2.1)
 ├── docs-vscode/             # VSCode Extension documentation (v0.1.0)
+├── docs-mcp/                # MCP Server documentation (v0.1.0)
 ├── blog/                    # Release notes and tutorials
 ├── src/
 │   ├── components/          # React components
@@ -21,7 +22,8 @@ website/
 ├── sidebars.ts              # Main docs sidebar
 ├── sidebars-sdk.ts          # SDK sidebar
 ├── sidebars-cli.ts          # CLI sidebar
-└── sidebars-vscode.ts       # VSCode sidebar
+├── sidebars-vscode.ts       # VSCode sidebar
+└── sidebars-mcp.ts          # MCP sidebar
 ```
 
 ## Development
@@ -70,8 +72,9 @@ Getting started guides, core concepts, and general documentation.
 ### SDK (`/sdk`)
 
 Python SDK documentation for agent instrumentation.
-- Current version: 0.1.0
+- Current version: 0.1.3
 - Source: `packages/sdk/`
+- Requires: Python 3.11+
 
 ### CLI (`/cli`)
 
@@ -85,6 +88,14 @@ VSCode extension documentation including auto-generated API reference.
 - Current version: 0.1.0
 - Source: `packages/vscode/`
 - API docs auto-generated from TypeScript source using TypeDoc
+
+### MCP Server (`/mcp`)
+
+Model Context Protocol server for AI-assisted Fluxloop integration.
+- Current version: 0.1.0
+- Source: `packages/mcp/`
+- Requires: Python 3.11+
+- Provides: Repository analysis, framework detection, integration planning tools
 
 ## Generating API Documentation
 
@@ -147,7 +158,7 @@ Edit generated JSON files in `i18n/ko/` directory.
 
 When adding new documentation:
 
-1. Choose the appropriate section (docs, docs-sdk, docs-cli, docs-vscode)
+1. Choose the appropriate section (docs, docs-sdk, docs-cli, docs-vscode, docs-mcp)
 2. Create Markdown files with frontmatter:
    ```markdown
    ---

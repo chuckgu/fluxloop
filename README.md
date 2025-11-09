@@ -7,7 +7,9 @@
 <p align="center">
   <a href="https://github.com/chuckgu/fluxloop"><img src="https://img.shields.io/badge/Status-Active-green" alt="Status"/></a>
   <a href="https://github.com/chuckgu/fluxloop/blob/main/packages/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"/></a>
-  <a href="https://pypi.org/project/fluxloop/"><img src="https://img.shields.io/pypi/v/fluxloop" alt="PyPI"/></a>
+  <a href="https://pypi.org/project/fluxloop/"><img src="https://img.shields.io/pypi/v/fluxloop?label=SDK" alt="SDK PyPI"/></a>
+  <a href="https://pypi.org/project/fluxloop-cli/"><img src="https://img.shields.io/pypi/v/fluxloop-cli?label=CLI" alt="CLI PyPI"/></a>
+  <a href="https://pypi.org/project/fluxloop-mcp/"><img src="https://img.shields.io/pypi/v/fluxloop-mcp?label=MCP" alt="MCP PyPI"/></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop"><img src="https://img.shields.io/visual-studio-marketplace/v/fluxloop.fluxloop?label=VS%20Code&logo=visualstudiocode" alt="VS Code Marketplace"/></a>
   <a href="https://open-vsx.org/extension/fluxloop/fluxloop"><img src="https://img.shields.io/open-vsx/v/fluxloop/fluxloop?label=Open%20VSX&logo=eclipseide" alt="Open VSX"/></a>
 </p>
@@ -100,201 +102,64 @@ See detailed examples: `packages/website/docs-cli/configuration/runner-targets.m
 
 ## Getting Started
 
-### 1. Install Packages
+### Installation
 
-**Python SDK & CLI:**
 ```bash
-pip install fluxloop-cli fluxloop
+# Install Python packages (SDK and MCP require Python 3.11+)
+pip install fluxloop fluxloop-cli fluxloop-mcp
+
+# Install VSCode/Cursor Extension
+# Search "FluxLoop" in Extensions marketplace
 ```
 
-**🎨 VSCode/Cursor Extension (Highly Recommended):**
+📖 **Installation Guides**: [SDK](https://fluxloop.io/sdk/getting-started/sdk-installation) | [CLI](https://fluxloop.io/cli/getting-started/cli-installation) | [VSCode](https://fluxloop.io/vscode/getting-started/installation) | [MCP](https://fluxloop.io/mcp/installation)
 
-<p align="center">
-  <img src="cursor.png" alt="Install FluxLoop in Cursor/VS Code" width="700"/>
-  <br/>
-  <em>FluxLoop Extension with Auto-Update Support</em>
-</p>
-
-**🎯 Cursor Users:**
-1. Open Extensions sidebar (click Extensions icon or `Cmd+Shift+X`)
-2. Search for **"FluxLoop"**
-3. Click **Install** → Extension will be downloaded from Open VSX
-4. Restart Cursor
-5. **✅ Auto-update enabled!**
-
-**💻 VS Code Users:**
-1. Open Extensions (`Cmd+Shift+X` / `Ctrl+Shift+X`)
-2. Search for **"FluxLoop"**
-3. Click **Install**
-4. Restart VS Code
-5. **✅ Auto-update enabled!**
-
-**Alternative: Manual Installation**
-- Download VSIX from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases)
-- Command Palette → **"Extensions: Install from VSIX..."**
-- ⚠️ Manual updates required
-
-### 2. Initialize Project
+### Quick Workflow
 
 ```bash
+# 1. Create a project
 fluxloop init project --name my-agent
-cd fluxloop/my-agent
-```
 
-**Generated structure (v0.2.0):**
-```
-fluxloop/
-├── .env                      # Global environment variables
-└── my-agent/
-    ├── configs/              # Separated configuration files
-    │   ├── project.yaml      # Project metadata, collector settings
-    │   ├── input.yaml        # Personas, base inputs, generation settings
-    │   ├── simulation.yaml   # Runner, iterations, replay args
-    │   └── evaluation.yaml   # Evaluator definitions
-    ├── .env                  # Project-specific overrides
-    ├── examples/
-    │   └── simple_agent.py   # Sample instrumented agent
-    ├── experiments/          # Results output
-    ├── inputs/               # Generated input datasets
-    └── recordings/           # Recorded arguments (optional)
-```
+# 2. Add @fluxloop.agent() decorator to your code
 
-### 3. Instrument Your Agent
-
-Add the `@fluxloop.agent` decorator to your agent's entry point:
-
-```python
-# examples/simple_agent.py
-import fluxloop
-
-@fluxloop.agent()
-def run(input_text: str) -> str:
-    return f"Response to: {input_text}"
-```
-
-### 4. Review Configuration
-
-Edit `configs/input.yaml` to set up personas, base inputs, and LLM provider:
-
-```yaml
-# configs/input.yaml
-personas:
-  - name: novice_user
-    description: A user new to the system
-    ...
-
-base_inputs:
-  - input: "How do I get started?"
-    expected_intent: help
-
-input_generation:
-  mode: llm
-  llm:
-    provider: openai
-    model: gpt-4o-mini
-```
-
-Configure credentials in `.env` or using CLI:
-
-```bash
-# Add to .env
-OPENAI_API_KEY=sk-...
-
-# Or use CLI helper
-fluxloop config set-llm openai sk-xxxx --model gpt-4o-mini
-```
-
-### 5. Generate Inputs
-
-```bash
+# 3. Generate test inputs
 fluxloop generate inputs --limit 50
-```
 
-This reads from `configs/input.yaml` and produces `inputs/generated.yaml` with LLM-generated variations.
-
-### 6. Run Experiment
-
-```bash
+# 4. Run experiment
 fluxloop run experiment
+
+# 5. Parse results
+fluxloop parse experiment experiments/<experiment_dir>
 ```
 
-This loads merged configuration from `configs/` and runs the experiment.
+📖 **Complete Tutorial**: [End-to-End Workflow Guide](https://fluxloop.io/docs/guides/getting-started)
 
-**Results** → `experiments/my_agent_experiment_YYYYMMDD_HHMMSS/`
+### What You Can Do
 
-### 7. Parse Results (Human-Readable)
-
-Convert raw JSONL artifacts into per-trace Markdown timelines:
-
-```bash
-fluxloop parse experiment experiments/<your_experiment_dir>
-```
-
-Each trace gets a timeline file under `per_trace_analysis/` showing step-by-step inputs/outputs.
+- **🎯 Instrument Agents**: Add decorators to trace execution
+- **📝 Generate Inputs**: Create test scenarios with LLM or deterministic strategies
+- **🧪 Run Simulations**: Execute batch experiments with different configurations
+- **📊 Analyze Results**: Parse structured outputs into human-readable timelines
+- **🔴 Record & Replay**: Capture complex arguments and replay them (advanced)
+- **🧠 AI-Assisted Setup**: Use MCP server for framework detection and integration guidance
 
 ---
 
-## 🎬 Argument Replay Workflow (Advanced/Optional)
+## 🎬 Advanced Features
 
-For agents with complex call signatures (e.g., WebSocket handlers with callbacks), you can record actual arguments and replay them during experiments. **Most projects won't need this feature.**
+### Argument Replay Workflow (Optional)
 
-### Step 1: Enable Recording Mode
+For agents with complex call signatures (WebSocket handlers, callbacks, etc.), FluxLoop supports recording and replaying actual arguments during experiments.
 
+📖 **Full Guide**: [Argument Replay Documentation](https://fluxloop.io/cli/workflows#argument-replay)
+
+**Quick Overview:**
 ```bash
-fluxloop record enable
+fluxloop record enable   # Start recording
+# Run your application
+fluxloop record disable  # Stop recording
+fluxloop run experiment  # Replay with variations
 ```
-
-This updates `.env` and `configs/simulation.yaml` to enable argument recording.
-
-### Step 2: Execute Your Service
-
-Run your application with recording hooks enabled. Arguments will be saved to `recordings/args_recording.jsonl`.
-
-### Step 3: Disable Recording
-
-```bash
-fluxloop record disable
-```
-
-Verify recorded data:
-```bash
-fluxloop record status
-```
-
-### Step 4: Configure Replay
-
-Edit `configs/simulation.yaml`:
-```yaml
-# configs/simulation.yaml
-runner:
-  target: "app.handler:MessageHandler.handle_message"
-
-replay_args:
-  enabled: true
-  recording_file: "recordings/args.jsonl"
-  callable_providers:
-    send_callback: "builtin:collector.send"
-    error_callback: "builtin:collector.error"
-  override_param_path: "data.content"
-```
-
-### Step 5: Run Experiment
-
-```bash
-fluxloop run experiment
-```
-
-The CLI will:
-1. Load recorded kwargs
-2. Override `data.content` with each generated input
-3. Restore callable objects
-4. Execute real logic with actual code paths
-
-**Benefits:**
-- ✅ No manual mock construction
-- ✅ Real code execution (not mocked)
-- ✅ Different LLM responses every iteration
-- ✅ Production-like argument structures
 
 ---
 
@@ -305,6 +170,7 @@ fluxloop/
 ├── packages/
 │   ├── sdk/              # Python SDK (decorators, recording, instrumentation)
 │   ├── cli/              # CLI tool (init, generate, run, record, parse, status)
+│   ├── mcp/              # MCP Server (AI-assisted integration guidance)
 │   ├── vscode/           # VSCode/Cursor extension (download VSIX from Releases)
 │   ├── website/          # Documentation website (Docusaurus)
 │   └── docs/             # Additional guides and references
@@ -320,17 +186,20 @@ fluxloop/
 ## 📚 Documentation
 
 ### Quick Links
-- **📖 Full Documentation**: [https://docs.fluxloop.io](https://docs.fluxloop.io) (or see `packages/website/`)
-- **CLI Reference**: [packages/cli/README.md](cli/README.md)
-- **SDK Reference**: [packages/sdk/README.md](sdk/README.md)
-- **VSCode Extension**: [packages/vscode/README.md](vscode/README.md)
+- **📖 Full Documentation**: [https://fluxloop.io](https://fluxloop.io)
+- **SDK Documentation**: [https://fluxloop.io/sdk](https://fluxloop.io/sdk) - Python 3.11+ (v0.1.3)
+- **CLI Documentation**: [https://fluxloop.io/cli](https://fluxloop.io/cli) - (v0.2.1)
+- **VSCode Extension**: [https://fluxloop.io/vscode](https://fluxloop.io/vscode) - (v0.1.1)
   - **VS Code Marketplace**: [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)
   - **Open VSX** (Cursor): [Install from Open VSX](https://open-vsx.org/extension/fluxloop/fluxloop)
   - **Manual**: [Download VSIX from Releases](https://github.com/chuckgu/fluxloop/releases)
+- **MCP Server**: [https://fluxloop.io/mcp](https://fluxloop.io/mcp) - Python 3.11+ (v0.1.0)
+  - **PyPI**: [fluxloop-mcp](https://pypi.org/project/fluxloop-mcp/)
 
 ### Design Docs
 - **v0.2.0 Settings & Recording**: [docs/prd/fluxloop_v0.2.0_settings_recording.md](docs/prd/fluxloop_v0.2.0_settings_recording.md)
 - **VSCode Extension Design**: [docs/prd/codex_vscode_extention.md](docs/prd/codex_vscode_extention.md)
+- **MCP Server Plan**: [docs/prd/mcp_server_plan.md](docs/prd/mcp_server_plan.md)
 
 ---
 
@@ -351,38 +220,16 @@ Check out our [contribution guide](CONTRIBUTING.md) and open issues to get start
 
 ## 🌟 Example Use Cases
 
-### Use Case 1: Simple Agent Testing
+📖 **Detailed Examples & Tutorials**: [FluxLoop Documentation](https://fluxloop.io/docs)
 
+### Simple Agent Testing
 ```python
 @fluxloop.agent()
 def run(input_text: str) -> str:
     return process(input_text)
 ```
 
-```bash
-fluxloop generate inputs --limit 50
-fluxloop run experiment
-# → Tests function with 50 input variations
-```
-
-### Use Case 2: Advanced Recording Workflow
-
-Enable recording, run service to capture args, then use in experiments:
-```python
-# In your agent code
-fluxloop.record_call_args(target="app:Handler.handle", **kwargs)
-```
-
-```bash
-fluxloop record enable
-# ... run your service ...
-fluxloop record disable
-fluxloop run experiment
-# → Replays recorded args with different inputs
-```
-
-### Use Case 3: Multi-Agent System
-
+### Multi-Agent Orchestration
 ```python
 @fluxloop.agent()
 async def orchestrator(...):
@@ -391,7 +238,10 @@ async def orchestrator(...):
     return result
 ```
 
-Trace the entire flow with hierarchical observations.
+**Learn More**:
+- [SDK Quick Start](https://fluxloop.io/sdk/getting-started/basic-usage)
+- [CLI Workflows](https://fluxloop.io/cli/workflows)
+- [Framework Integration](https://fluxloop.io/sdk/framework-integration)
 
 ---
 
@@ -409,9 +259,9 @@ FluxLoop is licensed under the [Apache License 2.0](LICENSE).
 
 ## 🚀 What's Next?
 
-1. **Read the End-to-End Workflow**: [Follow the full pipeline](docs/guides/end-to-end-workflow.md)
-2. **Initialize and Run**: Create a project and run an experiment
-3. **Parse Results**: Generate human-readable timelines from artifacts
-4. **Contribute**: See [CONTRIBUTING.md](CONTRIBUTING.md) and open an [issue](https://github.com/chuckgu/fluxloop/issues)
+1. **📖 Read the Documentation**: [https://fluxloop.io](https://fluxloop.io)
+2. **🎯 Quick Start**: [SDK Installation](https://fluxloop.io/sdk/getting-started/sdk-installation) & [CLI Setup](https://fluxloop.io/cli/getting-started/cli-installation)
+3. **🧠 AI-Assisted Integration**: Try the [MCP Server](https://fluxloop.io/mcp) for automated setup guidance
+4. **🤝 Contribute**: See [CONTRIBUTING.md](CONTRIBUTING.md) and open an [issue](https://github.com/chuckgu/fluxloop/issues)
 
 **Start simulating your agents today!** 🎯

@@ -4,21 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fluxloop-mcp"
-version = "0.0.1"
+version = "0.1.0"
 description = "Fluxloop MCP server providing repository analysis and documentation tools."
 authors = [
     {name = "Fluxloop Team", email = "team@fluxloop.dev"}
 ]
 license = {text = "Apache-2.0"}
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 readme = "README.md"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -37,16 +35,24 @@ dev = [
 [project.scripts]
 fluxloop-mcp = "fluxloop_mcp.server:main"
 
+[project.urls]
+Homepage = "https://github.com/chuckgu/fluxloop"
+Repository = "https://github.com/chuckgu/fluxloop"
+Documentation = "https://docs.fluxloop.io/mcp"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["fluxloop_mcp*"]
 
+[tool.setuptools.package-data]
+"fluxloop_mcp.schemas" = ["*.json"]
+
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_unused_configs = true
 warn_return_any = true
 disallow_untyped_defs = true
