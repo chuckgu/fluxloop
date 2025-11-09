@@ -89,12 +89,19 @@ Automatically detect your agent framework, suggest integration patterns, and pro
 📖 **Documentation**: [https://fluxloop.io/mcp/](https://fluxloop.io/mcp/)  
 📦 **PyPI**: [fluxloop-mcp](https://pypi.org/project/fluxloop-mcp/)
 
-### 5. Flux Agent (TBD)
-**Autonomous setup and evaluation agent** (coming soon).
+### 5. Flux Agent (Beta)
+**AI-powered integration assistant** built into the VSCode extension.
 
-An intelligent agent that automatically instruments your code, generates test scenarios, runs experiments, and provides evaluation insights—fully automated.
+Flux Agent analyzes your code, consults FluxLoop documentation via MCP, and generates intelligent integration suggestions using LLM. It combines repository analysis with OpenAI models to provide contextualized, framework-specific guidance—without making automatic changes. You review and apply suggestions manually.
 
-🔜 **Status**: In development
+📖 **Documentation**: [https://fluxloop.io/vscode/integration-assistant/overview](https://fluxloop.io/vscode/integration-assistant/overview)  
+✨ **Features**:
+- Repository analysis and framework detection
+- AI-generated code integration suggestions
+- Knowledge search with citation-backed answers
+- Manual review and application workflow
+
+🔜 **Status**: Beta (available in VSCode extension v0.1.3+)
 
 ---
 
@@ -139,7 +146,7 @@ fluxloop parse experiment experiments/<experiment_dir>
 - **🧪 Run Simulations**: Execute batch experiments with different configurations
 - **📊 Analyze Results**: Parse structured outputs into human-readable timelines
 - **🔴 Record & Replay**: Capture complex arguments and replay them (advanced)
-- **🧠 AI-Assisted Setup**: Use MCP server for framework detection and integration guidance
+- **🧠 AI-Assisted Setup**: Use MCP server and Flux Agent for automated integration guidance
 
 ---
 
