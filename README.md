@@ -31,46 +31,25 @@ Stop guessing, start evaluating.
 
 ## Key Features
 
-### 🎯 Simple Decorator-Based Setup
-Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing.
+### 🤖 AI-Assisted Setup
+Get started quickly with MCP Server integration that automatically detects your agent framework and guides you through the setup process. No more manual configuration or guesswork.
 
-### 🔄 Argument Replay System
-Record complex function arguments (WebSocket callbacks, session data, etc.) from staging, then replay them locally with different content. No manual mocking required.
+### 🎯 Simple Decorator-Based Instrumentation
+Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing. Works with any Python-based agent framework.
+
+### 📊 Evaluation-First Testing
+Rigorously test your agents with reproducible experiments and structured evaluation. Generate test scenarios, run batch simulations, and analyze results—all designed for proper AI evaluation.
 
 ### 🧪 Offline-First Simulation
-Run experiments on your machine without cloud dependencies. Generate structured artifacts that work with any evaluation backend.
+Run experiments on your machine without cloud dependencies. Full control over your testing environment with reproducible, auditable results.
 
-### 📊 Structured JSON Output
-Every simulation produces reproducible, auditable artifacts:
-- `summary.json`: Aggregate statistics
-- `trace_summary.jsonl`: Per-trace summary records
-- `observations.jsonl`: Observation stream
-- `traces.jsonl`: Detailed execution traces
+### 🔌 VSCode/Cursor Extension
+Visual project management for your IDE. Browse projects, run experiments with one click, parse results into Markdown timelines, and explore outputs in a structured tree—all without leaving your editor.
 
-### 🚀 CLI Orchestration
-Define complex experiments in YAML, generate input variations with LLM, and run batch simulations—all from the command line.
+Available on [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop) and [Open VSX (Cursor)](https://open-vsx.org/extension/fluxloop/fluxloop).
 
-### 🔌 VSCode/Cursor Extension ⭐
-
-<p align="center">
-  <img src="cursor.png" alt="FluxLoop Extension in Cursor" width="800"/>
-</p>
-
-Manage projects, generate inputs, run experiments, parse results, and explore outputs—all from your IDE with visual project management and configuration editing.
-
-**Key Features:**
-- **Parse Results**: Convert experiment traces into human-readable Markdown timelines with one click
-- **Execution Wrapper Support**: Seamless integration with `uv run`, `pipx`, and other Python wrappers via `fluxloop.executionWrapper` setting
-- **Organized Results**: Browse experiment outputs in a structured tree with timestamps and success rates
-- **Multi-environment Support**: Run experiments locally, in Dev Containers, or Docker (coming soon)
-
-**✨ Now Available in Extension Marketplaces!**
-
-- **🎯 Cursor Users**: Search **"FluxLoop"** in Extensions (powered by [Open VSX](https://open-vsx.org/extension/fluxloop/fluxloop))
-- **💻 VS Code Users**: Search **"FluxLoop"** in [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)
-- **📦 Manual Install**: Download [VSIX from GitHub Releases](https://github.com/chuckgu/fluxloop/releases) (alternative method)
-
-**✅ Auto-update enabled** for Marketplace installations!
+### 🚀 Powerful CLI
+Complete command-line control for advanced workflows. Initialize projects, generate test inputs with LLM, run batch experiments, and parse results—all from your terminal.
 
 ---
 
