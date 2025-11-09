@@ -78,7 +78,7 @@ Manage projects, generate inputs, run experiments, parse results, and explore ou
 
 FluxLoop consists of multiple integrated packages that work together to provide a complete AI agent testing solution:
 
-### 🐍 SDK (Python 3.11+)
+### 1. SDK (Python 3.11+)
 **Core instrumentation library** for tracing and recording agent execution.
 
 Add `@fluxloop.agent()` decorator to your code to automatically capture traces, observations, and execution context. Supports async, streaming, and complex agent frameworks.
@@ -86,7 +86,7 @@ Add `@fluxloop.agent()` decorator to your code to automatically capture traces, 
 📖 **Documentation**: [https://fluxloop.io/sdk/](https://fluxloop.io/sdk/)  
 📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
 
-### ⚙️ CLI
+### 2. CLI
 **Command-line orchestration tool** for managing experiments end-to-end.
 
 Initialize projects, generate test inputs with LLM, run batch simulations, and parse results into human-readable formats—all from your terminal.
@@ -94,7 +94,7 @@ Initialize projects, generate test inputs with LLM, run batch simulations, and p
 📖 **Documentation**: [https://fluxloop.io/cli/](https://fluxloop.io/cli/)  
 📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
 
-### 💻 VSCode Extension
+### 3. VSCode Extension
 **Visual project management** for Cursor and VS Code.
 
 Browse projects, run experiments with one click, parse results into Markdown timelines, and explore outputs in a structured tree view—all without leaving your IDE.
@@ -102,7 +102,7 @@ Browse projects, run experiments with one click, parse results into Markdown tim
 📖 **Documentation**: [https://fluxloop.io/vscode/](https://fluxloop.io/vscode/)  
 🛒 **Marketplaces**: [VS Code](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop) | [Open VSX (Cursor)](https://open-vsx.org/extension/fluxloop/fluxloop)
 
-### 🤖 MCP Server (Python 3.11+)
+### 4. MCP Server (Python 3.11+)
 **AI-assisted integration guidance** via Model Context Protocol.
 
 Automatically detect your agent framework, suggest integration patterns, and provide context-aware help for setting up FluxLoop in your codebase.
@@ -110,7 +110,7 @@ Automatically detect your agent framework, suggest integration patterns, and pro
 📖 **Documentation**: [https://fluxloop.io/mcp/](https://fluxloop.io/mcp/)  
 📦 **PyPI**: [fluxloop-mcp](https://pypi.org/project/fluxloop-mcp/)
 
-### 🚀 Flux Agent (TBD)
+### 5. Flux Agent (TBD)
 **Autonomous setup and evaluation agent** (coming soon).
 
 An intelligent agent that automatically instruments your code, generates test scenarios, runs experiments, and provides evaluation insights—fully automated.
