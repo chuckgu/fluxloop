@@ -17,10 +17,10 @@ Common issues and solutions for FluxLoop VSCode Extension.
 **Solutions:**
 
 1. **Install FluxLoop CLI in your project environment:**
-   ```bash
+```bash
    # If using venv
    source .venv/bin/activate
-   pip install fluxloop-cli
+pip install fluxloop-cli
    
    # If using uv
    uv pip install fluxloop-cli

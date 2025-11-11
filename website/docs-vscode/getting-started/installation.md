@@ -156,14 +156,14 @@ fluxloop doctor
    ```
 
 2. **프로젝트 venv에 설치:**
-   ```bash
+```bash
    source .venv/bin/activate
    pip install fluxloop-cli fluxloop fluxloop-mcp
    ```
 
 3. **또는 글로벌 설치:**
    ```bash
-   pipx install fluxloop-cli
+pipx install fluxloop-cli
    pipx install fluxloop-mcp
    ```
 
@@ -176,7 +176,7 @@ fluxloop doctor
    ```bash
    which fluxloop
    fluxloop doctor
-   ```
+```
 
 ### Cursor에서 Extension이 검색되지 않음
 

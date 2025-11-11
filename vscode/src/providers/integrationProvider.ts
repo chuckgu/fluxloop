@@ -494,15 +494,16 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
             let fileName = `${suggestion.timestamp}-${slug || 'suggestion'}.md`;
             fileUri = vscode.Uri.joinPath(this.storageRoot, fileName);
             let counter = 1;
+            let needsCheck = true;
 
-            while (true) {
+            while (needsCheck) {
                 try {
                     await vscode.workspace.fs.stat(fileUri);
                     fileName = `${suggestion.timestamp}-${slug || 'suggestion'}-${counter}.md`;
                     fileUri = vscode.Uri.joinPath(this.storageRoot, fileName);
                     counter += 1;
                 } catch {
-                    break;
+                    needsCheck = false;
                 }
             }
         }
