@@ -28,8 +28,26 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop parse experiment` – convert experiment outputs into readable artifacts
 - `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
+- `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment
 
 Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
+
+## Quick Setup Script
+
+To prepare a fresh checkout (create `.venv`, install dependencies, and run diagnostics):
+
+```
+bash scripts/setup_fluxloop_env.sh --target-source-root path/to/your/source
+```
+
+Options:
+
+- `--python PATH` – choose a specific interpreter (default `python3`)
+- `--target-source-root PATH` – pre-populate VSCode `fluxloop.targetSourceRoot`
+- `--skip-doctor` – skip the final `fluxloop doctor` check
+
+After running the script, open the folder in VSCode and use `FluxLoop: Show Environment Info`
+or `FluxLoop: Run Doctor` to confirm the environment.
 
 ## Runner Integration Patterns
 

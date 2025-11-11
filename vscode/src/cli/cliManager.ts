@@ -3,19 +3,32 @@ import * as child_process from 'child_process';
 import * as which from 'which';
 import { OutputChannelManager } from '../utils/outputChannel';
 import { ProjectContext } from '../project/projectContext';
+import { EnvironmentManager } from '../environment/environmentManager';
 
 export class CLIManager {
     private cliPath: string | null = null;
+    private lastLoggedPath: string | null = null;
     
-    constructor(private context: vscode.ExtensionContext) {}
+    constructor(
+        private context: vscode.ExtensionContext,
+        private environmentManager: EnvironmentManager
+    ) {}
 
     async checkInstallation(): Promise<boolean> {
+        const environment = await this.environmentManager.getResolvedEnvironment();
+
+        if (environment?.fluxloopPath) {
+            this.cliPath = environment.fluxloopPath;
+            this.logCliPath(this.cliPath, true);
+            return true;
+        }
+
         try {
             this.cliPath = await which.default('fluxloop');
-            OutputChannelManager.getInstance().appendLine(`FluxLoop CLI found at: ${this.cliPath}`);
+            this.logCliPath(this.cliPath, false);
             return true;
         } catch {
-            OutputChannelManager.getInstance().appendLine('FluxLoop CLI not found');
+            OutputChannelManager.getInstance().appendLine('FluxLoop CLI not found on PATH');
             return false;
         }
     }
@@ -78,12 +91,16 @@ export class CLIManager {
     }
 
     async runCommand(args: string[], cwd?: string): Promise<void> {
-        // Ensure CLI is installed
+        const environment = await this.environmentManager.getResolvedEnvironment();
+
+        // Ensure CLI is available when no environment-specific executable exists
+        if (!environment?.fluxloopPath) {
         if (!this.cliPath && !await this.checkInstallation()) {
             const installed = await this.promptInstall();
             if (!installed) {
                 vscode.window.showErrorMessage('FluxLoop CLI is required to run this command');
                 return;
+                }
             }
         }
 
@@ -102,7 +119,9 @@ export class CLIManager {
         }
 
         const executionWrapper = config.get<string>('executionWrapper')?.trim();
-        const baseCommand = `fluxloop ${args.join(' ')}`;
+        const resolved = await this.environmentManager.resolveCommand('fluxloop');
+        const executable = this.quoteExecutable(resolved.command);
+        const baseCommand = [executable, ...args].filter(Boolean).join(' ');
         const commandLine = executionWrapper ? `${executionWrapper} ${baseCommand}` : baseCommand;
 
         outputChannel.appendLine(`\n> ${commandLine}`);
@@ -113,7 +132,7 @@ export class CLIManager {
         const terminal = vscode.window.createTerminal({
             name: 'FluxLoop',
             cwd: workspaceFolder,
-            env: this.getEnvironmentVariables()
+            env: await this.environmentManager.getProcessEnv(this.getEnvironmentVariables())
         });
 
         terminal.show();
@@ -135,5 +154,24 @@ export class CLIManager {
         }
 
         return env;
+    }
+
+    private quoteExecutable(executable: string): string {
+        if (executable.includes(' ')) {
+            if (process.platform === 'win32') {
+                return `"${executable.replace(/"/g, '""')}"`;
+            }
+            return `"${executable.replace(/"/g, '\\"')}"`;
+        }
+        return executable;
+    }
+
+    private logCliPath(path: string, fromEnvironment: boolean): void {
+        if (this.lastLoggedPath === path) {
+            return;
+        }
+        this.lastLoggedPath = path;
+        const source = fromEnvironment ? '[FluxLoop Env] fluxloop CLI resolved from environment' : 'FluxLoop CLI found at';
+        OutputChannelManager.getInstance().appendLine(`${source}: ${path}`);
     }
 }

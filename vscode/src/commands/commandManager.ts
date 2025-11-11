@@ -3,22 +3,23 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { parse as parseYaml } from 'yaml';
 import { CLIManager } from '../cli/cliManager';
+import { EnvironmentManager } from '../environment/environmentManager';
 import { WireframeViewer } from '../wireframe/wireframeViewer';
 import { InputGenerationWizard } from '../wireframe/inputGenerationWizard';
 import { DialogsWireframe } from '../wireframe/dialogsWireframe';
 import { WebviewsWireframe } from '../wireframe/webviewsWireframe';
 import { InteractiveWireframe } from '../wireframe/interactiveWireframe';
 import { ProjectContext } from '../project/projectContext';
-import { ProjectManager } from '../project/projectManager';
-import { StatusProvider } from '../providers/statusProvider';
+import { ProjectEntry, ProjectManager } from '../project/projectManager';
 import { InputsProvider } from '../providers/inputsProvider';
 import { ResultsProvider } from '../providers/resultsProvider';
+import { OutputChannelManager } from '../utils/outputChannel';
 
 export class CommandManager {
     constructor(
         private context: vscode.ExtensionContext,
         private cliManager: CLIManager,
-        private statusProvider?: StatusProvider,
+        private environmentManager: EnvironmentManager,
         private inputsProvider?: InputsProvider,
         private resultsProvider?: ResultsProvider
     ) {}
@@ -41,6 +42,8 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.openSimulationConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.openEvaluationConfig', (projectId?: string) => this.openEvaluationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
+            vscode.commands.registerCommand('fluxloop.showEnvironmentInfo', () => this.showEnvironmentInfo()),
+            vscode.commands.registerCommand('fluxloop.runDoctor', () => this.runDoctor()),
             vscode.commands.registerCommand('fluxloop.configureExecutionWrapper', () => this.configureExecutionWrapper()),
             vscode.commands.registerCommand('fluxloop.setProjectSourceRoot', (projectId?: string) => this.setProjectSourceRoot(projectId)),
             vscode.commands.registerCommand('fluxloop.openProjectSourceRoot', (projectId?: string) => this.openProjectSourceRoot(projectId)),
@@ -67,7 +70,7 @@ export class CommandManager {
         if (!environment) {
             return;
         }
-        this.statusProvider?.refreshForEnvironment(environment);
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
 
         // Get optional parameters
         const iterations = await vscode.window.showInputBox({
@@ -97,7 +100,7 @@ export class CommandManager {
         }
 
         await this.cliManager.runCommand(args, project.path);
-        this.statusProvider?.refresh();
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
     }
 
     private async parseExperiment(experimentPath?: string) {
@@ -264,7 +267,7 @@ export class CommandManager {
         // Run command
         const args = ['run', 'single', modulePath, input, '--function', functionName];
         await this.cliManager.runCommand(args, project.path);
-        this.statusProvider?.refresh();
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
     }
 
     private async generateInputs() {
@@ -365,7 +368,7 @@ export class CommandManager {
     private async showStatus() {
         const args = ['status', 'check', '--verbose'];
         await this.cliManager.runCommand(args, ProjectContext.getActiveWorkspacePath());
-        this.statusProvider?.refresh();
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
     }
 
     private async openConfig(projectId?: string) {
@@ -395,7 +398,7 @@ export class CommandManager {
         }
 
         await this.cliManager.runCommand(['record', 'enable'], project.path);
-        this.statusProvider?.refresh();
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
     }
 
     private async disableRecording() {
@@ -405,7 +408,7 @@ export class CommandManager {
         }
 
         await this.cliManager.runCommand(['record', 'disable'], project.path);
-        this.statusProvider?.refresh();
+        void vscode.commands.executeCommand('fluxloop.integration.refresh');
     }
 
     private async showRecordingStatus() {
@@ -418,12 +421,212 @@ export class CommandManager {
     }
 
     private async selectEnvironment() {
-        const environment = await this.selectExecutionEnvironment();
-        if (environment) {
-            const config = vscode.workspace.getConfiguration('fluxloop');
-            await config.update('defaultEnvironment', environment, vscode.ConfigurationTarget.Workspace);
-            vscode.window.showInformationMessage(`Default environment set to: ${environment}`);
+        const project = ProjectContext.getActiveProject();
+        const targetInfo = this.resolveConfigurationTarget(project);
+        const configuration = vscode.workspace.getConfiguration('fluxloop', targetInfo.uri);
+
+        const executionMode = (configuration.get<string>('executionMode') as 'auto' | 'workspace' | 'global' | 'custom' | undefined) ?? 'auto';
+        const pythonOverride = configuration.get<string>('pythonPath') ?? '';
+        const mcpOverride = configuration.get<string>('mcpCommandPath') ?? '';
+
+        const items: Array<vscode.QuickPickItem & { mode?: 'auto' | 'workspace' | 'global' | 'custom'; action?: 'custom' | 'clear' }> = [
+            {
+                label: 'Auto (detect project environment)',
+                description: 'Use project .venv/uv/conda if available, otherwise fallback to PATH',
+                picked: executionMode === 'auto',
+                mode: 'auto'
+            },
+            {
+                label: 'Workspace only',
+                description: 'Require a virtual environment inside the project',
+                picked: executionMode === 'workspace',
+                mode: 'workspace'
+            },
+            {
+                label: 'Global PATH',
+                description: 'Always use globally installed executables',
+                picked: executionMode === 'global',
+                mode: 'global'
+            },
+            {
+                label: 'Custom executables…',
+                description: 'Specify python and fluxloop-mcp paths manually',
+                detail: this.formatOverrideSummary(pythonOverride, mcpOverride),
+                action: 'custom'
+            }
+        ];
+
+        if (pythonOverride || mcpOverride) {
+            items.push({
+                label: 'Clear custom overrides',
+                description: 'Remove python/fluxloop-mcp overrides',
+                action: 'clear'
+            });
         }
+
+        const selection = await vscode.window.showQuickPick(items, {
+            title: 'FluxLoop Environment Configuration',
+            placeHolder: 'Select execution mode or configure custom executables'
+        });
+
+        if (!selection) {
+            return;
+        }
+
+        const target = targetInfo.target;
+
+        if (selection.action === 'custom') {
+            const pythonPath = await this.promptForExecutable(
+                'Python executable path (absolute)',
+                pythonOverride,
+                { optional: true }
+            );
+            if (pythonPath === undefined) {
+                return;
+            }
+
+            const mcpPath = await this.promptForExecutable(
+                'fluxloop-mcp executable path (absolute, optional)',
+                mcpOverride,
+                { optional: true }
+            );
+            if (mcpPath === undefined) {
+                return;
+            }
+
+            if (!pythonPath && !mcpPath) {
+                void vscode.window.showWarningMessage('Provide at least one executable path when using custom mode.');
+                return;
+            }
+
+            await configuration.update('executionMode', 'custom', target);
+            await configuration.update('pythonPath', pythonPath || undefined, target);
+            await configuration.update('mcpCommandPath', mcpPath || undefined, target);
+            await configuration.update('defaultEnvironment', 'Local Python', target);
+            vscode.window.showInformationMessage('Custom FluxLoop executables configured.');
+            await this.environmentManager.refreshActiveEnvironment();
+            return;
+        }
+
+        if (selection.action === 'clear') {
+            await configuration.update('pythonPath', undefined, target);
+            await configuration.update('mcpCommandPath', undefined, target);
+            if (executionMode === 'custom') {
+                await configuration.update('executionMode', 'auto', target);
+            }
+            await configuration.update('defaultEnvironment', 'Local Python', target);
+            vscode.window.showInformationMessage('FluxLoop environment overrides cleared.');
+            await this.environmentManager.refreshActiveEnvironment();
+            return;
+        }
+
+        if (selection.mode) {
+            await configuration.update('executionMode', selection.mode, target);
+            await configuration.update('defaultEnvironment', 'Local Python', target);
+            vscode.window.showInformationMessage(`FluxLoop execution mode set to ${selection.mode}.`);
+            await this.environmentManager.refreshActiveEnvironment();
+        }
+    }
+
+    private formatOverrideSummary(pythonPath: string, mcpPath: string): string | undefined {
+        const parts: string[] = [];
+        if (pythonPath) {
+            parts.push(`python: ${pythonPath}`);
+        }
+        if (mcpPath) {
+            parts.push(`mcp: ${mcpPath}`);
+        }
+        return parts.length > 0 ? parts.join(' | ') : undefined;
+    }
+
+    private async promptForExecutable(
+        prompt: string,
+        initialValue: string,
+        options: { optional?: boolean } = {}
+    ): Promise<string | undefined> {
+        const value = await vscode.window.showInputBox({
+            prompt,
+            value: initialValue,
+            ignoreFocusOut: true,
+            placeHolder: '/absolute/path/to/executable',
+            validateInput: (input) => {
+                const trimmed = input.trim();
+                if (!trimmed) {
+                    return options.optional ? null : null;
+                }
+                if (!path.isAbsolute(trimmed)) {
+                    return 'Enter an absolute path.';
+                }
+                return null;
+            }
+        });
+
+        if (value === undefined) {
+            return undefined;
+        }
+
+        return value.trim();
+    }
+
+    private resolveConfigurationTarget(project: ProjectEntry | undefined): { target: vscode.ConfigurationTarget; uri?: vscode.Uri } {
+        if (project) {
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(project.path));
+            if (workspaceFolder) {
+                return { target: vscode.ConfigurationTarget.WorkspaceFolder, uri: workspaceFolder.uri };
+            }
+            return { target: vscode.ConfigurationTarget.Global, uri: undefined };
+        }
+
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            return { target: vscode.ConfigurationTarget.WorkspaceFolder, uri: workspaceFolders[0].uri };
+        }
+
+        return { target: vscode.ConfigurationTarget.Global, uri: undefined };
+    }
+
+    private async showEnvironmentInfo() {
+        const environment = this.environmentManager.getActiveEnvironment();
+        if (!environment) {
+            const choice = await vscode.window.showInformationMessage(
+                'FluxLoop environment has not been detected yet.',
+                'Refresh'
+            );
+            if (choice === 'Refresh') {
+                await this.environmentManager.refreshActiveEnvironment();
+            }
+            return;
+        }
+
+        const lines = [
+            `Source root: ${environment.root}`,
+            `Type: ${environment.environmentType}`,
+            `Python: ${environment.pythonPath ?? 'not set'}`,
+            `fluxloop: ${environment.fluxloopPath ?? 'not set'}`,
+            `fluxloop-mcp: ${environment.fluxloopMcpPath ?? 'not set'}`
+        ];
+
+        if (environment.notes.length > 0) {
+            lines.push('Notes:');
+            environment.notes.forEach(note => lines.push(`- ${note}`));
+        }
+
+        const action = await vscode.window.showInformationMessage(
+            lines.join('\n'),
+            { modal: true },
+            'Open Output',
+            'Refresh'
+        );
+
+        if (action === 'Open Output') {
+            OutputChannelManager.getInstance().show(true);
+        } else if (action === 'Refresh') {
+            await this.environmentManager.refreshActiveEnvironment();
+        }
+    }
+
+    private async runDoctor() {
+        await this.cliManager.runCommand(['doctor']);
     }
 
     private async selectExecutionEnvironment(): Promise<string | undefined> {
@@ -500,7 +703,7 @@ export class CommandManager {
         if (action.label === 'Clear Target Source Root') {
             this.writeSourceRoot(configPath, '');
             projectManager.refreshProjectById(project.id);
-            void vscode.window.showInformationMessage(`Target source root cleared for ${project.name}.`);
+            await this.handleSourceRootUpdate(`Target source root cleared for ${project.name}.`);
             return;
         }
 
@@ -533,7 +736,41 @@ export class CommandManager {
 
         this.writeSourceRoot(configPath, storedValue);
         projectManager.refreshProjectById(project.id);
-        void vscode.window.showInformationMessage(`Target source root set to ${storedValue} for ${project.name}.`);
+        const displayValue = storedValue === '.' ? project.path : storedValue;
+        await this.handleSourceRootUpdate(`Target source root set to ${displayValue} for ${project.name}.`);
+    }
+
+    private async handleSourceRootUpdate(summary: string): Promise<void> {
+        const environment = await this.environmentManager.refreshActiveEnvironment();
+
+        const lines = [summary];
+        if (environment) {
+            const details = [
+                `Environment: ${environment.environmentType}`,
+                `Python: ${environment.pythonPath ?? 'not detected'}`,
+                `fluxloop: ${environment.fluxloopPath ?? 'not detected'}`,
+                `fluxloop-mcp: ${environment.fluxloopMcpPath ?? 'not detected'}`
+            ];
+            lines.push(details.join(' | '));
+        } else {
+            lines.push('No FluxLoop environment detected for the current project.');
+        }
+
+        const actions: string[] = ['Select Environment'];
+        if (environment) {
+            actions.push('Show Environment Info');
+        }
+        actions.push('Run Doctor');
+
+        const choice = await vscode.window.showInformationMessage(lines.join('\n'), ...actions);
+
+        if (choice === 'Select Environment') {
+            await this.selectEnvironment();
+        } else if (choice === 'Show Environment Info') {
+            await this.showEnvironmentInfo();
+        } else if (choice === 'Run Doctor') {
+            void vscode.commands.executeCommand('fluxloop.runDoctor');
+        }
     }
 
     private async openProjectSourceRoot(projectId?: string) {

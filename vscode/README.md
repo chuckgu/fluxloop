@@ -258,7 +258,9 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
 **Configuration:**
 - `FluxLoop: Open Configuration`
-- `FluxLoop: Select Execution Environment`
+- `FluxLoop: Select Environment`
+- `FluxLoop: Show Environment Info`
+- `FluxLoop: Run Doctor`
 - `FluxLoop: Configure Execution Wrapper`
 
 **Results:**
@@ -288,9 +290,41 @@ Enter the prefix (e.g., `uv run`) and the extension will automatically prepend i
 
 This setting is saved to your workspace and will be applied to all FluxLoop commands.
 
-### Virtual Environments
+### Environment Configuration
 
-The extension creates terminals using your workspace's default shell. If you use a virtual environment (venv, conda, etc.), ensure it's activated in your terminal profile or use the `executionWrapper` setting to prefix commands appropriately.
+FluxLoop automatically detects your project's Python environment (venv, conda, uv, etc.) and uses it for all commands. You can configure this behavior via:
+
+**Command Palette:**
+```
+FluxLoop: Select Environment
+```
+
+Choose from:
+- **Auto (recommended)**: Uses project `.venv`/conda if found, otherwise global PATH
+- **Workspace only**: Requires a virtual environment in the project
+- **Global PATH**: Always uses globally installed executables
+- **Custom executables**: Manually specify python and fluxloop-mcp paths
+
+**Or in `.vscode/settings.json`:**
+```json
+{
+  "fluxloop.executionMode": "auto",
+  "fluxloop.pythonPath": "/path/to/python",
+  "fluxloop.mcpCommandPath": "/path/to/fluxloop-mcp"
+}
+```
+
+**Check environment status:**
+- Use `FluxLoop: Show Environment Info` or `FluxLoop: Run Doctor` from Command Palette
+- Or click **Run Doctor** in the Integration view → System Status
+
+**Setting Target Source Root:**
+When you select `Target Source Root…` in the Projects view, FluxLoop:
+1. Detects virtual environments in that directory
+2. Updates FluxLoop Output channel with detected paths
+3. Prompts you to review/adjust the environment via Select Environment
+
+See the FluxLoop Output channel for detailed environment logs.
 
 ---
 
@@ -316,7 +350,8 @@ The **Status** panel will verify SDK availability in your Python environment.
 
 ### fluxloop-mcp Not Found
 - Confirm installation: `pip install fluxloop-mcp`
-- Check version: `fluxloop-mcp --version`
+- Verify environment: Run `FluxLoop: Show Environment Info` to check if `fluxloop-mcp` is detected in your project venv or global PATH
+- Check with `fluxloop doctor` command for detailed diagnostics
 - Rebuild the knowledge index: `packages/mcp/scripts/rebuild_index.sh`
 - The **Integration** view shows the package and index state; refresh with **FluxLoop: Refresh Integration View**
 

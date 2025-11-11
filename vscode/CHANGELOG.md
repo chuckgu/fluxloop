@@ -5,6 +5,17 @@ All notable changes to the FluxLoop VSCode Extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-11-05
+
+### Added
+
+- **Environment Actions in Integration View**: System Status now includes a *Select Environment* action alongside Refresh and Run Doctor for quick access to execution mode settings.
+- **Source Root → Environment Flow**: Choosing `Target Source Root…` immediately refreshes environment detection and prompts to open Select Environment, Show Environment Info, or Run Doctor.
+
+### Changed
+
+- Environment prompts now summarize detected executables after updating the project source root, reducing guesswork when configuring FluxLoop per-workspace.
+
 ## [0.1.2] - 2025-11-04
 
 ### Added
@@ -14,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prompts for custom output directory (defaults to `per_trace_analysis`)
   - Automatically checks for existing output and prompts to overwrite if needed
   - Parsed results appear in a new `per_trace_analysis/` folder within the Results view
+- **Environment Diagnostics**:
+  - Added workspace settings `fluxloop.executionMode`, `fluxloop.pythonPath`, `fluxloop.mcpCommandPath`
+  - New commands `FluxLoop: Select Environment`, `FluxLoop: Show Environment Info`, `FluxLoop: Run Doctor`
+  - Integration view now exposes a **Run Doctor** action alongside status refresh
+  - CLI `fluxloop doctor` available for detailed environment reports (including MCP index)
 - **Execution Wrapper Support**: New `fluxloop.executionWrapper` setting to prefix CLI commands
   - Enables seamless integration with `uv run`, `pipx run`, and other Python environment wrappers
   - `FluxLoop: Configure Execution Wrapper` command for easy setup via Command Palette
@@ -28,11 +44,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moved `Run Experiment` action from inside `Current Experiment` to root level in Experiments view for faster access
   - Docker execution option now shows "(coming soon)" with explanatory message when selected
   - Experiment result descriptions now display timestamp before success rate for chronological clarity
+- **Command Execution**:
+  - All CLI invocations now respect the selected FluxLoop environment (venv/uv/conda/global)
+  - Integration status checks use the resolved executables (python/fluxloop/fluxloop-mcp) instead of PATH fallbacks
 - **Results View Structure**: `per_trace_analysis/` folder is recursively browsable, supporting nested analysis outputs
 
 ### Fixed
 
 - Experiments view and Results view now show identical file sets for consistency (`observations.jsonl`, `logs.json` added to Experiments view)
+- FluxLoop MCP detection no longer reports false negatives when the CLI is installed but invoked without a `--version` flag
 
 ## [0.1.1] - 2025-11-04
 

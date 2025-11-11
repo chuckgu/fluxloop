@@ -13,6 +13,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'getting-started/installation',
+        'getting-started/environment-configuration',
         'getting-started/creating-first-project',
         'getting-started/running-experiments',
       ],
@@ -26,6 +27,7 @@ const sidebars: SidebarsConfig = {
         'user-guide/running-experiments',
         'user-guide/viewing-results',
         'user-guide/recording-mode',
+        'user-guide/environment-setup',
       ],
     },
     {

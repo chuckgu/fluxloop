@@ -14,6 +14,7 @@ import { OutputChannelManager } from '../utils/outputChannel';
 import { ProjectContext } from '../project/projectContext';
 import * as https from 'https';
 import { IntegrationPanel } from './integrationPanel';
+import { EnvironmentManager } from '../environment/environmentManager';
 
 interface CommandResult {
     success: boolean;
@@ -30,6 +31,7 @@ export class IntegrationService {
         private readonly context: vscode.ExtensionContext,
         private readonly cliManager: CLIManager,
         private readonly integrationProvider: IntegrationProvider,
+        private readonly environmentManager: EnvironmentManager,
     ) {}
 
     async refreshStatus(): Promise<void> {
@@ -39,6 +41,8 @@ export class IntegrationService {
 
         this.refreshLock.set('status', true);
         try {
+            await this.environmentManager.refreshActiveEnvironment();
+
             const statuses: SystemStatusItem[] = [];
             statuses.push(await this.checkFluxloopCli());
             statuses.push(await this.checkPython());
@@ -105,7 +109,7 @@ export class IntegrationService {
             const answer = result.stdout.trim() || 'No response returned.';
             this.output.appendLine(answer);
 
-            this.integrationProvider.addSuggestion({
+            await this.integrationProvider.addSuggestion({
                 query,
                 answer,
             });
@@ -190,7 +194,7 @@ export class IntegrationService {
                         suggestion,
                     });
 
-                    this.integrationProvider.addSuggestion({
+                    await this.integrationProvider.addSuggestion({
                         query: `Integration suggestion for ${path.basename(document.uri.fsPath)}`,
                         answer: suggestion,
                         filePath: document.uri.fsPath,
@@ -258,11 +262,11 @@ export class IntegrationService {
     }
 
     private async checkMcpPackage(): Promise<SystemStatusItem> {
-        const result = await this.runCommand('fluxloop-mcp', ['--version']);
+        const result = await this.runCommand('fluxloop-mcp', ['--help']);
         const state: StatusState = result.success ? 'ok' : 'warn';
         const description = result.success
-            ? result.stdout.trim()
-            : 'fluxloop-mcp is not installed. Run "pip install fluxloop-mcp".';
+            ? 'fluxloop-mcp CLI detected.'
+            : (result.stderr.trim() || 'fluxloop-mcp is not installed. Run "pip install fluxloop-mcp".');
 
         this.integrationProvider.setMcpConnection(state, description);
 
@@ -445,13 +449,18 @@ json.dump(result, sys.stdout)
     }
 
     private async runCommand(command: string, args: string[], cwd?: string): Promise<CommandResult> {
+        const resolved = await this.environmentManager.resolveCommand(command);
+        const display = [resolved.command, ...args].join(' ');
+        this.output.appendLine(`[FluxLoop Integration] > ${display}`);
+
         return new Promise<CommandResult>((resolve) => {
             let stdout = '';
             let stderr = '';
 
-            const child = spawn(command, args, {
+            const child = spawn(resolved.command, args, {
                 cwd,
                 shell: process.platform === 'win32',
+                env: resolved.env,
             });
 
             child.stdout.on('data', (data) => {
@@ -476,6 +485,18 @@ json.dump(result, sys.stdout)
                     stdout,
                     stderr,
                 });
+
+                if (code === 0) {
+                    this.output.appendLine(`[FluxLoop Integration] ✅ ${display}`);
+                    if (stdout.trim()) {
+                        this.output.appendLine(stdout.trim());
+                    }
+                } else {
+                    this.output.appendLine(`[FluxLoop Integration] ❌ ${display}`);
+                    if (stderr.trim()) {
+                        this.output.appendLine(stderr.trim());
+                    }
+                }
             });
         });
     }

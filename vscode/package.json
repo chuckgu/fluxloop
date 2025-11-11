@@ -2,7 +2,7 @@
   "name": "fluxloop",
   "displayName": "FluxLoop",
   "description": "AI Agent Simulation and Observability",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "fluxloop",
   "engines": {
     "vscode": "^1.74.0"
@@ -32,7 +32,6 @@
     "onView:fluxloop.inputs",
     "onView:fluxloop.experiments",
     "onView:fluxloop.results",
-    "onView:fluxloop.status",
     "onView:fluxloop.integration",
     "onCommand:fluxloop.integration.showSuggestion"
   ],
@@ -136,12 +135,22 @@
       },
       {
         "command": "fluxloop.selectEnvironment",
-        "title": "Select Execution Environment",
+        "title": "Select Environment",
         "category": "FluxLoop"
       },
       {
         "command": "fluxloop.configureExecutionWrapper",
         "title": "Configure Execution Wrapper",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.showEnvironmentInfo",
+        "title": "Show Environment Info",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.runDoctor",
+        "title": "Run Environment Doctor",
         "category": "FluxLoop"
       },
       {
@@ -195,6 +204,15 @@
         "category": "FluxLoop Integration"
       },
       {
+        "command": "fluxloop.integration.removeSuggestion",
+        "title": "Remove Integration Suggestion",
+        "icon": {
+          "light": "resources/icons/remove-light.svg",
+          "dark": "resources/icons/remove-dark.svg"
+        },
+        "category": "FluxLoop Integration"
+      },
+      {
         "command": "fluxloop.integration.clearHistory",
         "title": "Clear Integration Suggestion History",
         "category": "FluxLoop Integration"
@@ -208,43 +226,12 @@
           "group": "fluxloop"
         }
       ],
-      "view/title": [
-        {
-          "command": "fluxloop.integration.connectMcp",
-          "when": "view == fluxloop.integration",
-          "group": "navigation@1"
-        },
-        {
-          "command": "fluxloop.integration.openKnowledgeSearch",
-          "when": "view == fluxloop.integration",
-          "group": "navigation@2"
-        },
-        {
-          "command": "fluxloop.integration.runAgent",
-          "when": "view == fluxloop.integration",
-          "group": "navigation@3"
-        },
-        {
-          "command": "fluxloop.integration.refresh",
-          "when": "view == fluxloop.integration",
-          "group": "navigation@4"
-        },
-        {
-          "command": "fluxloop.integration.clearHistory",
-          "when": "view == fluxloop.integration",
-          "group": "navigation@5"
-        }
-      ],
+      "view/title": [],
       "view/item/context": [
         {
-          "command": "fluxloop.integration.showSuggestion",
+          "command": "fluxloop.integration.removeSuggestion",
           "when": "view == fluxloop.integration && viewItem == suggestionItem",
           "group": "inline@1"
-        },
-        {
-          "command": "fluxloop.integration.clearHistory",
-          "when": "view == fluxloop.integration && viewItem == suggestionItem",
-          "group": "inline@2"
         }
       ],
       "editor/context": [
@@ -273,6 +260,12 @@
           "contextualTitle": "FluxLoop Projects"
         },
         {
+          "id": "fluxloop.integration",
+          "name": "Integration",
+          "icon": "$(extensions)",
+          "contextualTitle": "FluxLoop Integration"
+        },
+        {
           "id": "fluxloop.inputs",
           "name": "Inputs",
           "icon": "$(notebook)",
@@ -289,18 +282,6 @@
           "name": "Results",
           "icon": "$(graph)",
           "contextualTitle": "Experiment Results"
-        },
-        {
-          "id": "fluxloop.status",
-          "name": "Status",
-          "icon": "$(info)",
-          "contextualTitle": "System Status"
-        },
-        {
-          "id": "fluxloop.integration",
-          "name": "Integration",
-          "icon": "$(extensions)",
-          "contextualTitle": "FluxLoop Integration"
         }
       ]
     },
@@ -341,6 +322,36 @@
           "type": "string",
           "default": "",
           "description": "Command prefix used before running the FluxLoop CLI (e.g. 'uv run')"
+        },
+        "fluxloop.targetSourceRoot": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional path to the FluxLoop project source root used for environment detection. Relative paths are resolved against the active FluxLoop project."
+        },
+        "fluxloop.executionMode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "workspace",
+            "global",
+            "custom"
+          ],
+          "default": "auto",
+          "scope": "resource",
+          "description": "Controls how FluxLoop selects the Python environment (auto, workspace only, global PATH, or custom executables)."
+        },
+        "fluxloop.pythonPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Override the Python executable used by FluxLoop commands."
+        },
+        "fluxloop.mcpCommandPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Override the fluxloop-mcp executable path used by FluxLoop commands."
         },
         "fluxloop.openaiApiKey": {
           "type": "string",

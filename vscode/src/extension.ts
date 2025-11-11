@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { ExperimentsProvider } from './providers/experimentsProvider';
 import { ResultsProvider } from './providers/resultsProvider';
-import { StatusProvider } from './providers/statusProvider';
 import { ProjectsProvider } from './providers/projectsProvider';
 import { InputsProvider } from './providers/inputsProvider';
 import { CommandManager } from './commands/commandManager';
@@ -10,8 +9,9 @@ import { OutputChannelManager } from './utils/outputChannel';
 import { ProjectEntry, ProjectManager } from './project/projectManager';
 import { ProjectContext } from './project/projectContext';
 import { ProjectCommands } from './commands/projectCommands';
-import { IntegrationProvider, IntegrationSuggestion } from './providers/integrationProvider';
+import { IntegrationProvider, IntegrationSuggestion, IntegrationItem } from './providers/integrationProvider';
 import { IntegrationService } from './integration/integrationService';
+import { EnvironmentManager } from './environment/environmentManager';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('FluxLoop extension is now active');
@@ -24,29 +24,40 @@ export async function activate(context: vscode.ExtensionContext) {
     const projectManager = ProjectManager.initialize(context);
     ProjectContext.initialize(context);
 
-    // Initialize CLI manager
-    const cliManager = new CLIManager(context);
+    // Initialize environment manager and CLI manager
+    const environmentManager = new EnvironmentManager();
+    context.subscriptions.push(environmentManager);
+    await environmentManager.refreshActiveEnvironment();
+    const cliManager = new CLIManager(context, environmentManager);
 
     // Register tree data providers
     const projectsProvider = new ProjectsProvider();
     const inputsProvider = new InputsProvider();
     const experimentsProvider = new ExperimentsProvider(context.workspaceState);
     const resultsProvider = new ResultsProvider();
-    const statusProvider = new StatusProvider();
     const integrationProvider = new IntegrationProvider();
-    const integrationService = new IntegrationService(context, cliManager, integrationProvider);
+    const integrationService = new IntegrationService(context, cliManager, integrationProvider, environmentManager);
 
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('fluxloop.projects', projectsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.inputs', inputsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.experiments', experimentsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.results', resultsProvider),
-        vscode.window.registerTreeDataProvider('fluxloop.status', statusProvider),
         vscode.window.registerTreeDataProvider('fluxloop.integration', integrationProvider)
     );
 
+    const resolveWorkspaceUri = (project?: ProjectEntry): vscode.Uri | undefined => {
+        if (project?.path) {
+            return vscode.Uri.file(project.path);
+        }
+        const folder = vscode.workspace.workspaceFolders?.[0];
+        return folder?.uri;
+    };
+
+    await integrationProvider.setWorkspaceRoot(resolveWorkspaceUri(projectManager.getActiveProject()));
+
     // Initialize command manager
-    const commandManager = new CommandManager(context, cliManager, statusProvider, inputsProvider, resultsProvider);
+    const commandManager = new CommandManager(context, cliManager, environmentManager, inputsProvider, resultsProvider);
     commandManager.registerCommands();
 
     // Register project commands
@@ -71,7 +82,6 @@ export async function activate(context: vscode.ExtensionContext) {
         experimentsProvider.refresh();
         inputsProvider.refresh();
         resultsProvider.refresh();
-        statusProvider.refresh();
         integrationProvider.refresh();
         void integrationService.refreshStatus();
     };
@@ -100,7 +110,7 @@ export async function activate(context: vscode.ExtensionContext) {
             projectManager.refreshProjectById(project.id);
             experimentsProvider.refresh();
             inputsProvider.refresh();
-            statusProvider.refresh();
+            void vscode.commands.executeCommand('fluxloop.integration.refresh');
         };
 
         disposables.push(configWatcher);
@@ -112,7 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const envWatcher = vscode.workspace.createFileSystemWatcher(envPattern);
         const handleEnvUpdate = () => {
             experimentsProvider.refresh();
-            statusProvider.refresh();
+            experimentsProvider.refresh();
         };
 
         disposables.push(envWatcher);
@@ -160,6 +170,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const handleActiveProjectChange = (project: ProjectEntry | undefined) => {
         registerProjectWatchers(project);
+        void environmentManager.refreshActiveEnvironment();
+        void integrationProvider.setWorkspaceRoot(resolveWorkspaceUri(project));
         refreshProviders();
     };
 
@@ -168,10 +180,11 @@ export async function activate(context: vscode.ExtensionContext) {
     projectManager.onDidChangeActiveProject(handleActiveProjectChange);
     projectManager.onDidChangeProjects(() => {
         projectsProvider.refresh();
-        statusProvider.refresh();
         integrationProvider.refresh();
+        void environmentManager.refreshActiveEnvironment();
         void integrationService.refreshStatus();
         registerProjectWatchers(projectManager.getActiveProject());
+        void integrationProvider.setWorkspaceRoot(resolveWorkspaceUri(projectManager.getActiveProject()));
     });
 
     context.subscriptions.push(
@@ -190,8 +203,22 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('fluxloop.integration.showSuggestion', (suggestion: IntegrationSuggestion) => {
             integrationService.showSuggestionDetail(suggestion);
         }),
-        vscode.commands.registerCommand('fluxloop.integration.clearHistory', () => {
-            integrationProvider.clearSuggestions();
+        vscode.commands.registerCommand(
+            'fluxloop.integration.removeSuggestion',
+            async (target: IntegrationItem | IntegrationSuggestion) => {
+                const suggestion =
+                    target instanceof IntegrationItem ? target.suggestion : (target as IntegrationSuggestion | undefined);
+
+                if (!suggestion) {
+                    return;
+                }
+
+                await integrationProvider.removeSuggestion(suggestion.id);
+                vscode.window.setStatusBarMessage('Integration suggestion removed.', 3000);
+            },
+        ),
+        vscode.commands.registerCommand('fluxloop.integration.clearHistory', async () => {
+            await integrationProvider.clearSuggestions();
             vscode.window.showInformationMessage('Flux Agent suggestion history cleared.');
         })
     );
@@ -203,6 +230,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.globalState.update('fluxloop.hasShownWelcome', true);
     }
 
+    await environmentManager.refreshActiveEnvironment();
     void integrationService.refreshStatus();
 }
 

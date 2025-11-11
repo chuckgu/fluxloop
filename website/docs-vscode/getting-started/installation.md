@@ -60,27 +60,59 @@ Marketplace를 사용할 수 없는 경우:
 
 ## 필수 요구사항
 
-FluxLoop Extension을 사용하려면 FluxLoop CLI와 SDK가 설치되어 있어야 합니다.
+FluxLoop Extension을 사용하려면 FluxLoop CLI, SDK, MCP 서버가 설치되어 있어야 합니다.
 
-### CLI 및 SDK 설치
+### 권장 설치 방법
+
+프로젝트별 가상환경에 설치하는 것을 권장합니다:
 
 ```bash
-# pip로 설치
-pip install fluxloop-cli fluxloop
+# 가상환경 생성
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# 또는 pipx로 설치 (권장)
+# FluxLoop 패키지 설치
+pip install fluxloop-cli fluxloop fluxloop-mcp
+```
+
+### 대체 설치 방법
+
+#### uv 사용
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install fluxloop-cli fluxloop fluxloop-mcp
+```
+
+#### pipx (글로벌 설치)
+
+```bash
 pipx install fluxloop-cli
-pip install fluxloop
+pipx install fluxloop-mcp
+pip install fluxloop  # SDK는 프로젝트 venv에 설치 권장
 ```
 
 ### 설치 확인
 
+확장에서 자동으로 진단:
+```
+FluxLoop: Run Doctor
+```
+
+또는 터미널에서:
 ```bash
 # CLI 버전 확인
 fluxloop --version
 
 # SDK 확인
 python -c "import fluxloop; print(fluxloop.__version__)"
+
+# MCP 서버 확인
+fluxloop-mcp --help
+
+# 전체 환경 진단
+fluxloop doctor
 ```
 
 ## 시스템 요구사항
@@ -118,16 +150,33 @@ python -c "import fluxloop; print(fluxloop.__version__)"
 **증상**: "FluxLoop CLI is not installed" 메시지
 
 **해결**:
-```bash
-# PATH 확인
-which fluxloop
+1. **환경 확인:**
+   ```
+   FluxLoop: Show Environment Info
+   ```
 
-# 없다면 설치
-pip install fluxloop-cli
+2. **프로젝트 venv에 설치:**
+   ```bash
+   source .venv/bin/activate
+   pip install fluxloop-cli fluxloop fluxloop-mcp
+   ```
 
-# 또는 pipx 사용
-pipx install fluxloop-cli
-```
+3. **또는 글로벌 설치:**
+   ```bash
+   pipx install fluxloop-cli
+   pipx install fluxloop-mcp
+   ```
+
+4. **환경 모드 설정:**
+   ```
+   FluxLoop: Select Environment
+   ```
+
+5. **PATH 확인:**
+   ```bash
+   which fluxloop
+   fluxloop doctor
+   ```
 
 ### Cursor에서 Extension이 검색되지 않음
 
