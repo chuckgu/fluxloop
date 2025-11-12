@@ -12,6 +12,7 @@ import { ProjectCommands } from './commands/projectCommands';
 import { IntegrationProvider, IntegrationSuggestion, IntegrationItem } from './providers/integrationProvider';
 import { IntegrationService } from './integration/integrationService';
 import { EnvironmentManager } from './environment/environmentManager';
+import { DashboardViewProvider, FluxloopActiveView, OnboardingCard } from './providers/dashboardViewProvider';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('FluxLoop extension is now active');
@@ -38,12 +39,74 @@ export async function activate(context: vscode.ExtensionContext) {
     const integrationProvider = new IntegrationProvider();
     const integrationService = new IntegrationService(context, cliManager, integrationProvider, environmentManager);
 
+    const ONBOARDING_STORAGE_KEY = 'fluxloop.onboarding.dismissedCards';
+    const dismissedOnboardingCards = new Set(
+        context.globalState.get<string[]>(ONBOARDING_STORAGE_KEY, [])
+    );
+
+    const allOnboardingCards: OnboardingCard[] = [
+        {
+            id: 'layout-tip',
+            title: 'Adjust tree layout',
+            description: 'Drag the header grab line above each tree view to reposition or collapse it.'
+        }
+    ];
+
+    const getActiveOnboardingCards = (): OnboardingCard[] =>
+        allOnboardingCards.filter(card => !dismissedOnboardingCards.has(card.id));
+
+    let currentActiveView: FluxloopActiveView = 'workspace';
+    let dashboardProvider!: DashboardViewProvider;
+
+    function setActiveView(view: FluxloopActiveView): void {
+        currentActiveView = view;
+        void vscode.commands.executeCommand('setContext', 'fluxloop.activeView', view);
+        dashboardProvider.updateSnapshot({ activeView: view });
+    }
+
+    const refreshOnboardingCards = () => {
+        dashboardProvider.updateSnapshot({ onboardingCards: getActiveOnboardingCards() });
+    };
+
+    dashboardProvider = new DashboardViewProvider(context.extensionUri, {
+        onSwitchView: view => {
+            if (view !== currentActiveView) {
+                setActiveView(view);
+            }
+        },
+        onDismissOnboarding: async cardId => {
+            if (!dismissedOnboardingCards.has(cardId)) {
+                dismissedOnboardingCards.add(cardId);
+                await context.globalState.update(ONBOARDING_STORAGE_KEY, Array.from(dismissedOnboardingCards));
+                refreshOnboardingCards();
+            }
+        }
+    });
+
+    dashboardProvider.updateSnapshot({
+        project: projectManager.getActiveProject(),
+        environment: environmentManager.getActiveEnvironment()
+    });
+    refreshOnboardingCards();
+    setActiveView(currentActiveView);
+
     context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            DashboardViewProvider.viewType,
+            dashboardProvider,
+            { webviewOptions: { retainContextWhenHidden: true } }
+        ),
         vscode.window.registerTreeDataProvider('fluxloop.projects', projectsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.inputs', inputsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.experiments', experimentsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.results', resultsProvider),
         vscode.window.registerTreeDataProvider('fluxloop.integration', integrationProvider)
+    );
+
+    context.subscriptions.push(
+        environmentManager.onDidChangeEnvironment(environment => {
+            dashboardProvider.updateSnapshot({ environment });
+        })
     );
 
     const resolveWorkspaceUri = (project?: ProjectEntry): vscode.Uri | undefined => {
@@ -170,6 +233,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const handleActiveProjectChange = (project: ProjectEntry | undefined) => {
         registerProjectWatchers(project);
+        dashboardProvider.updateSnapshot({ project });
         void environmentManager.refreshActiveEnvironment();
         void integrationProvider.setWorkspaceRoot(resolveWorkspaceUri(project));
         refreshProviders();
@@ -185,6 +249,7 @@ export async function activate(context: vscode.ExtensionContext) {
         void integrationService.refreshStatus();
         registerProjectWatchers(projectManager.getActiveProject());
         void integrationProvider.setWorkspaceRoot(resolveWorkspaceUri(projectManager.getActiveProject()));
+        dashboardProvider.updateSnapshot({ project: projectManager.getActiveProject() });
     });
 
     context.subscriptions.push(

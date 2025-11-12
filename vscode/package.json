@@ -28,6 +28,7 @@
     "onCommand:fluxloop.enableRecording",
     "onCommand:fluxloop.disableRecording",
     "onCommand:fluxloop.showRecordingStatus",
+        "onView:fluxloop.dashboard",
     "onView:fluxloop.projects",
     "onView:fluxloop.inputs",
     "onView:fluxloop.experiments",
@@ -254,34 +255,46 @@
     "views": {
       "fluxloop": [
         {
+          "id": "fluxloop.dashboard",
+          "name": "Overview",
+          "type": "webview",
+          "priority": 0,
+          "contextualTitle": "FluxLoop Overview"
+        },
+        {
           "id": "fluxloop.projects",
           "name": "Projects",
           "icon": "$(folder)",
-          "contextualTitle": "FluxLoop Projects"
+          "contextualTitle": "FluxLoop Projects",
+          "when": "fluxloop.activeView == 'workspace'"
         },
         {
           "id": "fluxloop.integration",
           "name": "Integration",
           "icon": "$(extensions)",
-          "contextualTitle": "FluxLoop Integration"
+          "contextualTitle": "FluxLoop Integration",
+          "when": "fluxloop.activeView == 'workspace'"
         },
         {
           "id": "fluxloop.inputs",
           "name": "Inputs",
           "icon": "$(notebook)",
-          "contextualTitle": "FluxLoop Inputs"
+          "contextualTitle": "FluxLoop Inputs",
+          "when": "fluxloop.activeView == 'playground'"
         },
         {
           "id": "fluxloop.experiments",
           "name": "Experiments",
           "icon": "$(beaker)",
-          "contextualTitle": "FluxLoop Experiments"
+          "contextualTitle": "FluxLoop Experiments",
+          "when": "fluxloop.activeView == 'playground'"
         },
         {
           "id": "fluxloop.results",
           "name": "Results",
           "icon": "$(graph)",
-          "contextualTitle": "Experiment Results"
+          "contextualTitle": "Experiment Results",
+          "when": "fluxloop.activeView == 'insights'"
         }
       ]
     },

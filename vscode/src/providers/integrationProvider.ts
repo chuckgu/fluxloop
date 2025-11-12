@@ -8,6 +8,7 @@ export type IntegrationNodeType =
     | 'recentSuggestions'
     | 'refreshStatus'
     | 'selectEnvironment'
+    | 'showEnvironment'
     | 'runDoctor'
     | 'clearHistory'
     | 'statusItem'
@@ -254,18 +255,6 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         );
 
         rootItems.push(
-            new IntegrationItem('Connect MCP', vscode.TreeItemCollapsibleState.None, 'mcpConnection', {
-                description: this.mcpState.message,
-                command: {
-                    command: 'fluxloop.integration.connectMcp',
-                    title: 'Connect MCP',
-                },
-                iconId: 'debug-start',
-                tooltip: this.mcpState.message,
-            }),
-        );
-
-        rootItems.push(
             new IntegrationItem(
                 'Knowledge Search…',
                 vscode.TreeItemCollapsibleState.None,
@@ -275,7 +264,7 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
                         command: 'fluxloop.integration.openKnowledgeSearch',
                         title: 'Open Knowledge Search',
                     },
-                    iconId: 'debug-start',
+                    iconId: 'search',
                     tooltip: 'Search FluxLoop docs using the MCP knowledge index',
                 },
             ),
@@ -287,7 +276,7 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
                     command: 'fluxloop.integration.runAgent',
                     title: 'Run Flux Agent',
                 },
-                iconId: 'sparkle',
+                iconId: 'debug-start',
                 tooltip: 'Generate integration suggestions for the active file',
             }),
         );
@@ -310,6 +299,18 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         });
 
         items.push(
+            new IntegrationItem('Connect MCP', vscode.TreeItemCollapsibleState.None, 'mcpConnection', {
+                description: this.mcpState.message,
+                command: {
+                    command: 'fluxloop.integration.connectMcp',
+                    title: 'Connect MCP',
+                },
+                iconId: 'plug',
+                tooltip: this.mcpState.message,
+            }),
+        );
+
+        items.push(
             new IntegrationItem('Refresh Status', vscode.TreeItemCollapsibleState.None, 'refreshStatus', {
                 command: {
                     command: 'fluxloop.integration.refresh',
@@ -328,6 +329,17 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
                 },
                 iconId: 'settings-gear',
                 tooltip: 'Choose execution mode or custom executables for FluxLoop',
+            }),
+        );
+
+        items.push(
+            new IntegrationItem('Show Environment', vscode.TreeItemCollapsibleState.None, 'showEnvironment', {
+                command: {
+                    command: 'fluxloop.showEnvironmentInfo',
+                    title: 'Show Environment Info',
+                },
+                iconId: 'info',
+                tooltip: 'Display details about the current FluxLoop environment',
             }),
         );
 
