@@ -56,19 +56,8 @@ export async function activate(context: vscode.ExtensionContext) {
         allOnboardingCards.filter(card => !dismissedOnboardingCards.has(card.id));
 
     let currentActiveView: FluxloopActiveView = 'workspace';
-    let dashboardProvider!: DashboardViewProvider;
 
-    function setActiveView(view: FluxloopActiveView): void {
-        currentActiveView = view;
-        void vscode.commands.executeCommand('setContext', 'fluxloop.activeView', view);
-        dashboardProvider.updateSnapshot({ activeView: view });
-    }
-
-    const refreshOnboardingCards = () => {
-        dashboardProvider.updateSnapshot({ onboardingCards: getActiveOnboardingCards() });
-    };
-
-    dashboardProvider = new DashboardViewProvider(context.extensionUri, {
+    const dashboardProvider = new DashboardViewProvider(context.extensionUri, {
         onSwitchView: view => {
             if (view !== currentActiveView) {
                 setActiveView(view);
@@ -82,6 +71,16 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }
     });
+
+    function setActiveView(view: FluxloopActiveView): void {
+        currentActiveView = view;
+        void vscode.commands.executeCommand('setContext', 'fluxloop.activeView', view);
+        dashboardProvider.updateSnapshot({ activeView: view });
+    }
+
+    function refreshOnboardingCards(): void {
+        dashboardProvider.updateSnapshot({ onboardingCards: getActiveOnboardingCards() });
+    }
 
     dashboardProvider.updateSnapshot({
         project: projectManager.getActiveProject(),
