@@ -30,6 +30,7 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.init', () => this.initProject()),
             vscode.commands.registerCommand('fluxloop.runExperiment', () => this.runExperiment()),
             vscode.commands.registerCommand('fluxloop.parseExperiment', (experimentPath?: string) => this.parseExperiment(experimentPath)),
+            vscode.commands.registerCommand('fluxloop.evaluateExperiment', (experimentPath?: string) => this.evaluateExperiment(experimentPath)),
             vscode.commands.registerCommand('fluxloop.runSingle', () => this.runSingle()),
             vscode.commands.registerCommand('fluxloop.generateInputs', () => this.generateInputs()),
             vscode.commands.registerCommand('fluxloop.showStatus', () => this.showStatus()),
@@ -199,6 +200,120 @@ export class CommandManager {
         }
 
         const args = ['parse', 'experiment', experimentArg, '--output', finalOutputDir];
+        if (overwrite) {
+            args.push('--overwrite');
+        }
+
+        await this.cliManager.runCommand(args, project.path);
+        this.resultsProvider?.refresh();
+    }
+
+    private async evaluateExperiment(experimentPath?: string) {
+        const project = ProjectContext.ensureActiveProject();
+        if (!project) {
+            return;
+        }
+
+        const experimentsDir = path.join(project.path, 'experiments');
+        if (!fs.existsSync(experimentsDir)) {
+            void vscode.window.showWarningMessage('실험 결과 폴더가 없습니다. 먼저 실험을 실행해 주세요.');
+            return;
+        }
+
+        let targetPath = experimentPath && fs.existsSync(experimentPath)
+            ? experimentPath
+            : undefined;
+
+        if (!targetPath) {
+            const directories = fs.readdirSync(experimentsDir)
+                .filter(name => {
+                    try {
+                        return fs.statSync(path.join(experimentsDir, name)).isDirectory();
+                    } catch {
+                        return false;
+                    }
+                })
+                .sort((a, b) => b.localeCompare(a));
+
+            if (directories.length === 0) {
+                void vscode.window.showWarningMessage('평가할 실험 결과가 없습니다.');
+                return;
+            }
+
+            const pick = await vscode.window.showQuickPick(
+                directories.map(name => ({
+                    label: name,
+                    description: path.join('experiments', name)
+                })),
+                {
+                    title: '평가할 실험 결과 선택',
+                    placeHolder: '평가를 실행할 실험 결과 폴더를 선택하세요.'
+                }
+            );
+
+            if (!pick) {
+                return;
+            }
+
+            targetPath = path.join(experimentsDir, pick.label);
+        }
+
+        if (!targetPath || !fs.existsSync(targetPath)) {
+            void vscode.window.showErrorMessage('선택한 실험 결과 폴더를 찾을 수 없습니다.');
+            return;
+        }
+
+        const relativePath = path.relative(project.path, targetPath);
+        const experimentArg = relativePath && !relativePath.startsWith('..') ? relativePath : targetPath;
+
+        const configRelative = path.join('configs', 'evaluation.yaml');
+        const configAbsolute = path.join(project.path, configRelative);
+        let configArg = configRelative;
+        if (!fs.existsSync(configAbsolute)) {
+            void vscode.window.showWarningMessage('configs/evaluation.yaml 파일을 찾을 수 없습니다. CLI 설정을 확인해 주세요.');
+        } else {
+            const relativeConfig = path.relative(project.path, configAbsolute);
+            configArg = relativeConfig && !relativeConfig.startsWith('..') ? relativeConfig : configAbsolute;
+        }
+
+        const outputDir = await vscode.window.showInputBox({
+            prompt: '평가 결과를 저장할 출력 디렉터리 (옵션)',
+            placeHolder: '예: evaluation (비워두면 기본값 사용)',
+            ignoreFocusOut: true
+        });
+
+        if (outputDir === undefined) {
+            return;
+        }
+
+        const defaultOutputDir = 'evaluation';
+        const trimmedOutput = outputDir.trim();
+        const finalOutputDir = trimmedOutput.length > 0 ? trimmedOutput : defaultOutputDir;
+        const resolvedOutputPath = path.isAbsolute(finalOutputDir)
+            ? finalOutputDir
+            : path.join(targetPath, finalOutputDir);
+
+        let overwrite = false;
+        if (fs.existsSync(resolvedOutputPath)) {
+            const overwriteChoice = await vscode.window.showQuickPick<{ label: string; value: 'overwrite' | 'cancel'; description?: string }>(
+                [
+                    { label: '예, 덮어쓰겠습니다', value: 'overwrite' },
+                    { label: '아니요', value: 'cancel' }
+                ],
+                {
+                    title: `${finalOutputDir} 디렉터리가 이미 존재합니다. 덮어쓸까요?`,
+                    placeHolder: '덮어쓰기를 원하지 않으면 "아니요"를 선택하세요.'
+                }
+            );
+
+            if (!overwriteChoice || overwriteChoice.value === 'cancel') {
+                return;
+            }
+
+            overwrite = overwriteChoice.value === 'overwrite';
+        }
+
+        const args = ['evaluate', 'experiment', experimentArg, '--config', configArg, '--output', finalOutputDir];
         if (overwrite) {
             args.push('--overwrite');
         }

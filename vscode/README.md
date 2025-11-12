@@ -23,7 +23,9 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - Browse experiment outputs organized by run timestamp under an **Experiments** folder
 - Open traces, summaries, observations, and artifacts with one click
 - Parse results into human-readable Markdown timelines with **Parse Results** action
+- Evaluate experiments and compute aggregate metrics with **Evaluate Results** action
 - View parsed analysis outputs in the `per_trace_analysis/` folder
+- Review evaluation outputs (summary, per-trace JSONL, markdown report) inside the `evaluation/` folder
 
 ### 🔴 Recording Mode (Advanced)
 - Toggle argument recording for complex function signatures
@@ -143,7 +145,9 @@ Results will be saved to `experiments/` and appear in the **Results** view.
 
 The **Results** view lists recent experiment runs under an **Experiments** folder. Expand any run to see:
 - **Parse Results** – Generate human-readable Markdown timelines from traces
+- **Evaluate Results** – Run rule-based + optional LLM evaluation pipeline
 - `per_trace_analysis/` – Parsed analysis outputs (appears after parsing)
+- `evaluation/` – Evaluation outputs (summary, per-trace JSONL, markdown report)
 - `summary.json` – aggregate statistics
 - `traces.jsonl` – detailed execution traces
 - `observations.jsonl` – observation stream
@@ -151,6 +155,8 @@ The **Results** view lists recent experiment runs under an **Experiments** folde
 - `logs.json` – additional logs
 
 Click **Parse Results** to convert experiment outputs into per-trace Markdown files. You can specify a custom output directory or use the default `per_trace_analysis`.
+
+Click **Evaluate Results** to generate success metrics, rule-based checks, and (optionally) LLM judge scores. Results are stored under `evaluation/` with JSON summaries and a human-readable report. Use the prompt dialog to override the output directory or keep the default `evaluation`.
 
 ---
 

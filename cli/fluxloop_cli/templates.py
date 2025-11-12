@@ -11,6 +11,9 @@ def create_project_config(project_name: str) -> str:
     return dedent(
         f"""
         # FluxLoop Project Configuration
+        # ------------------------------------------------------------
+        # Describes global metadata and defaults shared across the project.
+        # Update name/description/tags to suit your workspace.
         name: {project_name}
         description: AI agent simulation project
         version: 1.0.0
@@ -18,9 +21,11 @@ def create_project_config(project_name: str) -> str:
         # FluxLoop VSCode extension will prompt to set this path
         source_root: ""
 
+        # Optional collector settings (leave null if using offline mode only)
         collector_url: null
         collector_api_key: null
 
+        # Tags and metadata help downstream tooling categorize experiments
         tags:
           - simulation
           - testing
@@ -28,6 +33,7 @@ def create_project_config(project_name: str) -> str:
         metadata:
           team: development
           environment: local
+          # Add any custom fields used by dashboards or automation tools.
         """
     ).strip() + "\n"
 
@@ -38,6 +44,9 @@ def create_input_config() -> str:
     return dedent(
         """
         # FluxLoop Input Configuration
+        # ------------------------------------------------------------
+        # Defines personas, base inputs, and generation modes.
+        # Adjust personas/goals/strategies based on your target scenarios.
         personas:
           - name: novice_user
             description: A user new to the system
@@ -50,6 +59,7 @@ def create_input_config() -> str:
             goals:
               - Understand system capabilities
               - Complete basic tasks
+            # Tip: Add persona-specific context that can be injected into prompts.
 
           - name: expert_user
             description: An experienced power user
@@ -62,11 +72,18 @@ def create_input_config() -> str:
             goals:
               - Optimize workflows
               - Access advanced features
+            # Tip: Include any tone/style expectations in characteristics.
 
         base_inputs:
           - input: "How do I get started?"
             expected_intent: help
+            # Provide optional 'metadata' or 'expected' fields to guide evaluation.
 
+        # ------------------------------------------------------------
+        # Input generation settings
+        # - variation_strategies: transformations applied when synthesizing inputs.
+        # - variation_count / temperature: tune diversity of generated samples.
+        # - inputs_file: location where generated inputs will be saved/loaded.
         variation_strategies:
           - rephrase
           - verbose
@@ -84,6 +101,7 @@ def create_input_config() -> str:
             provider: openai
             model: gpt-4o-mini
             api_key: null
+            # Replace provider/model/api_key according to your LLM setup.
         """
     ).strip() + "\n"
 
@@ -94,22 +112,25 @@ def create_simulation_config(project_name: str) -> str:
     return dedent(
         f"""
         # FluxLoop Simulation Configuration
+        # ------------------------------------------------------------
+        # Controls how experiments execute (iterations, runner target, output paths).
+        # Adjust runner module/function to point at your agent entry point.
         name: {project_name}_experiment
         description: AI agent simulation experiment
 
-        iterations: 10
-        parallel_runs: 1
-        run_delay_seconds: 0
-        seed: 42
+        iterations: 10           # Number of times to cycle through inputs/personas
+        parallel_runs: 1          # Increase for concurrent execution (ensure thread safety)
+        run_delay_seconds: 0      # Optional delay between runs to avoid rate limits
+        seed: 42                  # Set for reproducibility; remove for randomness
 
         runner:
           module_path: "examples.simple_agent"
           function_name: "run"
           target: "examples.simple_agent:run"
-          working_directory: .
-          python_path:
-          timeout_seconds: 120
-          max_retries: 3
+          working_directory: .    # Relative to project root; adjust if agent lives elsewhere
+          python_path:            # Optional custom PYTHONPATH entries
+          timeout_seconds: 120   # Abort long-running traces
+          max_retries: 3         # Automatic retry attempts on error
 
         replay_args:
           enabled: false
@@ -129,25 +150,95 @@ def create_evaluation_config() -> str:
     return dedent(
         """
         # FluxLoop Evaluation Configuration
+        # ------------------------------------------------------------
+        # This file controls how experiment results are evaluated.
+        # - evaluators: define individual checks (rule-based or LLM).
+        # - aggregate: sets how evaluator scores combine into a final score.
+        # - limits: cost-control knobs for LLM-based evaluators.
+        # Fill in or adjust notes below to match your project.
         evaluators:
-          - name: success_checker
+          # ----------------------------------------------------------
+          # Rule-based evaluator: ensures outputs are not empty.
+          # Adjust keywords/fields if your traces structure differs.
+          - name: not_empty
             type: rule_based
             enabled: true
+            weight: 0.2
             rules:
               - check: output_not_empty
-                weight: 1.0
 
-          - name: response_quality
+          # ----------------------------------------------------------
+          # Rule-based evaluator: checks for required/forbidden keywords.
+          # Update keywords/target fields based on your success criteria.
+          - name: keyword_quality
+            type: rule_based
+            enabled: true
+            weight: 0.2
+            rules:
+              - check: contains
+                target: output
+                keywords: ["help", "assist"]
+              - check: not_contains
+                target: output
+                keywords: ["sorry", "cannot"]
+
+          # ----------------------------------------------------------
+          # Rule-based evaluator: compares output to expected text (if available).
+          # Provide expected outputs in metadata when generating inputs.
+          - name: similarity_to_expected
+            type: rule_based
+            enabled: true
+            weight: 0.2
+            rules:
+              - check: similarity
+                target: output
+                expected_path: metadata.expected     # path inside trace metadata
+                method: difflib
+
+          # ----------------------------------------------------------
+          # Rule-based evaluator: enforces latency budgets per trace.
+          # Adjust budget_ms to your SLA and supply duration_ms in summaries.
+          - name: latency_budget
+            type: rule_based
+            enabled: true
+            weight: 0.2
+            rules:
+              - check: latency_under
+                budget_ms: 1000
+
+          # ----------------------------------------------------------
+          # LLM evaluator: optional semantic quality scoring.
+          # Enable after setting valid LLM credentials and adjusting prompt/model.
+          - name: llm_response_quality
             type: llm_judge
             enabled: false
-            model: gpt-4o-mini
+            weight: 0.2
+            model: gpt-5-mini
             prompt_template: |
-              Rate the quality of this response on a scale of 1-10:
+              You are an expert judge. Score the assistant's response from 1-10.
               Input: {input}
               Output: {output}
+              Consider relevance, completeness, clarity.
+              Answer with: "Score: <number>" and a one-line reason.
+            max_score: 10
+            parser: first_number_1_10
 
-              Consider: relevance, completeness, clarity
-              Score:
+        aggregate:
+          # ----------------------------------------------------------
+          # Weighted sum: combines evaluator scores based on provided weights.
+          # Adjust threshold to tune pass criteria. by_persona groups stats.
+          method: weighted_sum
+          threshold: 0.7
+          by_persona: true
+
+        limits:
+          # ----------------------------------------------------------
+          # Sample/call limits safeguard LLM usage.
+          # Lower sample_rate or max_llm_calls to reduce cost for large runs.
+          sample_rate: 0.3
+          max_llm_calls: 50
+          timeout_seconds: 60
+          cache: evaluation_cache.jsonl
         """
     ).strip() + "\n"
 

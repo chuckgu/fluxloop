@@ -111,6 +111,19 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
                 }
             ));
 
+            items.push(new ResultItem(
+                'Evaluate Results',
+                'fluxloop evaluate experiment',
+                vscode.TreeItemCollapsibleState.None,
+                'action',
+                element.resourcePath,
+                {
+                    command: 'fluxloop.evaluateExperiment',
+                    title: 'Evaluate Experiment Results',
+                    arguments: [element.resourcePath]
+                }
+            ));
+
             const analysisDir = path.join(element.resourcePath, 'per_trace_analysis');
             if (fs.existsSync(analysisDir) && fs.statSync(analysisDir).isDirectory()) {
                 items.push(new ResultItem(
@@ -119,6 +132,17 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
                     vscode.TreeItemCollapsibleState.Collapsed,
                     'analysis',
                     analysisDir
+                ));
+            }
+
+            const evaluationDir = path.join(element.resourcePath, 'evaluation');
+            if (fs.existsSync(evaluationDir) && fs.statSync(evaluationDir).isDirectory()) {
+                items.push(new ResultItem(
+                    'evaluation',
+                    '',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'analysis',
+                    evaluationDir
                 ));
             }
 

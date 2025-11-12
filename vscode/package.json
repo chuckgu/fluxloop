@@ -25,10 +25,11 @@
     "onCommand:fluxloop.init",
     "onCommand:fluxloop.runExperiment",
     "onCommand:fluxloop.generateInputs",
+    "onCommand:fluxloop.evaluateExperiment",
     "onCommand:fluxloop.enableRecording",
     "onCommand:fluxloop.disableRecording",
     "onCommand:fluxloop.showRecordingStatus",
-        "onView:fluxloop.dashboard",
+    "onView:fluxloop.dashboard",
     "onView:fluxloop.projects",
     "onView:fluxloop.inputs",
     "onView:fluxloop.experiments",
@@ -87,6 +88,11 @@
       {
         "command": "fluxloop.generateInputs",
         "title": "Generate Inputs",
+        "category": "FluxLoop"
+      },
+      {
+        "command": "fluxloop.evaluateExperiment",
+        "title": "Evaluate Experiment",
         "category": "FluxLoop"
       },
       {
