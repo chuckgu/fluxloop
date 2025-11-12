@@ -169,15 +169,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            background-color: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
         }
 
         .summary-item {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 0 4px;
+            padding: 0;
             min-height: 16px;
             min-width: 0;
+            border-radius: 4px;
         }
 
         .summary-icon {
