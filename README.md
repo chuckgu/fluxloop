@@ -38,7 +38,7 @@ Get started quickly with MCP Server integration that automatically detects your 
 Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing. Works with any Python-based agent framework.
 
 ### 📊 Evaluation-First Testing
-Rigorously test your agents with reproducible experiments and structured evaluation. Generate test scenarios, run batch simulations, and analyze results—all designed for proper AI evaluation.
+Rigorously test your agents with reproducible experiments and structured evaluation. Define rule-based and LLM-based evaluators, set success criteria, analyze trends and outliers, and generate comprehensive reports with customizable templates—all designed for proper AI evaluation.
 
 ### 🧪 Offline-First Simulation
 Run experiments on your machine without cloud dependencies. Full control over your testing environment with reproducible, auditable results.

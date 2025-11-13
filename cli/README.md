@@ -26,7 +26,7 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop generate inputs` – produce input variations for the active project
 - `fluxloop run experiment` – execute an experiment using `configs/simulation.yaml`
 - `fluxloop parse experiment` – convert experiment outputs into readable artifacts
-- `fluxloop evaluate experiment` – score experiment outputs and generate evaluation reports
+- `fluxloop evaluate experiment` – score experiment outputs using rule-based and LLM evaluators, generate reports with success criteria, analysis, and customizable templates
 - `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
 - `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment

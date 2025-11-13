@@ -81,6 +81,133 @@ def _write_eval_config(path: Path, include_llm: bool = False) -> None:
     path.write_text(textwrap.dedent(config_body).strip() + "\n", encoding="utf-8")
 
 
+def _write_phase2_trace_summary(path: Path) -> None:
+    traces = [
+        {
+            "trace_id": "p2-1",
+            "iteration": 0,
+            "persona": "expert_user",
+            "input": "How do I configure alerts?",
+            "output": "Alerts configured successfully.",
+            "duration_ms": 900,
+            "success": True,
+        },
+        {
+            "trace_id": "p2-2",
+            "iteration": 1,
+            "persona": "novice_user",
+            "input": "My tool invocation failed.",
+            "output": "Retrying the tool call now.",
+            "duration_ms": 1800,
+            "success": True,
+        },
+        {
+            "trace_id": "p2-3",
+            "iteration": 2,
+            "persona": "expert_user",
+            "input": "Can you summarize the results?",
+            "output": "",
+            "duration_ms": 650,
+            "success": False,
+        },
+        {
+            "trace_id": "p2-4",
+            "iteration": 3,
+            "persona": "novice_user",
+            "input": "Create an incident report.",
+            "output": "Incident report created.",
+            "duration_ms": 2100,
+            "success": True,
+        },
+    ]
+    lines = [json.dumps(item) for item in traces]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_phase2_eval_config(path: Path) -> None:
+    config_body = """
+    evaluation_goal:
+      text: |
+        Validate extended Phase 2 evaluation outputs for persona-aware runs.
+
+    evaluators:
+      - name: latency_checker
+        type: rule_based
+        enabled: true
+        weight: 1.0
+        rules:
+          - check: latency_under
+            budget_ms: 1500
+      - name: intent_recognition
+        type: rule_based
+        enabled: true
+        weight: 1.0
+        rules:
+          - check: output_not_empty
+
+    aggregate:
+      method: weighted_sum
+      threshold: 0.6
+      by_persona: true
+
+    success_criteria:
+      performance:
+        all_traces_successful: false
+        avg_response_time:
+          enabled: true
+          threshold_ms: 1600
+        error_rate:
+          enabled: true
+          threshold_percent: 60
+      quality:
+        intent_recognition: true
+      functionality:
+        tool_calling:
+          enabled: false
+
+    additional_analysis:
+      persona:
+        enabled: true
+      performance:
+        detect_outliers: true
+        trend_analysis: true
+      failures:
+        enabled: true
+        categorize_causes: true
+      comparison:
+        enabled: true
+        baseline_path: "baseline_summary.json"
+
+    report:
+      style: detailed
+      sections:
+        executive_summary: true
+        key_metrics: true
+        detailed_results: true
+        failure_cases: true
+      visualizations:
+        charts_and_graphs: true
+        tables: true
+      tone: executive
+      output: html
+    """
+    path.write_text(textwrap.dedent(config_body).strip() + "\n", encoding="utf-8")
+
+
+def _write_baseline_summary(path: Path) -> None:
+    baseline = {
+        "pass_rate": 0.75,
+        "average_score": 0.7,
+        "total_traces": 4,
+        "passed_traces": 3,
+        "evaluator_stats": {
+            "latency_checker": {"average": 0.75, "min": 0.0, "max": 1.0, "count": 4},
+            "intent_recognition": {"average": 1.0, "min": 1.0, "max": 1.0, "count": 4},
+        },
+    }
+    path.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+
+
 def test_evaluate_generates_outputs(tmp_path: Path) -> None:
     experiment_dir = tmp_path / "experiments" / "demo"
     experiment_dir.mkdir(parents=True)
@@ -157,3 +284,52 @@ def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path) -> None:
     assert "llm_quality" in reasons
     assert "API key" in reasons["llm_quality"]
 
+
+def test_evaluate_phase2_extended_outputs(tmp_path: Path) -> None:
+    experiment_dir = tmp_path / "experiments" / "phase2"
+    experiment_dir.mkdir(parents=True)
+    _write_phase2_trace_summary(experiment_dir / "trace_summary.jsonl")
+    _write_baseline_summary(experiment_dir / "baseline_summary.json")
+
+    config_path = tmp_path / "configs" / "evaluation_phase2.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_phase2_eval_config(config_path)
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "evaluate",
+            "experiment",
+            str(experiment_dir),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    output_dir = experiment_dir / "evaluation"
+    summary_path = output_dir / "summary.json"
+    html_report_path = output_dir / "report.html"
+
+    assert summary_path.exists()
+    assert html_report_path.exists()
+    assert not (output_dir / "report.md").exists()
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    assert summary["evaluation_goal"].startswith("Validate extended Phase 2")
+    assert summary["report"]["format"] == "html"
+
+    criteria_results = summary["success_criteria_results"]
+    assert "performance" in criteria_results
+    assert "avg_response_time" in criteria_results["performance"]
+    assert "quality" in criteria_results
+    assert "intent_recognition" in criteria_results["quality"]
+
+    analysis = summary["analysis"]
+    assert "persona" in analysis and analysis["persona"]["breakdown"]
+    performance_analysis = analysis["performance"]
+    assert "outliers" in performance_analysis and "trends" in performance_analysis
+    comparison = analysis["comparison"]
+    assert "baseline_path" in comparison and comparison["baseline_path"].endswith("baseline_summary.json")

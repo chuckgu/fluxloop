@@ -23,9 +23,13 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - Browse experiment outputs organized by run timestamp under an **Experiments** folder
 - Open traces, summaries, observations, and artifacts with one click
 - Parse results into human-readable Markdown timelines with **Parse Results** action
-- Evaluate experiments and compute aggregate metrics with **Evaluate Results** action
+- Evaluate experiments with rule-based and LLM evaluators using **Evaluate Results** action
 - View parsed analysis outputs in the `per_trace_analysis/` folder
-- Review evaluation outputs (summary, per-trace JSONL, markdown report) inside the `evaluation/` folder
+- Review evaluation outputs in the `evaluation/` folder:
+  - `summary.json` – aggregate statistics, success criteria results, analysis (persona, outliers, trends, baseline comparison)
+  - `per_trace.jsonl` – per-trace scores and failure reasons
+  - `report.md` – human-readable Markdown report
+  - `report.html` – interactive HTML report with charts and visualizations (Phase 2)
 
 ### 🔴 Recording Mode (Advanced)
 - Toggle argument recording for complex function signatures
@@ -156,7 +160,13 @@ The **Results** view lists recent experiment runs under an **Experiments** folde
 
 Click **Parse Results** to convert experiment outputs into per-trace Markdown files. You can specify a custom output directory or use the default `per_trace_analysis`.
 
-Click **Evaluate Results** to generate success metrics, rule-based checks, and (optionally) LLM judge scores. Results are stored under `evaluation/` with JSON summaries and a human-readable report. Use the prompt dialog to override the output directory or keep the default `evaluation`.
+Click **Evaluate Results** to run rule-based and LLM-based evaluators, compute success criteria, perform advanced analysis (persona breakdown, outlier detection, trend analysis, baseline comparison), and generate Markdown and HTML reports. Configure evaluators, thresholds, and report settings in `configs/evaluation.yaml`. Results are stored under `evaluation/` with:
+- `summary.json` – aggregate statistics and Phase 2 analysis
+- `per_trace.jsonl` – detailed per-trace scores
+- `report.md` – human-readable Markdown report
+- `report.html` – interactive HTML report with charts (Phase 2)
+
+Use the prompt dialog to override the output directory or keep the default `evaluation`.
 
 ---
 
@@ -230,7 +240,7 @@ FluxLoop projects use a multi-file configuration structure:
 | `configs/project.yaml` | Project metadata, collector settings | Projects view → Configure Project |
 | `configs/input.yaml` | Personas, base inputs, LLM settings | Inputs view → Base Inputs (click to open) |
 | `configs/simulation.yaml` | Runner, iterations, replay args | Experiments view → Open configuration |
-| `configs/evaluation.yaml` | Evaluator definitions | (Future: Results view) |
+| `configs/evaluation.yaml` | Evaluators (rule-based, LLM), success criteria, analysis options, report settings | Edit directly |
 
 All configs are YAML files that can be edited directly. The extension watches for changes and automatically refreshes views.
 

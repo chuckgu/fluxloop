@@ -9,14 +9,17 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import mean
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Literal
 
 import shutil
 from rich.console import Console
 
-from .config import AggregateConfig, EvaluationConfig, EvaluatorConfig
-from .llm import LLMEvaluationManager, LLMResult
-from .rules import RuleContext, RuleResult, evaluate_rule
+from ..config import AggregateConfig, EvaluationConfig, EvaluatorConfig
+from ..llm import LLMEvaluationManager, LLMResult
+from ..rules import RuleContext, RuleResult, evaluate_rule
+from .analysis import compute_additional_analysis
+from .reporting import prepare_report_plan, write_reports
+from .success import evaluate_success_criteria
 
 console = Console()
 
@@ -31,6 +34,9 @@ class EvaluationOptions:
     sample_rate: Optional[float] = None
     max_llm_calls: Optional[int] = None
     verbose: bool = False
+    report_format: Optional[Literal["md", "html", "both"]] = None
+    report_template: Optional[Path] = None
+    baseline_path: Optional[Path] = None
 
 
 @dataclass
@@ -275,50 +281,13 @@ def _summarize_reasons(results: List[TraceOutcome]) -> List[Tuple[str, int]]:
     return counter.most_common(10)
 
 
+
+
 def _write_summary(summary: Dict[str, Any], path: Path) -> None:
     (path / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-
-
-def _write_report(summary: Dict[str, Any], results: List[TraceOutcome], path: Path) -> None:
-    lines: List[str] = []
-    lines.append("# Evaluation Summary\n")
-    lines.append(f"- Total traces: {summary['total_traces']}")
-    lines.append(f"- Passed traces: {summary['passed_traces']}")
-    lines.append(f"- Pass rate: {summary['pass_rate'] * 100:.1f}% (threshold {summary['threshold']})")
-    lines.append(f"- Average score: {summary['average_score']:.3f}")
-    if "llm_calls" in summary:
-        lines.append(f"- LLM calls: {summary['llm_calls']} (sample rate {summary.get('llm_sample_rate', 0):.2f})")
-    lines.append("")
-
-    lines.append("## Evaluator Stats\n")
-    lines.append("| Evaluator | Avg | Min | Max | Count |")
-    lines.append("|-----------|-----|-----|-----|-------|")
-    for name, stats in summary["evaluator_stats"].items():
-        lines.append(
-            f"| {name} | {stats['average']:.3f} | {stats['min']:.3f} | "
-            f"{stats['max']:.3f} | {stats['count']} |"
-        )
-    lines.append("")
-
-    if summary.get("persona_breakdown"):
-        lines.append("## Persona Breakdown\n")
-        for persona, stats in summary["persona_breakdown"].items():
-            lines.append(f"### {persona}")
-            lines.append(f"- Count: {stats['count']}")
-            lines.append(f"- Average score: {stats['average_score']:.3f}")
-            lines.append(f"- Pass rate: {stats['pass_rate'] * 100:.1f}%")
-            lines.append("")
-
-    if summary.get("top_reasons"):
-        lines.append("## Top Failure Reasons\n")
-        for reason, count in summary["top_reasons"]:
-            lines.append(f"- {reason} ({count})")
-        lines.append("")
-
-    (path / "report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def run_evaluation(
@@ -375,12 +344,38 @@ def run_evaluation(
         "top_reasons": _summarize_reasons(results),
     }
 
+    if config.evaluation_goal.text:
+        summary["evaluation_goal"] = config.evaluation_goal.text
+
+    success_results = evaluate_success_criteria(results, config)
+    if success_results:
+        summary["success_criteria_results"] = success_results
+        summary["overall_success"] = success_results.get("overall_success")
+
+    analysis = compute_additional_analysis(
+        results,
+        summary,
+        config,
+        experiment_dir,
+        options.baseline_path,
+    )
+    if analysis:
+        summary["analysis"] = analysis
+
+    report_plan = prepare_report_plan(options, config)
+    summary["report"] = {
+        "format": report_plan["format"],
+        "style": config.report.style,
+        "tone": config.report.tone,
+        "template": report_plan.get("template_source"),
+    }
+
     if llm_manager is not None:
         summary["llm_calls"] = llm_manager.calls_made
         summary["llm_sample_rate"] = llm_manager.sample_rate
 
     _write_summary(summary, options.output_dir)
-    _write_report(summary, results, options.output_dir)
+    write_reports(summary, results, options, report_plan)
 
     console.print(
         f"[bold green]Evaluation complete[/bold green] · traces: {len(results)} · "

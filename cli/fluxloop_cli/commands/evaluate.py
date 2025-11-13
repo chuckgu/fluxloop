@@ -57,6 +57,28 @@ def experiment(
         "--max-llm",
         help="Maximum number of LLM evaluations to run",
     ),
+    report: Optional[str] = typer.Option(
+        None,
+        "--report",
+        help="Report output format to generate (md, html, both)",
+        metavar="FORMAT",
+    ),
+    report_template: Optional[Path] = typer.Option(
+        None,
+        "--report-template",
+        help="Path to custom HTML report template",
+        exists=False,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    baseline: Optional[Path] = typer.Option(
+        None,
+        "--baseline",
+        help="Path to baseline summary.json file for comparisons",
+        exists=False,
+        file_okay=True,
+        dir_okay=False,
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -82,6 +104,29 @@ def experiment(
     if max_llm_calls is not None and max_llm_calls < 0:
         raise typer.BadParameter("--max-llm must be a non-negative integer")
 
+    report_format: Optional[str] = None
+    if report is not None:
+        candidate = report.lower()
+        if candidate not in {"md", "html", "both"}:
+            raise typer.BadParameter("--report must be one of: md, html, both")
+        report_format = candidate
+
+    report_template_path: Optional[Path] = None
+    if report_template is not None:
+        resolved_template = report_template
+        if not resolved_template.is_absolute():
+            resolved_template = (Path.cwd() / resolved_template).resolve()
+        if not resolved_template.exists():
+            raise typer.BadParameter(f"Report template not found: {resolved_template}")
+        report_template_path = resolved_template
+
+    baseline_path: Optional[Path] = None
+    if baseline is not None:
+        resolved_baseline = baseline
+        if not resolved_baseline.is_absolute():
+            resolved_baseline = (Path.cwd() / resolved_baseline).resolve()
+        baseline_path = resolved_baseline
+
     try:
         evaluation_config = load_evaluation_config(config_path)
     except FileNotFoundError as exc:
@@ -100,13 +145,33 @@ def experiment(
         sample_rate=sample_rate,
         max_llm_calls=max_llm_calls,
         verbose=verbose,
+        report_format=report_format,  # type: ignore[arg-type]
+        report_template=report_template_path,
+        baseline_path=baseline_path,
     )
 
-    console.print(
-        f"📊 Evaluating experiment at [cyan]{resolved_experiment_dir}[/cyan]\n"
-        f"⚙️  Config: [magenta]{config_path}[/magenta]\n"
-        f"📁 Output: [green]{output_dir}[/green]"
+    effective_report_format = report_format or evaluation_config.report.output
+    template_display = (
+        str(report_template_path)
+        if report_template_path is not None
+        else evaluation_config.report.template_path or "default"
     )
+    baseline_display = (
+        str(baseline_path)
+        if baseline_path is not None
+        else evaluation_config.additional_analysis.comparison.baseline_path
+    )
+
+    message_lines = [
+        f"📊 Evaluating experiment at [cyan]{resolved_experiment_dir}[/cyan]",
+        f"⚙️  Config: [magenta]{config_path}[/magenta]",
+        f"📁 Output: [green]{output_dir}[/green]",
+        f"📝 Report: [yellow]{effective_report_format.upper()}[/yellow] (template: [cyan]{template_display}[/cyan])",
+    ]
+    if baseline_display:
+        message_lines.append(f"📈 Baseline: [cyan]{baseline_display}[/cyan]")
+
+    console.print("\n".join(message_lines))
 
     summary = run_evaluation(resolved_experiment_dir, evaluation_config, options)
 

@@ -1,0 +1,548 @@
+---
+sidebar_position: 5
+---
+
+# evaluate Command
+
+Evaluate experiment outputs using rule-based and LLM-based evaluators.
+
+## Overview
+
+The `evaluate` command scores experiment results against custom criteria, generates aggregate statistics, and produces human-readable reports. It supports:
+
+- **Rule-based evaluators**: Check latency, output format, keywords, similarity, etc.
+- **LLM judge evaluators**: Use language models to score response quality
+- **Success criteria**: Define performance/quality/functionality thresholds (Phase 2)
+- **Additional analysis**: Persona breakdown, outlier detection, trend analysis, baseline comparison (Phase 2)
+- **Flexible reporting**: Generate Markdown and/or HTML reports with customizable templates (Phase 2)
+
+## Basic Usage
+
+```bash
+# Evaluate with default config
+fluxloop evaluate experiment experiments/demo_run_20231215_123456
+
+# Specify custom config
+fluxloop evaluate experiment experiments/demo_run_20231215_123456 \
+  --config configs/evaluation.yaml
+
+# Override output directory
+fluxloop evaluate experiment experiments/demo_run_20231215_123456 \
+  --output custom_eval_results
+
+# Overwrite existing results
+fluxloop evaluate experiment experiments/demo_run_20231215_123456 \
+  --overwrite
+```
+
+## Command Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `experiment_dir` | Path to experiment output directory | Required |
+| `--config`, `-c` | Path to evaluation config file | `configs/evaluation.yaml` |
+| `--output`, `-o` | Output directory name (relative to experiment) | `evaluation` |
+| `--overwrite` | Overwrite output if it exists | `false` |
+| `--llm-api-key` | LLM API key for judge evaluators | `FLUXLOOP_LLM_API_KEY` env var |
+| `--sample-rate` | Override LLM evaluation sample rate (0.0-1.0) | From config |
+| `--max-llm` | Maximum number of LLM evaluations | From config |
+| `--report` | Report format: `md`, `html`, `both` | From config or `both` |
+| `--report-template` | Path to custom HTML template | From config or built-in |
+| `--baseline` | Path to baseline summary.json for comparison | From config |
+| `--verbose` | Enable verbose logging | `false` |
+
+## Phase 1: Core Evaluation
+
+### Configuration
+
+Basic evaluation config (`configs/evaluation.yaml`):
+
+```yaml
+evaluators:
+  # Rule-based evaluator
+  - name: completeness
+    type: rule_based
+    enabled: true
+    weight: 1.0
+    rules:
+      - check: output_not_empty
+      - check: latency_under
+        budget_ms: 1000
+      - check: success
+
+  # LLM judge evaluator
+  - name: response_quality
+    type: llm_judge
+    enabled: true
+    weight: 0.5
+    model: gpt-4o-mini
+    prompt_template: |
+      Score the assistant's response from 1-10.
+      Input: {input}
+      Output: {output}
+      Consider relevance, completeness, clarity.
+    max_score: 10
+    parser: first_number_1_10
+
+aggregate:
+  method: weighted_sum  # or "average"
+  threshold: 0.7        # Pass threshold
+  by_persona: true      # Group stats by persona
+
+limits:
+  sample_rate: 0.3      # Evaluate 30% of traces with LLM
+  max_llm_calls: 50     # Cap total LLM evaluations
+  timeout_seconds: 60
+  cache: evaluation_cache.jsonl
+```
+
+### Output Files
+
+After running evaluation, the output directory contains:
+
+```
+evaluation/
+├── summary.json          # Aggregate statistics
+├── per_trace.jsonl       # Per-trace scores and reasons
+├── report.md             # Human-readable report
+└── report.html           # Interactive HTML report (Phase 2)
+```
+
+### Summary Structure
+
+```json
+{
+  "total_traces": 10,
+  "passed_traces": 8,
+  "pass_rate": 0.8,
+  "average_score": 0.85,
+  "threshold": 0.7,
+  "aggregate_method": "weighted_sum",
+  "evaluators": ["completeness", "response_quality"],
+  "evaluator_stats": {
+    "completeness": {
+      "average": 0.9,
+      "min": 0.5,
+      "max": 1.0,
+      "count": 10
+    }
+  },
+  "persona_breakdown": {
+    "expert_user": {
+      "count": 5,
+      "average_score": 0.88,
+      "pass_rate": 1.0
+    }
+  },
+  "top_reasons": [
+    ["Output not empty", 10],
+    ["Latency under budget", 8]
+  ],
+  "llm_calls": 3,
+  "llm_sample_rate": 0.3
+}
+```
+
+## Phase 2: Advanced Evaluation
+
+### Extended Configuration
+
+Phase 2 adds success criteria, analysis, and reporting customization:
+
+```yaml
+# Evaluation goal (appears in reports)
+evaluation_goal:
+  text: |
+    Verify customer support agent provides accurate, persona-aware responses
+    with average response time below 2s.
+
+# Success criteria (all optional)
+success_criteria:
+  performance:
+    all_traces_successful: true
+    avg_response_time:
+      enabled: true
+      threshold_ms: 2000
+    max_response_time:
+      enabled: true
+      threshold_ms: 5000
+    error_rate:
+      enabled: true
+      threshold_percent: 5
+
+  quality:
+    intent_recognition: true      # Requires matching evaluator
+    response_consistency: true
+    response_clarity: true
+    information_completeness: false
+
+  functionality:
+    tool_calling:
+      enabled: false
+      all_calls_successful: true
+      appropriate_selection: true
+      correct_parameters: true
+      proper_timing: false
+      handles_failures: false
+
+# Additional analysis
+additional_analysis:
+  persona:
+    enabled: true
+    focus_personas: ["expert_user", "novice_user"]
+
+  performance:
+    detect_outliers: true
+    trend_analysis: true
+
+  failures:
+    enabled: true
+    categorize_causes: true
+
+  comparison:
+    enabled: true
+    baseline_path: "experiments/baseline_run/summary.json"
+
+# Report configuration
+report:
+  style: detailed  # quick | standard | detailed
+  sections:
+    executive_summary: true
+    key_metrics: true
+    detailed_results: true
+    statistical_analysis: false
+    failure_cases: true
+    success_examples: false
+    recommendations: true
+    action_items: true
+  visualizations:
+    charts_and_graphs: true
+    tables: true
+    interactive: true
+  tone: balanced  # technical | executive | balanced
+  output: html    # md | html | both
+  template_path: null  # Path to custom HTML template
+
+# Advanced settings
+advanced:
+  statistical_tests:
+    enabled: false
+    significance_level: 0.05
+    confidence_interval: 0.95
+  outliers:
+    detection: true
+    handling: analyze_separately  # remove | analyze_separately | include
+  alerts:
+    enabled: false
+    conditions:
+      - metric: "error_rate"
+        threshold: 10
+        operator: ">"
+```
+
+### Extended Output
+
+Phase 2 evaluation produces additional fields in `summary.json`:
+
+```json
+{
+  "evaluation_goal": "Verify customer support agent...",
+  "overall_success": true,
+  "success_criteria_results": {
+    "performance": {
+      "avg_response_time": {
+        "met": true,
+        "average_ms": 1500,
+        "threshold_ms": 2000,
+        "trace_count": 10
+      }
+    },
+    "quality": {
+      "intent_recognition": {
+        "met": true,
+        "average_score": 0.95,
+        "threshold": 0.7,
+        "pass_rate": 1.0,
+        "trace_count": 10
+      }
+    }
+  },
+  "analysis": {
+    "persona": {
+      "focus_personas": ["expert_user", "novice_user"],
+      "breakdown": { ... }
+    },
+    "performance": {
+      "outliers": {
+        "duration_ms": [
+          {"trace_id": "trace-5", "value": 3500, "thresholds": {...}}
+        ],
+        "final_score": []
+      },
+      "trends": {
+        "final_score": {
+          "trend": "increasing",
+          "slope": 0.02,
+          "points": [[0, 0.75], [1, 0.80], ...]
+        }
+      }
+    },
+    "failures": {
+      "top_reasons": [...],
+      "categorized": {
+        "latency": 2,
+        "intent_recognition": 1
+      }
+    },
+    "comparison": {
+      "baseline_path": "experiments/baseline_run/summary.json",
+      "pass_rate": {
+        "current": 0.8,
+        "baseline": 0.75,
+        "delta": 0.05
+      }
+    }
+  },
+  "report": {
+    "format": "html",
+    "style": "detailed",
+    "tone": "balanced",
+    "template": "default"
+  }
+}
+```
+
+### CLI Overrides
+
+Phase 2 adds CLI options to override report and baseline settings:
+
+```bash
+# Generate HTML report only
+fluxloop evaluate experiment experiments/demo \
+  --report html
+
+# Use custom template
+fluxloop evaluate experiment experiments/demo \
+  --report html \
+  --report-template templates/custom_report.html
+
+# Compare against baseline
+fluxloop evaluate experiment experiments/demo \
+  --baseline experiments/baseline_run/summary.json
+
+# Combine all options
+fluxloop evaluate experiment experiments/demo \
+  --report both \
+  --report-template templates/custom.html \
+  --baseline experiments/baseline/summary.json \
+  --overwrite
+```
+
+## Available Rule Checks
+
+| Check | Parameters | Description |
+|-------|------------|-------------|
+| `output_not_empty` | None | Ensures output field is non-empty |
+| `latency_under` | `budget_ms` | Checks duration_ms < budget |
+| `success` | None | Checks trace success flag |
+| `contains` | `target`, `keywords` | Checks if target field contains any keyword |
+| `not_contains` | `target`, `keywords` | Checks if target field contains none of keywords |
+| `similarity` | `target`, `expected_path`, `method` | Compares target to expected using difflib/embedding |
+
+## LLM Judge Parsers
+
+| Parser | Description | Example Output |
+|--------|-------------|----------------|
+| `first_number_1_10` | Extract first number 1-10 | `"Score: 8/10"` → `0.8` |
+| `json_score` | Parse JSON `{"score": ...}` | `{"score": 7}` → `0.7` |
+| `regex_score` | Custom regex pattern | Configurable |
+
+## Examples
+
+### Minimal Rule-Based Evaluation
+
+```yaml
+evaluators:
+  - name: basic_checks
+    type: rule_based
+    enabled: true
+    weight: 1.0
+    rules:
+      - check: output_not_empty
+      - check: success
+
+aggregate:
+  method: average
+  threshold: 0.5
+```
+
+### LLM-Only Evaluation
+
+```yaml
+evaluators:
+  - name: semantic_quality
+    type: llm_judge
+    enabled: true
+    weight: 1.0
+    model: gpt-4o-mini
+    prompt_template: |
+      Rate the response quality (1-10):
+      Input: {input}
+      Output: {output}
+    max_score: 10
+    parser: first_number_1_10
+
+aggregate:
+  method: weighted_sum
+  threshold: 0.7
+
+limits:
+  sample_rate: 1.0
+  max_llm_calls: 100
+```
+
+### Phase 2: Full-Featured Evaluation
+
+```yaml
+evaluation_goal:
+  text: "Comprehensive agent quality assessment"
+
+evaluators:
+  - name: latency_checker
+    type: rule_based
+    enabled: true
+    weight: 0.3
+    rules:
+      - check: latency_under
+        budget_ms: 1500
+
+  - name: intent_recognition
+    type: llm_judge
+    enabled: true
+    weight: 0.7
+    model: gpt-4o-mini
+    prompt_template: |
+      Did the agent correctly understand the user's intent?
+      Score 1-10.
+      Input: {input}
+      Output: {output}
+    max_score: 10
+    parser: first_number_1_10
+
+aggregate:
+  method: weighted_sum
+  threshold: 0.75
+  by_persona: true
+
+success_criteria:
+  performance:
+    avg_response_time:
+      enabled: true
+      threshold_ms: 2000
+  quality:
+    intent_recognition: true
+
+additional_analysis:
+  persona:
+    enabled: true
+  performance:
+    detect_outliers: true
+    trend_analysis: true
+  failures:
+    enabled: true
+    categorize_causes: true
+
+report:
+  style: detailed
+  output: both
+  sections:
+    executive_summary: true
+    key_metrics: true
+    detailed_results: true
+    failure_cases: true
+    recommendations: true
+  visualizations:
+    charts_and_graphs: true
+  tone: executive
+```
+
+## Custom HTML Templates
+
+Phase 2 supports custom HTML report templates using placeholder substitution:
+
+### Required Placeholders
+
+- `[[TITLE]]` – Report title (from evaluation_goal or default)
+- `[[DATE]]` – Generation timestamp
+- `[[SUMMARY_JSON]]` – Full summary object as JSON
+- `[[PER_TRACE_JSON]]` – Per-trace results array
+- `[[CRITERIA_JSON]]` – Success criteria results
+- `[[ANALYSIS_JSON]]` – Additional analysis results
+
+### Example Template
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[[TITLE]]</title>
+  <style>/* Your styles */</style>
+</head>
+<body>
+  <h1>[[TITLE]]</h1>
+  <p>Generated: [[DATE]]</p>
+  
+  <script>
+    const summary = [[SUMMARY_JSON]];
+    const perTrace = [[PER_TRACE_JSON]];
+    const criteria = [[CRITERIA_JSON]];
+    const analysis = [[ANALYSIS_JSON]];
+    
+    // Render your custom visualizations
+  </script>
+</body>
+</html>
+```
+
+The default template uses Tailwind CSS and Chart.js from CDN for a modern, interactive experience.
+
+## Troubleshooting
+
+### LLM Evaluations Not Running
+
+- Check `--llm-api-key` is provided or `FLUXLOOP_LLM_API_KEY` env var is set
+- Verify `sample_rate` and `max_llm_calls` in config
+- Review `evaluation_cache.jsonl` for cached results
+
+### Low Pass Rate
+
+- Review `per_trace.jsonl` for detailed failure reasons
+- Check `report.md` for top failure patterns
+- Adjust `aggregate.threshold` if too strict
+- Enable Phase 2 `additional_analysis.failures` for categorized breakdowns
+
+### Missing Analysis Sections
+
+- Ensure corresponding config sections are enabled:
+  - `additional_analysis.persona.enabled: true`
+  - `additional_analysis.performance.detect_outliers: true`
+  - `additional_analysis.comparison.enabled: true` + baseline path
+- Check `summary.json` for `analysis` object
+
+### HTML Report Not Generated
+
+- Verify `report.output` is `html` or `both`
+- Check `--report` CLI override
+- Review FluxLoop output for template loading errors
+
+## Related Commands
+
+- [`fluxloop run experiment`](./run.md) – Execute experiments
+- [`fluxloop parse experiment`](./parse.md) – Convert traces to readable format
+- [`fluxloop generate inputs`](./generate.md) – Create test scenarios
+
+## See Also
+
+- [Evaluation Configuration](../configuration/evaluation-config.md)
+- [Basic Workflow](../workflows/basic-workflow.md)
+
