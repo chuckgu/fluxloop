@@ -99,7 +99,7 @@ def create_input_config() -> str:
           llm:
             enabled: true
             provider: openai
-            model: gpt-4o-mini
+            model: gpt-5-mini
             api_key: null
             # Replace provider/model/api_key according to your LLM setup.
         """
@@ -151,15 +151,25 @@ def create_evaluation_config() -> str:
         """
         # FluxLoop Evaluation Configuration
         # ------------------------------------------------------------
-        # This file controls how experiment results are evaluated.
-        # - evaluators: define individual checks (rule-based or LLM).
-        # - aggregate: sets how evaluator scores combine into a final score.
-        # - limits: cost-control knobs for LLM-based evaluators.
-        # Fill in or adjust notes below to match your project.
+        # Controls how experiment results are evaluated.
+        # - evaluators: rule-based or LLM judges that score each trace
+        # - aggregate: how scores combine into a final pass/fail decision
+        # - limits: cost-control knobs for LLM-based evaluators
+        # - success_criteria / additional_analysis / report / advanced: Phase 2 features
+        # Fill in or adjust the notes below to match your project.
+
+        # ------------------------------------------------------------
+        # Evaluation Goal (Phase 2)
+        # Appears in reports / dashboards; describe desired outcome.
+        evaluation_goal:
+          text: |
+            Verify that the agent provides clear, persona-aware responses
+            while meeting latency and accuracy targets.
+
+        # ------------------------------------------------------------
+        # Evaluators (Phase 1 compatible)
+        # Add/remove evaluators as needed. Rule-based examples below.
         evaluators:
-          # ----------------------------------------------------------
-          # Rule-based evaluator: ensures outputs are not empty.
-          # Adjust keywords/fields if your traces structure differs.
           - name: not_empty
             type: rule_based
             enabled: true
@@ -167,9 +177,14 @@ def create_evaluation_config() -> str:
             rules:
               - check: output_not_empty
 
-          # ----------------------------------------------------------
-          # Rule-based evaluator: checks for required/forbidden keywords.
-          # Update keywords/target fields based on your success criteria.
+          - name: latency_budget
+            type: rule_based
+            enabled: true
+            weight: 0.2
+            rules:
+              - check: latency_under
+                budget_ms: 1500
+
           - name: keyword_quality
             type: rule_based
             enabled: true
@@ -180,11 +195,8 @@ def create_evaluation_config() -> str:
                 keywords: ["help", "assist"]
               - check: not_contains
                 target: output
-                keywords: ["sorry", "cannot"]
+                keywords: ["error", "sorry"]
 
-          # ----------------------------------------------------------
-          # Rule-based evaluator: compares output to expected text (if available).
-          # Provide expected outputs in metadata when generating inputs.
           - name: similarity_to_expected
             type: rule_based
             enabled: true
@@ -192,23 +204,9 @@ def create_evaluation_config() -> str:
             rules:
               - check: similarity
                 target: output
-                expected_path: metadata.expected     # path inside trace metadata
+                expected_path: metadata.expected
                 method: difflib
 
-          # ----------------------------------------------------------
-          # Rule-based evaluator: enforces latency budgets per trace.
-          # Adjust budget_ms to your SLA and supply duration_ms in summaries.
-          - name: latency_budget
-            type: rule_based
-            enabled: true
-            weight: 0.2
-            rules:
-              - check: latency_under
-                budget_ms: 1000
-
-          # ----------------------------------------------------------
-          # LLM evaluator: optional semantic quality scoring.
-          # Enable after setting valid LLM credentials and adjusting prompt/model.
           - name: llm_response_quality
             type: llm_judge
             enabled: false
@@ -218,27 +216,120 @@ def create_evaluation_config() -> str:
               You are an expert judge. Score the assistant's response from 1-10.
               Input: {input}
               Output: {output}
-              Consider relevance, completeness, clarity.
-              Answer with: "Score: <number>" and a one-line reason.
+              Consider relevance, completeness, clarity, and tone.
+              Reply with "Score: <number>/10" and a short reason.
             max_score: 10
             parser: first_number_1_10
+            metadata:
+              model_temperature: 0.0
 
+        # ------------------------------------------------------------
+        # Aggregation Settings
         aggregate:
-          # ----------------------------------------------------------
-          # Weighted sum: combines evaluator scores based on provided weights.
-          # Adjust threshold to tune pass criteria. by_persona groups stats.
-          method: weighted_sum
-          threshold: 0.7
-          by_persona: true
+          method: weighted_sum      # or "average"
+          threshold: 0.7            # pass/fail threshold
+          by_persona: true          # group stats per persona
 
+        # ------------------------------------------------------------
+        # Limits (LLM cost controls)
         limits:
-          # ----------------------------------------------------------
-          # Sample/call limits safeguard LLM usage.
-          # Lower sample_rate or max_llm_calls to reduce cost for large runs.
-          sample_rate: 0.3
-          max_llm_calls: 50
+          sample_rate: 0.3          # evaluate 30% of traces with LLM
+          max_llm_calls: 50         # cap total LLM API calls
           timeout_seconds: 60
           cache: evaluation_cache.jsonl
+
+        # ------------------------------------------------------------
+        # Success Criteria (Phase 2)
+        # Leave disabled fields as false/None if you do not need them.
+        success_criteria:
+          performance:
+            all_traces_successful: true
+            avg_response_time:
+              enabled: true
+              threshold_ms: 2000
+            max_response_time:
+              enabled: false
+              threshold_ms: 5000
+            error_rate:
+              enabled: false
+              threshold_percent: 5
+
+          quality:
+            intent_recognition: true
+            response_consistency: true
+            response_clarity: true
+            information_completeness: false
+
+          functionality:
+            tool_calling:
+              enabled: false
+              all_calls_successful: false
+              appropriate_selection: false
+              correct_parameters: false
+              proper_timing: false
+              handles_failures: false
+
+        # ------------------------------------------------------------
+        # Additional Analysis (Phase 2)
+        additional_analysis:
+          persona:
+            enabled: false
+            focus_personas: []      # e.g., ["expert_user", "novice_user"]
+
+          performance:
+            detect_outliers: false
+            trend_analysis: false
+
+          failures:
+            enabled: false
+            categorize_causes: false
+
+          comparison:
+            enabled: false
+            baseline_path: ""      # path to baseline summary.json
+
+        # ------------------------------------------------------------
+        # Report Configuration (Phase 2)
+        report:
+          style: standard           # quick | standard | detailed
+
+          sections:
+            executive_summary: true
+            key_metrics: true
+            detailed_results: true
+            statistical_analysis: false
+            failure_cases: true
+            success_examples: false
+            recommendations: true
+            action_items: true
+
+          visualizations:
+            charts_and_graphs: true
+            tables: true
+            interactive: true       # generate HTML with charts
+
+          tone: balanced            # technical | executive | balanced
+          output: both              # md | html | both
+          template_path: null       # override with custom HTML template
+
+        # ------------------------------------------------------------
+        # Advanced Settings (Phase 2+)
+        advanced:
+          statistical_tests:
+            enabled: false
+            significance_level: 0.05
+            confidence_interval: 0.95
+
+          outliers:
+            detection: true
+            handling: analyze_separately   # remove | analyze_separately | include
+
+          alerts:
+            enabled: false
+            conditions:
+              - metric: "error_rate"
+                threshold: 10
+                operator: ">"
         """
     ).strip() + "\n"
 
@@ -381,158 +472,3 @@ def create_env_file() -> str:
         # Add your custom environment variables here
         """
     ).strip() + "\n"
-"""
-Templates for generating configuration and code files.
-"""
-def create_sample_agent() -> str:
-    """Create a sample agent implementation."""
-    return '''"""
-Sample agent implementation for FluxLoop testing.
-"""
-
-import random
-import time
-from typing import Any, Dict
-
-import fluxloop 
-
-
-@fluxloop.agent(name="SimpleAgent")
-def run(input_text: str) -> str:
-    """
-    Main agent entry point.
-    
-    Args:
-        input_text: Input from the user
-        
-    Returns:
-        Agent response
-    """
-    # Process the input
-    processed = process_input(input_text)
-    
-    # Generate response
-    response = generate_response(processed)
-    
-    # Simulate some work
-    time.sleep(random.uniform(0.1, 0.5))
-    
-    return response
-
-
-@fluxloop.prompt(model="simple-model")
-def generate_response(processed_input: Dict[str, Any]) -> str:
-    """
-    Generate a response based on processed input.
-    """
-    intent = processed_input.get("intent", "unknown")
-    
-    responses = {
-        "greeting": "Hello! How can I help you today?",
-        "help": "I can assist you with various tasks. What would you like to know?",
-        "capabilities": "I can answer questions, provide information, and help with tasks.",
-        "demo": "Here's an example: You can ask me about any topic and I'll try to help.",
-        "unknown": "I'm not sure I understand. Could you please rephrase?",
-    }
-    
-    return responses.get(intent, responses["unknown"])
-
-
-@fluxloop.tool(description="Process and analyze input text")
-def process_input(text: str) -> Dict[str, Any]:
-    """
-    Process the input text to extract intent and entities.
-    """
-    # Simple intent detection
-    text_lower = text.lower()
-    
-    intent = "unknown"
-    if any(word in text_lower for word in ["hello", "hi", "hey"]):
-        intent = "greeting"
-    elif any(word in text_lower for word in ["help", "start", "begin"]):
-        intent = "help"
-    elif any(word in text_lower for word in ["can you", "what can", "capabilities"]):
-        intent = "capabilities"
-    elif "example" in text_lower or "demo" in text_lower:
-        intent = "demo"
-    
-    return {
-        "original": text,
-        "intent": intent,
-        "word_count": len(text.split()),
-        "has_question": "?" in text,
-    }
-
-
-if __name__ == "__main__":
-    # Test the agent locally
-    with fluxloop.instrument("test_run"):
-        result = run("Hello, what can you help me with?")
-        print(f"Result: {result}")
-'''
-
-
-def create_gitignore() -> str:
-    """Create a .gitignore file."""
-    return """# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv/
-
-# FluxLoop
-traces/
-*.trace
-*.log
-
-# Environment
-.env
-.env.local
-*.env
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-*.coverage
-"""
-
-
-def create_env_file() -> str:
-    """Create a .env template file."""
-    return """# FluxLoop Configuration
-FLUXLOOP_COLLECTOR_URL=http://localhost:8000
-FLUXLOOP_API_KEY=your-api-key-here
-FLUXLOOP_ENABLED=true
-FLUXLOOP_DEBUG=false
-FLUXLOOP_SAMPLE_RATE=1.0
-# Argument Recording (global toggle)
-FLUXLOOP_RECORD_ARGS=false
-FLUXLOOP_RECORDING_FILE=recordings/args_recording.jsonl
-
-# Service Configuration
-FLUXLOOP_SERVICE_NAME=my-agent
-FLUXLOOP_ENVIRONMENT=development
-
-# LLM API Keys (if needed)
-# OPENAI_API_KEY=sk-...
-# ANTHROPIC_API_KEY=sk-ant-...
-
-# Other Configuration
-# Add your custom environment variables here
-"""

@@ -126,6 +126,11 @@
         "category": "FluxLoop"
       },
       {
+        "command": "fluxloop.openProjectEnv",
+        "title": "Open Environment File",
+        "category": "FluxLoop"
+      },
+      {
         "command": "fluxloop.openInputConfig",
         "title": "Open Input Configuration",
         "category": "FluxLoop"

@@ -40,6 +40,7 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.openConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.openProjectConfig', (projectId?: string) => this.openProjectConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.openInputConfig', (projectId?: string) => this.openInputConfig(projectId)),
+            vscode.commands.registerCommand('fluxloop.openProjectEnv', (projectId?: string) => this.openProjectEnv(projectId)),
             vscode.commands.registerCommand('fluxloop.openSimulationConfig', (projectId?: string) => this.openSimulationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.openEvaluationConfig', (projectId?: string) => this.openEvaluationConfig(projectId)),
             vscode.commands.registerCommand('fluxloop.selectEnvironment', () => this.selectEnvironment()),
@@ -492,6 +493,55 @@ export class CommandManager {
 
     private async openProjectConfig(projectId?: string) {
         await this.openConfigSection('project', projectId);
+    }
+
+    private async openProjectEnv(projectId?: string): Promise<void> {
+        const project = projectId ? ProjectManager.getInstance().getProjectById(projectId) : ProjectContext.ensureActiveProject();
+        if (!project) {
+            if (projectId) {
+                void vscode.window.showWarningMessage('선택한 프로젝트를 찾을 수 없어 .env 파일을 열 수 없습니다.');
+            }
+            return;
+        }
+
+        const envPath = path.join(project.path, '.env');
+        const envUri = vscode.Uri.file(envPath);
+
+        let exists = true;
+        try {
+            await vscode.workspace.fs.stat(envUri);
+        } catch {
+            exists = false;
+        }
+
+        if (!exists) {
+            const choice = await vscode.window.showInformationMessage(
+                `.env 파일이 없습니다. 기본 템플릿으로 생성할까요?`,
+                'Create',
+                'Cancel'
+            );
+
+            if (choice !== 'Create') {
+                return;
+            }
+
+            try {
+                await fs.promises.mkdir(path.dirname(envPath), { recursive: true });
+                await fs.promises.writeFile(envPath, this.getDefaultEnvTemplate(), 'utf8');
+            } catch (error) {
+                void vscode.window.showErrorMessage('.env 파일을 생성하지 못했습니다. 출력 창을 확인하세요.');
+                console.error('Failed to create .env file', error);
+                return;
+            }
+        }
+
+        try {
+            const document = await vscode.workspace.openTextDocument(envUri);
+            await vscode.window.showTextDocument(document, { preview: false });
+        } catch (error) {
+            void vscode.window.showErrorMessage('.env 파일을 열 수 없습니다. 출력 창을 확인하세요.');
+            console.error('Failed to open .env file', error);
+        }
     }
 
     private async openInputConfig(projectId?: string) {
@@ -1054,6 +1104,31 @@ export class CommandManager {
             vscode.window.showErrorMessage(`Unable to open configs/${fileName}`);
             console.error('Failed to open config section', error);
         }
+    }
+
+    private getDefaultEnvTemplate(): string {
+        return [
+            '# FluxLoop Configuration',
+            'FLUXLOOP_COLLECTOR_URL=http://localhost:8000',
+            'FLUXLOOP_API_KEY=your-api-key-here',
+            'FLUXLOOP_ENABLED=true',
+            'FLUXLOOP_DEBUG=false',
+            'FLUXLOOP_SAMPLE_RATE=1.0',
+            '# Argument Recording (global toggle)',
+            'FLUXLOOP_RECORD_ARGS=false',
+            'FLUXLOOP_RECORDING_FILE=recordings/args_recording.jsonl',
+            '',
+            '# Service Configuration',
+            'FLUXLOOP_SERVICE_NAME=my-agent',
+            'FLUXLOOP_ENVIRONMENT=development',
+            '',
+            '# LLM API Keys (if needed)',
+            '# OPENAI_API_KEY=sk-...',
+            '# ANTHROPIC_API_KEY=sk-ant-...',
+            '',
+            '# Other Configuration',
+            '# Add your custom environment variables here'
+        ].join('\n') + '\n';
     }
 
     private getConfigMode(config: Record<string, any> | undefined): string | undefined {

@@ -111,11 +111,22 @@ Open the **FluxLoop** Activity Bar and click **"Create New Project…"** or use 
 FluxLoop: Create FluxLoop Project
 ```
 
-This will:
-- Prompt you to select a parent folder
-- Generate `configs/` directory with project/input/simulation/evaluation configs
-- Create `.env`, `examples/`, `inputs/`, `recordings/`, `experiments/` directories
-- Register the project and set it as active
+This now guides you through:
+- Selecting a parent folder and project name
+- Choosing a Python environment (project `.venv`, existing env, or global PATH)
+- Running `setup_fluxloop_env.sh` automatically if FluxLoop packages are missing
+- Generating `configs/` (project/input/simulation/evaluation) plus `.env`, `examples/`, `inputs/`, `recordings/`, `experiments/`
+- Registering the project and setting it as active
+
+Check the detected environment anytime via:
+```
+FluxLoop: Show Environment Info
+```
+
+For full diagnostics (Python/FluxLoop/MCP/index), run:
+```
+FluxLoop: Run Doctor
+```
 
 ### 2. Review Configuration
 

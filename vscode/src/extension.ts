@@ -123,7 +123,7 @@ export async function activate(context: vscode.ExtensionContext) {
     commandManager.registerCommands();
 
     // Register project commands
-    const projectCommands = new ProjectCommands(context, cliManager);
+    const projectCommands = new ProjectCommands(context, cliManager, environmentManager);
     context.subscriptions.push(...projectCommands.register());
 
     // Check CLI installation (non-blocking)

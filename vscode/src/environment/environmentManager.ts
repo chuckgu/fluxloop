@@ -20,6 +20,20 @@ export interface DetectedEnvironment {
     notes: string[];
 }
 
+export interface EnvironmentCheckResult {
+    root: string;
+    pythonPath?: string;
+    fluxloopPath?: string;
+    fluxloopMcpPath?: string;
+    environmentType: EnvironmentType;
+    hasEnvironment: boolean;
+    hasPython: boolean;
+    hasFluxloop: boolean;
+    hasFluxloopMcp: boolean;
+    missing: string[];
+    notes: string[];
+}
+
 interface EnvironmentCandidate {
     type: EnvironmentType;
     baseDir: string;
@@ -116,6 +130,60 @@ export class EnvironmentManager implements vscode.Disposable {
         }
 
         return result;
+    }
+
+    async checkEnvironment(root: string): Promise<EnvironmentCheckResult> {
+        const normalizedRoot = path.resolve(root);
+        const missingSet = new Set<string>();
+        let environmentType: EnvironmentType = 'unknown';
+        let pythonPath: string | undefined;
+        let fluxloopPath: string | undefined;
+        let fluxloopMcpPath: string | undefined;
+        let notes: string[] = [];
+        let hasEnvironment = false;
+
+        if (!fs.existsSync(normalizedRoot) || !fs.statSync(normalizedRoot).isDirectory()) {
+            missingSet.add('Python interpreter');
+            missingSet.add('FluxLoop CLI (fluxloop)');
+            missingSet.add('FluxLoop MCP (fluxloop-mcp)');
+            notes.push(`Directory does not exist: ${normalizedRoot}`);
+        } else {
+            const detected = this.detectLocalEnvironment(normalizedRoot);
+            if (detected) {
+                hasEnvironment = true;
+                environmentType = detected.environmentType;
+                pythonPath = detected.pythonPath;
+                fluxloopPath = detected.fluxloopPath;
+                fluxloopMcpPath = detected.fluxloopMcpPath;
+                notes = detected.notes;
+            } else {
+                notes.push('No virtual environment found in target source root.');
+            }
+        }
+
+        if (!pythonPath) {
+            missingSet.add('Python interpreter');
+        }
+        if (!fluxloopPath) {
+            missingSet.add('FluxLoop CLI (fluxloop)');
+        }
+        if (!fluxloopMcpPath) {
+            missingSet.add('FluxLoop MCP (fluxloop-mcp)');
+        }
+
+        return {
+            root: normalizedRoot,
+            pythonPath,
+            fluxloopPath,
+            fluxloopMcpPath,
+            environmentType,
+            hasEnvironment,
+            hasPython: !!pythonPath,
+            hasFluxloop: !!fluxloopPath,
+            hasFluxloopMcp: !!fluxloopMcpPath,
+            missing: Array.from(missingSet),
+            notes
+        };
     }
 
     async refreshActiveEnvironment(): Promise<DetectedEnvironment | undefined> {

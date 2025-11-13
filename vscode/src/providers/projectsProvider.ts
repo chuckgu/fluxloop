@@ -100,27 +100,10 @@ export class ProjectsProvider implements vscode.TreeDataProvider<ProjectTreeItem
                 arguments: [project.id]
             }));
 
-        items.push(new CommandTreeItem('Configure Inputs', undefined, '$(list-unordered)', {
-                command: 'fluxloop.openInputConfig',
-                title: 'Open FluxLoop Input Configuration',
+        items.push(new CommandTreeItem('Configure Environment (.env)', undefined, '$(key)', {
+                command: 'fluxloop.openProjectEnv',
+                title: 'Open FluxLoop Environment File',
                 arguments: [project.id]
-            }));
-
-        items.push(new CommandTreeItem('Configure Experiment', undefined, '$(beaker)', {
-                command: 'fluxloop.openSimulationConfig',
-                title: 'Open FluxLoop Experiment Configuration',
-                arguments: [project.id]
-            }));
-
-        items.push(new CommandTreeItem('Configure Evaluation', undefined, '$(graph)', {
-                command: 'fluxloop.openEvaluationConfig',
-                title: 'Open FluxLoop Evaluation Configuration',
-                arguments: [project.id]
-            }));
-
-        items.push(new CommandTreeItem('Run Experiment', undefined, '$(debug-start)', {
-                command: 'fluxloop.runExperiment',
-                title: 'Run FluxLoop Experiment'
             }));
 
         items.push(new CommandTreeItem('Remove from List', undefined, '$(trash)', {

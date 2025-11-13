@@ -58,6 +58,8 @@ bash packages/cli/scripts/setup_fluxloop_env.sh --python python3.11
 bash packages/cli/scripts/setup_fluxloop_env.sh --target-source-root ./backend
 ```
 
+> Tip: When you create a project through VSCode, choose **Run Setup Script** in the environment wizard to execute this script automatically.
+
 ## Execution Modes
 
 FluxLoop supports four execution modes to match your workflow.
