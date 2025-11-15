@@ -301,7 +301,7 @@ Multi-turn mode makes additional LLM calls (supervisor decisions). Use:
 
 ## Next Steps
 
-- [Runner Targets](./runner-targets) – detailed runner integration patterns
+- [Runner Targets](../configuration/runner-targets) – detailed runner integration patterns
 - [Run Command](../commands/run) – command-line reference
 - [Project Configuration](../configuration/project-config) – metadata setup
 
