@@ -59,6 +59,7 @@ const sidebars: SidebarsConfig = {
       label: 'Workflows',
       items: [
         'workflows/basic-workflow',
+        'workflows/multi-turn-workflow',
         'workflows/recording-workflow',
         'workflows/ci-cd-integration',
       ],
