@@ -24,6 +24,8 @@ from .config import (
     VariationStrategy,
     EvaluatorConfig,
     RunnerConfig,
+    MultiTurnConfig,
+    MultiTurnSupervisorConfig,
 )
 
 __all__ = [
@@ -45,4 +47,6 @@ __all__ = [
     "VariationStrategy",
     "EvaluatorConfig",
     "RunnerConfig",
+    "MultiTurnConfig",
+    "MultiTurnSupervisorConfig",
 ]

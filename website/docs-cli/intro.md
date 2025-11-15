@@ -22,6 +22,7 @@ Current version: **0.2.1**
 - 🎯 **Project Management**: Initialize and configure simulation projects
 - 📝 **Input Generation**: Create test input variations using LLM or deterministic strategies
 - 🧪 **Experiment Execution**: Run batch simulations with configurable iterations
+- 💬 **Multi-Turn Conversations**: Automatically extend experiments into dynamic dialogues with AI supervisor
 - 📊 **Result Parsing**: Convert raw artifacts to human-readable formats
 - 🔴 **Recording Mode**: Capture and replay complex function arguments
 - ⚙️ **Configuration**: Structured YAML-based configuration system
@@ -69,9 +70,16 @@ Generate input variations from base inputs defined in `configs/input.yaml`.
 
 ```bash
 fluxloop run experiment [--iterations 10]
+
+# Multi-turn conversations (LLM-driven)
+fluxloop run experiment --multi-turn --max-turns 12 --auto-approve
+
+# Multi-turn scripted playback (deterministic)
+# Set supervisor.provider to 'mock' and supply scripted_questions in simulation.yaml
+fluxloop run experiment --multi-turn --supervisor-provider mock
 ```
 
-Run simulation experiment using configuration from `configs/simulation.yaml`.
+Run simulation experiment using configuration from `configs/simulation.yaml`. Enable multi-turn mode to automatically extend single inputs into dynamic conversations. Use `provider: openai` for AI-driven follow-ups or `provider: mock` for scripted question playback.
 
 ### Recording Mode
 
@@ -95,9 +103,9 @@ FluxLoop CLI uses a multi-file configuration structure:
 
 | File | Purpose |
 |------|---------|
-| `configs/project.yaml` | Project metadata, collector settings |
+| `configs/project.yaml` | Project metadata, service context, collector settings |
 | `configs/input.yaml` | Personas, base inputs, LLM settings |
-| `configs/simulation.yaml` | Runner, iterations, replay args |
+| `configs/simulation.yaml` | Runner, iterations, multi-turn settings |
 | `configs/evaluation.yaml` | Evaluator definitions |
 
 ## What's Next?
@@ -106,6 +114,7 @@ FluxLoop CLI uses a multi-file configuration structure:
 - **[Project Setup](/cli/getting-started/project-setup)** - Initialize your first project
 - **[Commands Reference](/cli/commands/init)** - Full command documentation
 - **[Configuration](/cli/configuration/project-config)** - Config file reference
+- **[Multi-Turn Workflow](/cli/workflows/multi-turn-workflow)** - Run dynamic conversations
 - **[Runner Targets](/cli/configuration/runner-targets)** - Connect your code to simulations
 
 ---

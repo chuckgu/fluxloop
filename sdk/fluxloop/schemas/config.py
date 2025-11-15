@@ -102,6 +102,29 @@ class PersonaConfig(BaseModel):
         return "\n".join(prompt_parts)
 
 
+class MultiTurnSupervisorConfig(BaseModel):
+    """Configuration for the conversation supervisor LLM."""
+
+    provider: str = "openai"
+    model: str = "gpt-5-mini"
+    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+    system_prompt: Optional[str] = None
+    api_key: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class MultiTurnConfig(BaseModel):
+    """Settings controlling multi-turn execution in the runner."""
+
+    enabled: bool = False
+    max_turns: int = Field(default=8, ge=1, le=100)
+    auto_approve_tools: bool = True
+    persona_override: Optional[str] = None
+    supervisor: MultiTurnSupervisorConfig = Field(
+        default_factory=MultiTurnSupervisorConfig
+    )
+
+
 class EvaluatorConfig(BaseModel):
     """Configuration for evaluation methods."""
 
@@ -244,6 +267,9 @@ class ExperimentConfig(BaseModel):
     output_directory: str = "./experiments"
     save_traces: bool = True
     save_aggregated_metrics: bool = True
+
+    # Multi-turn configuration
+    multi_turn: Optional[MultiTurnConfig] = None
 
     # Collector settings
     collector_url: Optional[str] = None

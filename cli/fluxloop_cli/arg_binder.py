@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Sequence
 
 
 class _AttrDict(dict):
@@ -26,7 +26,7 @@ class _AttrDict(dict):
         except KeyError as exc:  # pragma: no cover
             raise AttributeError(item) from exc
 
-from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig
+from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, PersonaConfig
 
 
 class _AwaitableNone:
@@ -98,8 +98,16 @@ class ArgBinder:
         *,
         runtime_input: str,
         iteration: int = 0,
+        conversation_state: Optional[Dict[str, Any]] = None,
+        persona: Optional[PersonaConfig] = None,
+        auto_approve: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Construct kwargs for calling *func* based on replay or inspection."""
+
+        signature = inspect.signature(func)
+        parameters = list(signature.parameters.values())
+        if parameters and parameters[0].name == "self":
+            parameters = parameters[1:]
 
         if self._recording:
             kwargs = self._recording.get("kwargs", {}).copy()
@@ -111,22 +119,42 @@ class ArgBinder:
                 try:
                     self._set_by_path(kwargs, replay.override_param_path, runtime_input)
                 except (KeyError, TypeError):
-                    # If path missing, fall back to plain binding
-                    return self._bind_by_signature(func, runtime_input)
-
+                    kwargs = self._bind_runtime_input(parameters, runtime_input)
+            else:
+                fallback = self._bind_runtime_input(parameters, runtime_input)
+                for key, value in fallback.items():
+                    kwargs.setdefault(key, value)
             self._restore_callables(kwargs, replay)
             self._ensure_no_unmapped_callables(kwargs, replay)
-            return self._hydrate_structures(kwargs)
+            kwargs = self._hydrate_structures(kwargs)
+        else:
+            kwargs = self._bind_runtime_input(parameters, runtime_input)
 
-        return self._bind_by_signature(func, runtime_input)
+        return self._inject_optional_kwargs(
+            parameters=parameters,
+            kwargs=kwargs,
+            conversation_state=conversation_state,
+            persona=persona,
+            auto_approve=auto_approve,
+            iteration=iteration,
+        )
 
-    def _bind_by_signature(self, func: Callable, runtime_input: str) -> Dict[str, Any]:
-        signature = inspect.signature(func)
-        parameters = list(signature.parameters.values())
+    def _bind_runtime_input(
+        self, parameters: Sequence[inspect.Parameter], runtime_input: str
+    ) -> Dict[str, Any]:
+        candidate = self._find_runtime_parameter(parameters)
+        if candidate:
+            return {candidate: runtime_input}
+        if parameters:
+            return {parameters[0].name: runtime_input}
+        raise ValueError(
+            "Cannot determine where to bind runtime input for the provided function."
+        )
 
-        if parameters and parameters[0].name == "self":
-            parameters = parameters[1:]
-
+    @staticmethod
+    def _find_runtime_parameter(
+        parameters: Sequence[inspect.Parameter],
+    ) -> Optional[str]:
         candidate_names = [
             "input",
             "input_text",
@@ -134,18 +162,70 @@ class ArgBinder:
             "query",
             "text",
             "content",
+            "user_message",
         ]
+        for name in candidate_names:
+            for param in parameters:
+                if param.name == name:
+                    return name
+        return None
 
-        for param in parameters:
-            if param.name in candidate_names:
-                return {param.name: runtime_input}
+    def _inject_optional_kwargs(
+        self,
+        *,
+        parameters: Sequence[inspect.Parameter],
+        kwargs: Dict[str, Any],
+        conversation_state: Optional[Dict[str, Any]],
+        persona: Optional[PersonaConfig],
+        auto_approve: Optional[bool],
+        iteration: Optional[int],
+    ) -> Dict[str, Any]:
+        param_names = {param.name for param in parameters}
 
-        if parameters:
-            return {parameters[0].name: runtime_input}
+        def assign(value: Any, candidates: Sequence[str]) -> bool:
+            if value is None:
+                return False
+            for name in candidates:
+                if name in param_names and name not in kwargs:
+                    kwargs[name] = value
+                    return True
+            return False
 
-        raise ValueError(
-            f"Cannot determine where to bind runtime input for function '{func.__name__}'."
-        )
+        if conversation_state is not None:
+            assign(conversation_state, ["conversation_state", "state", "dialog_state"])
+            if isinstance(conversation_state, dict):
+                metadata = conversation_state.get("metadata")
+                if metadata:
+                    assign(
+                        metadata,
+                        ["conversation_metadata", "state_metadata", "conversation_meta"],
+                    )
+                turns = conversation_state.get("turns")
+                if turns:
+                    assign(turns, ["messages", "history", "turns"])
+
+        if persona is not None:
+            assign(persona, ["persona", "user_persona", "persona_config"])
+            try:
+                persona_prompt = persona.to_prompt()
+            except Exception:
+                persona_prompt = None
+            if persona_prompt:
+                assign(
+                    persona_prompt,
+                    ["persona_prompt", "persona_description", "persona_text"],
+                )
+
+        if auto_approve is not None:
+            assign(
+                auto_approve,
+                ["auto_approve", "auto_approve_tools", "approve_tools", "autoapprove"],
+            )
+
+        if iteration is not None:
+            assign(iteration, ["iteration", "run_iteration", "loop_index"])
+
+        return kwargs
 
     def _restore_callables(self, kwargs: Dict[str, Any], replay: ReplayArgsConfig) -> None:
         for param_name, provider in replay.callable_providers.items():

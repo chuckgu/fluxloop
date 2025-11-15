@@ -35,6 +35,8 @@ def create_project_config(project_name: str) -> str:
         metadata:
           team: development
           environment: local
+          service_context: ""
+          # Describe the overall service scenario (used by multi-turn supervisor)
           # Add any custom fields used by dashboards or automation tools.
         """
     ).strip() + "\n"
@@ -138,6 +140,25 @@ def create_simulation_config(project_name: str) -> str:
           enabled: false
           recording_file: recordings/args_recording.jsonl
           override_param_path: data.content
+
+        multi_turn:
+          enabled: false              # Enable to drive conversations via supervisor
+          max_turns: 8                # Safety cap on total turns per conversation
+          auto_approve_tools: true    # Automatically approve tool calls when supported
+          persona_override: null      # Force a specific persona id (optional)
+          supervisor:
+            provider: openai          # openai (LLM generated) | mock (scripted playback)
+            model: gpt-5-mini
+            system_prompt: |
+              You supervise an AI assistant supporting customers.
+              Review the entire transcript and decide whether to continue.
+              When continuing, craft the next user message consistent with the persona.
+              When terminating, explain the reason and provide any closing notes.
+            metadata:
+              scripted_questions: []  # Array of user utterances for sequential playback (e.g., ["First question", "Second question", ...])
+              mock_decision: terminate        # Fallback when no scripted questions remain
+              mock_reason: script_complete    # Termination reason for scripted runs
+              mock_closing: "Thanks for the help. I have no further questions."
 
         output_directory: experiments
         save_traces: true

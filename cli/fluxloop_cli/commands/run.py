@@ -21,6 +21,7 @@ from ..project_paths import (
     resolve_config_path,
     resolve_project_relative,
 )
+from fluxloop.schemas import MultiTurnConfig
 
 app = typer.Typer()
 console = Console()
@@ -55,6 +56,46 @@ def experiment(
         "--personas",
         "-p",
         help="Comma-separated list of personas to use",
+    ),
+    multi_turn: Optional[bool] = typer.Option(
+        None,
+        "--multi-turn/--no-multi-turn",
+        help="Enable or disable multi-turn supervisor loop",
+    ),
+    max_turns: Optional[int] = typer.Option(
+        None,
+        "--max-turns",
+        help="Override maximum number of turns per conversation",
+    ),
+    auto_approve_tools: Optional[bool] = typer.Option(
+        None,
+        "--auto-approve-tools/--manual-approve-tools",
+        help="Override automatic tool approval behaviour",
+    ),
+    persona_override: Optional[str] = typer.Option(
+        None,
+        "--persona-override",
+        help="Force a specific persona id during multi-turn execution",
+    ),
+    supervisor_provider: Optional[str] = typer.Option(
+        None,
+        "--supervisor-provider",
+        help="Override conversation supervisor provider (e.g. openai, mock)",
+    ),
+    supervisor_model: Optional[str] = typer.Option(
+        None,
+        "--supervisor-model",
+        help="Override conversation supervisor model identifier",
+    ),
+    supervisor_temperature: Optional[float] = typer.Option(
+        None,
+        "--supervisor-temperature",
+        help="Override conversation supervisor sampling temperature",
+    ),
+    supervisor_api_key: Optional[str] = typer.Option(
+        None,
+        "--supervisor-api-key",
+        help="API key to use for supervisor calls (overrides environment)",
     ),
     output_dir: Optional[Path] = typer.Option(
         None,
@@ -114,6 +155,39 @@ def experiment(
     if output_dir:
         resolved_output = resolve_project_relative(output_dir, project, root)
         config.output_directory = str(resolved_output)
+
+    if any(
+        value is not None
+        for value in [
+            multi_turn,
+            max_turns,
+            auto_approve_tools,
+            persona_override,
+            supervisor_provider,
+            supervisor_model,
+            supervisor_temperature,
+            supervisor_api_key,
+        ]
+    ):
+        if config.multi_turn is None:
+            config.multi_turn = MultiTurnConfig()
+        mt = config.multi_turn
+        if multi_turn is not None:
+            mt.enabled = multi_turn
+        if max_turns is not None:
+            mt.max_turns = max_turns
+        if auto_approve_tools is not None:
+            mt.auto_approve_tools = auto_approve_tools
+        if persona_override:
+            mt.persona_override = persona_override
+        if supervisor_provider:
+            mt.supervisor.provider = supervisor_provider
+        if supervisor_model:
+            mt.supervisor.model = supervisor_model
+        if supervisor_temperature is not None:
+            mt.supervisor.temperature = supervisor_temperature
+        if supervisor_api_key:
+            mt.supervisor.api_key = supervisor_api_key
     
     # Load inputs to ensure accurate counts before showing the summary
     try:
@@ -137,6 +211,18 @@ def experiment(
         "Input Source",
         "external file" if config.has_external_inputs() else "base_inputs",
     )
+    if config.multi_turn:
+        summary.add_row(
+            "Multi-turn",
+            "enabled" if config.multi_turn.enabled else "disabled",
+        )
+        summary.add_row("Max Turns", str(config.multi_turn.max_turns))
+        if config.multi_turn.persona_override:
+            summary.add_row("Persona Override", config.multi_turn.persona_override)
+        summary.add_row(
+            "Supervisor Model",
+            config.multi_turn.supervisor.model,
+        )
     summary.add_row("Total Runs", str(total_runs))
     summary.add_row("Output", config.output_directory)
     

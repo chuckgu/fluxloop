@@ -18,12 +18,13 @@ import fluxloop
 import yaml
 
 from fluxloop.buffer import EventBuffer
-from fluxloop.schemas import ExperimentConfig, PersonaConfig
+from fluxloop.schemas import ExperimentConfig, PersonaConfig, MultiTurnConfig
 from rich.console import Console
 
 from .environment import load_env_chain
 from .target_loader import TargetLoader
 from .arg_binder import ArgBinder
+from .conversation_supervisor import ConversationSupervisor, SupervisorDecision
 
 console = Console()
 
@@ -284,6 +285,11 @@ class ExperimentRunner:
         iteration: int,
     ) -> None:
         """Run a single execution."""
+
+        if self._should_use_multi_turn():
+            await self._run_multi_turn(agent_func, variation, persona, iteration)
+            return
+
         self.results["total_runs"] += 1
         
         # Create trace name
@@ -325,6 +331,9 @@ class ExperimentRunner:
                     input_text,
                     iteration=iteration,
                     callback_store=callback_messages,
+                    conversation_state=None,
+                    persona=persona,
+                    auto_approve=None,
                 )
 
                 # Allow background callbacks to flush
@@ -398,6 +407,211 @@ class ExperimentRunner:
                 "input": input_text,
                 "error": str(e),
             })
+
+    def _should_use_multi_turn(self) -> bool:
+        cfg = getattr(self.config, "multi_turn", None)
+        return bool(cfg and getattr(cfg, "enabled", False))
+
+    async def _run_multi_turn(
+        self,
+        agent_func: Callable,
+        variation: Dict[str, Any],
+        persona: Optional[PersonaConfig],
+        iteration: int,
+    ) -> None:
+        """Execute a multi-turn conversation using the supervisor loop."""
+
+        self.results["total_runs"] += 1
+
+        multi_cfg: MultiTurnConfig = self.config.multi_turn or MultiTurnConfig()
+
+        if multi_cfg.persona_override:
+            persona = next(
+                (
+                    p
+                    for p in (self.config.personas or [])
+                    if p.name == multi_cfg.persona_override
+                ),
+                persona,
+            )
+
+        variation_metadata = variation.get("metadata") or {}
+        input_text = variation["input"]
+
+        if persona and not variation_metadata.get("persona"):
+            variation_metadata["persona"] = persona.name
+        if persona and not variation_metadata.get("persona_description"):
+            variation_metadata["persona_description"] = persona.description
+
+        persona_description = variation_metadata.get("persona_description")
+        if persona and not persona_description:
+            persona_description = persona.description
+
+        service_context = variation_metadata.get("service_context")
+        if not service_context:
+            service_context = (self.config.metadata or {}).get("service_context")
+
+        supervisor = ConversationSupervisor(multi_cfg.supervisor)
+
+        conversation_state: Dict[str, Any] = {
+            "turns": [
+                {
+                    "role": "user",
+                    "content": input_text,
+                }
+            ],
+            "metadata": {
+                "iteration": iteration,
+                "persona": persona.name if persona else None,
+                "persona_description": persona_description,
+                "service_context": service_context,
+                "variation": variation_metadata,
+                "auto_approve_tools": multi_cfg.auto_approve_tools,
+            },
+            "context": {},
+        }
+
+        trace_name = f"{self.config.name}_iter{iteration}"
+        if persona:
+            trace_name += f"_persona_{persona.name}"
+
+        start_time = time.time()
+        termination_reason: Optional[str] = None
+        last_decision: Optional[SupervisorDecision] = None
+        final_output: Optional[str] = None
+        trace_id: Optional[str] = None
+
+        try:
+            with fluxloop.instrument(trace_name) as ctx:
+                if hasattr(ctx, "trace") and getattr(ctx, "trace") is not None:
+                    trace_id = str(ctx.trace.id)
+                    ctx.add_metadata("trace_id", trace_id)
+
+                ctx.add_metadata("iteration", iteration)
+                ctx.add_metadata("variation", variation)
+                if persona:
+                    ctx.add_metadata("persona", persona.name)
+                ctx.add_metadata("multi_turn", True)
+
+                current_user_input = input_text
+                turn_count = 0
+
+                while True:
+                    callback_messages: Dict[str, Any] = {}
+
+                    result = await self._call_agent(
+                        agent_func,
+                        current_user_input,
+                        iteration=iteration,
+                        callback_store=callback_messages,
+                        conversation_state=conversation_state,
+                        persona=persona,
+                        auto_approve=multi_cfg.auto_approve_tools,
+                    )
+
+                    await self._wait_for_callbacks(callback_messages)
+
+                    EventBuffer.get_instance().flush()
+
+                    observations: List[Dict[str, Any]] = []
+                    if trace_id:
+                        observations = self._load_observations_for_trace(trace_id)
+
+                    assistant_output = self._extract_final_output(
+                        callback_messages, observations
+                    )
+                    if assistant_output is None:
+                        coerced = await self._coerce_result_to_text(result)
+                        assistant_output = coerced if coerced is not None else str(result)
+
+                    final_output = assistant_output
+
+                    conversation_state["turns"].append(
+                        {
+                            "role": "assistant",
+                            "content": assistant_output,
+                        }
+                    )
+
+                    turn_count += 1
+                    ctx.add_metadata("turn_count", turn_count)
+
+                    if turn_count >= multi_cfg.max_turns:
+                        termination_reason = "max_turns_reached"
+                        ctx.add_metadata("termination_reason", termination_reason)
+                        break
+
+                    decision = await supervisor.decide(
+                        conversation_state=conversation_state,
+                        persona_description=persona_description,
+                        service_context=service_context,
+                    )
+                    last_decision = decision
+
+                    if decision.decision == "terminate":
+                        termination_reason = (
+                            decision.termination_reason or "supervisor_terminate"
+                        )
+                        if decision.closing_user_message:
+                            conversation_state["turns"].append(
+                                {
+                                    "role": "user",
+                                    "content": decision.closing_user_message,
+                                    "closing": True,
+                                }
+                            )
+                        ctx.add_metadata("termination_reason", termination_reason)
+                        break
+
+                    next_user_message = decision.next_user_message
+                    if not next_user_message:
+                        raise ValueError(
+                            "Supervisor decided to continue but provided no next_user_message."
+                        )
+
+                    conversation_state["turns"].append(
+                        {
+                            "role": "user",
+                            "content": next_user_message,
+                        }
+                    )
+                    current_user_input = next_user_message
+
+                EventBuffer.get_instance().flush()
+
+        except Exception as exc:
+            self.results["failed"] += 1
+            duration_ms = (time.time() - start_time) * 1000
+            self.results["durations"].append(duration_ms)
+            self.results["errors"].append(
+                {
+                    "iteration": iteration,
+                    "persona": persona.name if persona else None,
+                    "input": input_text,
+                    "error": str(exc),
+                }
+            )
+            raise
+        else:
+            self.results["successful"] += 1
+            duration_ms = (time.time() - start_time) * 1000
+            self.results["durations"].append(duration_ms)
+
+            trace_entry = {
+                "trace_id": trace_id,
+                "iteration": iteration,
+                "persona": persona.name if persona else None,
+                "input": input_text,
+                "output": final_output,
+                "duration_ms": duration_ms,
+                "success": True,
+                "termination_reason": termination_reason,
+                "conversation": conversation_state,
+            }
+            if last_decision and last_decision.raw_response:
+                trace_entry["supervisor_response"] = last_decision.raw_response
+
+            self.results["traces"].append(trace_entry)
     
     def _resolve_entry_persona(
         self,
@@ -420,6 +634,9 @@ class ExperimentRunner:
         input_text: str,
         iteration: int = 0,
         callback_store: Optional[Dict[str, Any]] = None,
+        conversation_state: Optional[Dict[str, Any]] = None,
+        persona: Optional[PersonaConfig] = None,
+        auto_approve: Optional[bool] = None,
     ) -> Any:
         """Call the agent with arguments bound by ArgBinder (sync or async)."""
 
@@ -427,6 +644,9 @@ class ExperimentRunner:
             agent_func,
             runtime_input=input_text,
             iteration=iteration,
+            conversation_state=conversation_state,
+            persona=persona,
+            auto_approve=auto_approve,
         )
 
         # Attach collector callback capture if present

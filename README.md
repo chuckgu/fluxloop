@@ -144,6 +144,7 @@ fluxloop parse experiment experiments/<experiment_dir>
 - **🎯 Instrument Agents**: Add decorators to trace execution
 - **📝 Generate Inputs**: Create test scenarios with LLM or deterministic strategies
 - **🧪 Run Simulations**: Execute batch experiments with different configurations
+- **💬 Multi-Turn Conversations**: Automatically extend single-input experiments into multi-turn dialogues with AI supervisor
 - **📊 Analyze Results**: Parse structured outputs into human-readable timelines
 - **🔴 Record & Replay**: Capture complex arguments and replay them (advanced)
 - **🧠 AI-Assisted Setup**: Use MCP server and Flux Agent for automated integration guidance

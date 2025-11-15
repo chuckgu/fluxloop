@@ -8,6 +8,7 @@ from typing import Dict, Optional
 import typer
 from rich.console import Console
 from rich.table import Table
+from ruamel.yaml import YAML, CommentedMap
 
 from ..constants import DEFAULT_ROOT_DIR_NAME
 from ..project_paths import (
@@ -20,6 +21,9 @@ from ..config_schema import CONFIG_SECTION_FILENAMES
 
 app = typer.Typer()
 console = Console()
+_yaml = YAML()
+_yaml.indent(mapping=2, sequence=4, offset=2)
+_yaml.preserve_quotes = True
 
 
 def _load_env(env_path: Path) -> Dict[str, str]:
@@ -44,22 +48,25 @@ def _update_simulation(recording_enabled: bool, project: Optional[str], root: Pa
     except KeyError:
         return
 
-    data: Dict[str, object] = {}
     if simulation_path.exists():
-        import yaml
+        with simulation_path.open("r", encoding="utf-8") as handle:
+            loaded = _yaml.load(handle) or CommentedMap()
+    else:
+        loaded = CommentedMap()
 
-        data = yaml.safe_load(simulation_path.read_text()) or {}
+    if not isinstance(loaded, CommentedMap):
+        loaded = CommentedMap(loaded)
 
-    replay = data.setdefault("replay_args", {})
+    replay = loaded.get("replay_args")
+    if not isinstance(replay, CommentedMap):
+        replay = CommentedMap(replay or {})
+        loaded["replay_args"] = replay
+
     replay["enabled"] = recording_enabled
 
-    import yaml
-
     simulation_path.parent.mkdir(parents=True, exist_ok=True)
-    simulation_path.write_text(
-        yaml.dump(data, sort_keys=False, default_flow_style=False),
-        encoding="utf-8",
-    )
+    with simulation_path.open("w", encoding="utf-8") as handle:
+        _yaml.dump(loaded, handle)
 
 
 @app.command()

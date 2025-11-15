@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, RunnerConfig
+from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, RunnerConfig, PersonaConfig
 from fluxloop_cli.arg_binder import ArgBinder
 
 
@@ -157,4 +157,51 @@ def test_raises_for_missing_callable_mapping(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Missing callable providers"):
         binder.bind_call_args(handler, runtime_input="test")
+
+
+def test_injects_conversation_state_and_persona():
+    config = build_config()
+    binder = ArgBinder(config)
+
+    persona = PersonaConfig(
+        name="traveler",
+        description="Business traveler persona",
+        characteristics=["busy"],
+    )
+    state = {
+        "turns": [{"role": "user", "content": "Hello"}],
+        "metadata": {"service_context": "booking"},
+        "context": {"notes": "initial"},
+    }
+
+    def handler(
+        input_text: str,
+        conversation_state=None,
+        persona=None,
+        auto_approve: bool = False,
+        iteration: int = 0,
+        messages=None,
+    ):
+        return {
+            "conversation_state": conversation_state,
+            "persona": persona,
+            "auto_approve": auto_approve,
+            "iteration": iteration,
+            "messages": messages,
+        }
+
+    kwargs = binder.bind_call_args(
+        handler,
+        runtime_input="Hi again",
+        iteration=3,
+        conversation_state=state,
+        persona=persona,
+        auto_approve=True,
+    )
+
+    assert kwargs["conversation_state"] is state
+    assert kwargs["messages"] == state["turns"]
+    assert kwargs["persona"] is persona
+    assert kwargs["auto_approve"] is True
+    assert kwargs["iteration"] == 3
 

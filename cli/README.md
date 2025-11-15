@@ -31,6 +31,20 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
 - `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment
 
+### Multi-turn supervisor options
+
+`fluxloop run experiment` supports multi-turn orchestration out of the box:
+
+- Toggle with `--multi-turn/--no-multi-turn`
+- Limit depth via `--max-turns`
+- Control tool approvals with `--auto-approve-tools/--manual-approve-tools`
+- Override the supervisor persona target: `--persona-override`
+- Point at a specific LLM: `--supervisor-provider`, `--supervisor-model`, `--supervisor-temperature`, `--supervisor-api-key`
+
+These flags override the values in `configs/simulation.yaml` (`multi_turn` block). When enabled, the runner consults the supervisor after every turn to decide whether to continue and to synthesize the next realistic user message.
+
+**Scripted Playback Mode**: For deterministic multi-turn scenarios, switch `supervisor.provider` to `mock` and populate `supervisor.metadata.scripted_questions` with a list of user messages. FluxLoop will replay them sequentially and terminate when the script ends—ideal for regression testing and demos.
+
 Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
 
 ## Quick Setup Script
