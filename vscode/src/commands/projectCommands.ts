@@ -114,7 +114,8 @@ export class ProjectCommands {
     private async prepareProjectEnvironment(projectRoot: string, projectName: string): Promise<PreparedEnvironment | undefined> {
         let selectedRoot: string | undefined;
 
-        while (true) {
+        let shouldContinue = true;
+        while (shouldContinue) {
             if (!selectedRoot) {
                 const choice = await this.promptEnvironmentChoice(projectRoot, projectName);
                 if (!choice) {
@@ -152,8 +153,9 @@ export class ProjectCommands {
                 selectedRoot = undefined;
                 continue;
             }
-            return undefined;
+            shouldContinue = false;
         }
+        return undefined;
     }
 
     private async promptEnvironmentChoice(projectRoot: string, projectName: string): Promise<{ mode: 'workspace'; root: string } | { mode: 'global' } | undefined> {
