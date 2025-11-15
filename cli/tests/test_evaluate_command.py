@@ -333,3 +333,51 @@ def test_evaluate_phase2_extended_outputs(tmp_path: Path) -> None:
     assert "outliers" in performance_analysis and "trends" in performance_analysis
     comparison = analysis["comparison"]
     assert "baseline_path" in comparison and comparison["baseline_path"].endswith("baseline_summary.json")
+
+
+def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch) -> None:
+    project_dir = tmp_path
+    configs_dir = project_dir / "configs"
+    configs_dir.mkdir()
+
+    env_path = project_dir / ".env"
+    env_path.write_text("FLUXLOOP_LLM_API_KEY=sk-test-key\n", encoding="utf-8")
+
+    eval_config = configs_dir / "evaluation.yaml"
+    _write_eval_config(eval_config, include_llm=True)
+
+    experiment_dir = project_dir / "experiments" / "run_1"
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    _write_trace_summary(experiment_dir / "trace_summary.jsonl")
+
+    captured: dict[str, object] = {}
+
+    def fake_run_evaluation(exp_dir, config, options):
+        captured["llm_api_key"] = options.llm_api_key
+        captured["sample_rate"] = options.sample_rate
+        return {}
+
+    monkeypatch.delenv("FLUXLOOP_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "fluxloop_cli.commands.evaluate.run_evaluation", fake_run_evaluation
+    )
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "evaluate",
+            "experiment",
+            str(experiment_dir),
+            "--config",
+            str(eval_config),
+            "--output",
+            "evaluation",
+        ],
+    )
+
+    monkeypatch.delenv("FLUXLOOP_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    assert result.exit_code == 0, result.output
+    assert captured["llm_api_key"] == "sk-test-key"

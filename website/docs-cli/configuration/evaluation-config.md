@@ -34,7 +34,7 @@ evaluators:
     type: llm_judge
     enabled: false
     weight: 0.5
-    model: gpt-4o-mini
+    model: gpt-5-mini
     prompt_template: |
       Score the assistant's response from 1-10.
       Input: {input}
@@ -102,7 +102,7 @@ Use language models to score subjective quality:
   type: llm_judge
   enabled: true
   weight: 0.7
-  model: gpt-4o-mini
+  model: gpt-5-mini
   prompt_template: |
     You are an expert judge. Score the assistant's response from 1-10.
     
@@ -117,8 +117,11 @@ Use language models to score subjective quality:
     Respond with: "Score: <number>/10" and a brief reason.
   max_score: 10
   parser: first_number_1_10
-  metadata:
-    model_temperature: 0.0
+  model_parameters:
+    reasoning:
+      effort: medium
+    text:
+      verbosity: medium
 ```
 
 #### Supported Parsers
@@ -144,6 +147,29 @@ aggregate:
 
 - **`weighted_sum`**: `final_score = Σ(evaluator_score × weight) / Σ(weight)`
 - **`average`**: `final_score = Σ(evaluator_score) / count`
+
+#### GPT-5 parameter compatibility
+
+- `gpt-5` 계열은 `temperature`, `top_p`, `logprobs` 파라미터를 지원하지 않습니다. 해당 필드를 포함하면 호출이 실패합니다.
+- 대신 아래 컨트롤을 사용하세요.
+  - `reasoning: { effort: "minimal" | "low" | "medium" | "high" }`
+  - `text: { verbosity: "low" | "medium" | "high" }`
+  - `max_output_tokens` (선택값, 응답 길이 제한이 필요할 때만 설정)
+- 복잡한 평가 작업(o3·o4-mini 계열을 사용하던 작업 등)은 `gpt-5` 모델 + `reasoning.effort: high`로 대체하면 더 나은 추론 품질을 기대할 수 있습니다.
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+
+result = client.responses.create(
+    model="gpt-5",
+    input="Find the null pointer exception: ...your code here...",
+    reasoning={"effort": "high"},
+)
+
+print(result.output_text)
+```
 
 ## Limits
 

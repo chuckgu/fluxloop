@@ -188,6 +188,141 @@ def _compare_to_baseline(current: Dict[str, Any], baseline: Dict[str, Any]) -> D
     return comparisons
 
 
+def _format_percent(value: Optional[float]) -> str:
+    if value is None:
+        return "—"
+    return f"{value * 100:.1f}%"
+
+
+def _generate_recommendations(
+    summary: Dict[str, Any],
+    analysis: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+
+    pass_rate = summary.get("pass_rate")
+    threshold = summary.get("threshold")
+    if isinstance(pass_rate, (int, float)) and isinstance(threshold, (int, float)):
+        if pass_rate < threshold:
+            top_reason = None
+            top_reasons = summary.get("top_reasons") or []
+            if top_reasons:
+                top_reason = top_reasons[0][0]
+            summary_text = (
+                f"Pass rate is {_format_percent(pass_rate)} (goal {_format_percent(threshold)})."
+            )
+            if top_reason:
+                summary_text += f" Most common failure reason: {top_reason}."
+            items.append(
+                {
+                    "title": "Boost overall pass rate",
+                    "priority": "high",
+                    "summary": summary_text,
+                    "metrics": {
+                        "pass_rate": pass_rate,
+                        "threshold": threshold,
+                    },
+                }
+            )
+
+    persona_breakdown = summary.get("persona_breakdown") or {}
+    if isinstance(persona_breakdown, dict) and isinstance(threshold, (int, float)):
+        for persona, stats in persona_breakdown.items():
+            persona_pass_rate = stats.get("pass_rate")
+            if isinstance(persona_pass_rate, (int, float)) and persona_pass_rate < threshold:
+                items.append(
+                    {
+                        "title": f"Target persona '{persona}'",
+                        "priority": "medium",
+                        "summary": (
+                            f"{persona} pass rate is {_format_percent(persona_pass_rate)} "
+                            f"(goal {_format_percent(threshold)}). Prioritize playbooks or prompts for this persona."
+                        ),
+                        "metrics": {
+                            "persona": persona,
+                            "pass_rate": persona_pass_rate,
+                            "threshold": threshold,
+                        },
+                    }
+                )
+
+    comparison = analysis.get("comparison")
+    if isinstance(comparison, dict):
+        evaluator_deltas = comparison.get("evaluator_averages") or {}
+        if isinstance(evaluator_deltas, dict):
+            for evaluator_name, payload in evaluator_deltas.items():
+                delta = payload.get("delta")
+                if isinstance(delta, (int, float)) and delta < -0.05:
+                    items.append(
+                        {
+                            "title": f"Recover regression in {evaluator_name}",
+                            "priority": "high",
+                            "summary": (
+                                f"{evaluator_name} average score dropped by {delta:.3f} "
+                                "vs. baseline. Investigate prompt or flow changes."
+                            ),
+                            "metrics": {
+                                "evaluator": evaluator_name,
+                                "delta": delta,
+                                "baseline": payload.get("baseline"),
+                                "current": payload.get("current"),
+                            },
+                        }
+                    )
+
+    failures = analysis.get("failures")
+    if isinstance(failures, dict):
+        categorized = failures.get("categorized") or {}
+        if isinstance(categorized, dict) and categorized:
+            top_failure = max(categorized.items(), key=lambda item: item[1])
+            category, count = top_failure
+            if count:
+                items.append(
+                    {
+                        "title": f"Address {category.replace('_', ' ')} failures",
+                        "priority": "medium",
+                        "summary": (
+                            f"{count} traces failed due to {category.replace('_', ' ')} issues. "
+                            "Review tooling and guardrails for this category."
+                        ),
+                        "metrics": {
+                            "category": category,
+                            "count": count,
+                        },
+                    }
+                )
+
+    performance = analysis.get("performance")
+    if isinstance(performance, dict):
+        trends = performance.get("trends") or {}
+        if isinstance(trends, dict):
+            final_score_trend = trends.get("final_score")
+            if isinstance(final_score_trend, dict) and final_score_trend.get("trend") == "decreasing":
+                slope = final_score_trend.get("slope")
+                items.append(
+                    {
+                        "title": "Investigate declining trend",
+                        "priority": "medium",
+                        "summary": (
+                            "Average final score shows a decreasing trend. "
+                            "Review recent dataset or agent updates."
+                        )
+                        + (f" Slope: {slope:.3f}." if isinstance(slope, (int, float)) else ""),
+                        "metrics": {
+                            "trend": final_score_trend.get("trend"),
+                            "slope": slope,
+                        },
+                    }
+                )
+
+    # Deduplicate by title to avoid noisy recommendations.
+    unique: Dict[str, Dict[str, Any]] = {}
+    for item in items:
+        unique.setdefault(item["title"], item)
+
+    return list(unique.values())
+
+
 def compute_additional_analysis(
     results: List["TraceOutcome"],
     summary: Dict[str, Any],
@@ -254,6 +389,10 @@ def compute_additional_analysis(
     elif comparison_enabled:
         analysis.setdefault("comparison", {})
         analysis["comparison"]["message"] = "Comparison enabled but no baseline path provided."
+
+    recommendations = _generate_recommendations(summary, analysis)
+    if recommendations:
+        analysis["recommendations"] = recommendations
 
     return analysis
 

@@ -124,6 +124,16 @@ def write_markdown_report(summary: Dict[str, Any], results: List["TraceOutcome"]
                     lines.append(f"- {key}: {json.dumps(value, ensure_ascii=False)}")
             lines.append("")
 
+        recommendations = analysis.get("recommendations")
+        if recommendations:
+            lines.append("### Recommendations")
+            for recommendation in recommendations:
+                title = recommendation.get("title", "Recommendation")
+                priority = recommendation.get("priority", "medium").title()
+                summary_text = recommendation.get("summary", "")
+                lines.append(f"- **{title}** ({priority}): {summary_text}")
+            lines.append("")
+
     lines.append("## Evaluator Stats\n")
     lines.append("| Evaluator | Avg | Min | Max | Count |")
     lines.append("|-----------|-----|-----|-----|-------|")

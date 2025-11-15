@@ -36,6 +36,17 @@ def _deterministic_sample(trace_id: Optional[str], sample_rate: float) -> bool:
     return rng.random() < sample_rate
 
 
+def _stringify(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except TypeError:
+        return str(value)
+
+
 def _parse_first_number_1_10(text: str) -> Tuple[Optional[float], Optional[str]]:
     match = re.search(r"(\d+(?:\.\d+)?)", text)
     if not match:
@@ -146,6 +157,7 @@ class LLMEvaluationManager:
             {
                 "evaluator": evaluator.name,
                 "model": evaluator.model,
+                "model_parameters": evaluator.model_parameters,
                 "prompt": prompt,
                 "trace_id": trace.get("trace_id"),
                 "iteration": trace.get("iteration"),
@@ -167,6 +179,22 @@ class LLMEvaluationManager:
 
     def _prepare_prompt(self, evaluator: EvaluatorConfig, trace: Dict[str, Any]) -> str:
         template = evaluator.prompt_template or ""
+        metadata_obj = trace.get("metadata")
+        history = trace.get("history")
+
+        guidelines = trace.get("guidelines")
+        policy_context = trace.get("policy_context")
+        requirements = trace.get("requirements")
+        supporting_data = trace.get("supporting_data")
+        knowledge_base = trace.get("knowledge_base")
+
+        if isinstance(metadata_obj, dict):
+            guidelines = guidelines or metadata_obj.get("guidelines")
+            policy_context = policy_context or metadata_obj.get("policy_context")
+            requirements = requirements or metadata_obj.get("requirements")
+            supporting_data = supporting_data or metadata_obj.get("supporting_data")
+            knowledge_base = knowledge_base or metadata_obj.get("knowledge_base")
+
         context = SafeFormatDict(
             {
                 "input": trace.get("input") or "",
@@ -174,9 +202,57 @@ class LLMEvaluationManager:
                 "persona": trace.get("persona") or "",
                 "iteration": trace.get("iteration"),
                 "trace_id": trace.get("trace_id") or "",
+                "metadata": _stringify(metadata_obj),
+                "history": _stringify(history),
+                "guidelines": _stringify(guidelines),
+                "policy_context": _stringify(policy_context),
+                "requirements": _stringify(requirements),
+                "supporting_data": _stringify(supporting_data),
+                "knowledge_base": _stringify(knowledge_base),
             }
         )
         return template.format_map(context)
+
+    def _build_model_parameters(self, evaluator: EvaluatorConfig) -> Tuple[int, Dict[str, Any]]:
+        params = evaluator.model_parameters or {}
+        fallback_max_tokens = int(params.get("max_output_tokens") or 512)
+
+        request_kwargs: Dict[str, Any] = {}
+        if params.get("max_output_tokens") is not None:
+            request_kwargs["max_output_tokens"] = fallback_max_tokens
+
+        model_name = (evaluator.model or "").lower()
+        is_gpt5 = model_name.startswith("gpt-5")
+
+        reasoning = params.get("reasoning")
+        if reasoning is None and is_gpt5:
+            reasoning = {"effort": "medium"}
+        if reasoning is not None:
+            request_kwargs["reasoning"] = reasoning
+
+        text_settings = params.get("text")
+        if text_settings is None and is_gpt5:
+            text_settings = {"verbosity": "medium"}
+        if text_settings is not None:
+            request_kwargs["text"] = text_settings
+
+        presence_penalty = params.get("presence_penalty")
+        if presence_penalty is not None:
+            request_kwargs["presence_penalty"] = float(presence_penalty)
+
+        frequency_penalty = params.get("frequency_penalty")
+        if frequency_penalty is not None:
+            request_kwargs["frequency_penalty"] = float(frequency_penalty)
+
+        response_format = params.get("response_format")
+        if response_format:
+            request_kwargs["response_format"] = response_format
+
+        seed = params.get("seed")
+        if seed is not None:
+            request_kwargs["seed"] = int(seed)
+
+        return fallback_max_tokens, request_kwargs
 
     def _invoke_model(self, evaluator: EvaluatorConfig, prompt: str) -> Tuple[Optional[str], Optional[str]]:
         if not self._client:
@@ -185,11 +261,13 @@ class LLMEvaluationManager:
         if self.max_calls is not None and self.calls_made >= self.max_calls:
             return None, "LLM evaluation budget exhausted"
 
+        max_output_tokens, request_kwargs = self._build_model_parameters(evaluator)
+
         try:
             response = self._client.responses.create(  # type: ignore[attr-defined]
                 model=evaluator.model,
                 input=prompt,
-                max_output_tokens=512,
+                **request_kwargs,
             )
             self.calls_made += 1
             output = response.output_text  # type: ignore[attr-defined]
@@ -197,13 +275,19 @@ class LLMEvaluationManager:
         except AttributeError:
             # Fallback for older openai versions
             try:
+                completion_kwargs: Dict[str, Any] = {"max_tokens": max_output_tokens}
+                if "presence_penalty" in request_kwargs:
+                    completion_kwargs["presence_penalty"] = request_kwargs["presence_penalty"]
+                if "frequency_penalty" in request_kwargs:
+                    completion_kwargs["frequency_penalty"] = request_kwargs["frequency_penalty"]
+
                 completion = self._client.chat.completions.create(  # type: ignore[attr-defined]
                     model=evaluator.model,
                     messages=[
                         {"role": "system", "content": "You are an expert evaluator."},
                         {"role": "user", "content": prompt},
                     ],
-                    max_tokens=512,
+                    **completion_kwargs,
                 )
                 self.calls_made += 1
                 text = completion.choices[0].message.content  # type: ignore[index]
@@ -252,6 +336,7 @@ class LLMEvaluationManager:
                     "cached": True,
                     "raw_score": raw_score,
                     "response": cached.get("response"),
+                    "model_parameters": evaluator.model_parameters,
                 },
             )
 
@@ -292,6 +377,7 @@ class LLMEvaluationManager:
             "raw_score": raw_score,
             "reason": reason_text,
             "response": response_text,
+            "model_parameters": evaluator.model_parameters,
         }
         self._save_to_cache(cache_key, record)
 
@@ -305,6 +391,7 @@ class LLMEvaluationManager:
                 "raw_score": raw_score,
                 "max_score": max_score,
                 "response": response_text,
+                "model_parameters": evaluator.model_parameters,
             },
         )
 

@@ -3,7 +3,7 @@ FluxLoop SDK - Agent instrumentation and tracing library.
 """
 
 from .context import FluxLoopContext, get_current_context, instrument
-from .decorators import agent, prompt, tool
+from .decorators import agent, prompt, tool, trace
 from .schemas import (
     ExperimentConfig,
     PersonaConfig,
@@ -33,6 +33,7 @@ __all__ = [
     "agent",
     "prompt",
     "tool",
+    "trace",
     # Context
     "instrument",
     "get_current_context",

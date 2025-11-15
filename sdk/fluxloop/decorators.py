@@ -6,13 +6,135 @@ import functools
 import inspect
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union, cast
 from uuid import UUID, uuid4
 
 from .context import get_current_context
 from .models import ObservationData, ObservationType
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+def trace(
+    name: Optional[str] = None,
+    observation_type: Union[ObservationType, str] = ObservationType.SPAN,
+    metadata: Optional[Dict[str, Any]] = None,
+    capture_input: bool = True,
+    capture_output: bool = True,
+) -> Callable[[F], F]:
+    """
+    General-purpose decorator for recording an observation around a function call.
+
+    Args:
+        name: Display name for the observation (defaults to function name)
+        observation_type: ObservationType enum (or string value) for the span
+        metadata: Optional metadata to attach to the observation
+        capture_input: Whether to store serialized function arguments
+        capture_output: Whether to store the serialized return value
+    """
+
+    if isinstance(observation_type, str):
+        try:
+            observation_type = ObservationType(observation_type)
+        except ValueError as exc:
+            valid_types = ", ".join(t.value for t in ObservationType)
+            raise ValueError(
+                f"Invalid observation_type '{observation_type}'. "
+                f"Expected one of: {valid_types}"
+            ) from exc
+
+    def decorator(func: F) -> F:
+        trace_name = name or func.__name__
+
+        @functools.wraps(func)
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            context = get_current_context()
+            if not context or not context.is_enabled():
+                return func(*args, **kwargs)
+
+            obs_id = uuid4()
+            start_time = datetime.now(timezone.utc)
+
+            input_data = None
+            if capture_input:
+                input_data = _serialize_arguments(func, args, kwargs)
+
+            observation = ObservationData(
+                id=obs_id,
+                type=observation_type,
+                name=trace_name,
+                start_time=start_time,
+                input=input_data,
+                metadata=dict(metadata or {}),
+            )
+
+            context.push_observation(observation)
+
+            try:
+                result = func(*args, **kwargs)
+
+                if capture_output:
+                    observation.output = _serialize_value(result)
+
+                return result
+
+            except Exception as error:  # noqa: BLE001
+                observation.error = str(error)
+                observation.metadata["error_type"] = type(error).__name__
+                observation.metadata["traceback"] = traceback.format_exc()
+                raise
+
+            finally:
+                observation.end_time = datetime.now(timezone.utc)
+                context.pop_observation()
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            context = get_current_context()
+            if not context or not context.is_enabled():
+                return await func(*args, **kwargs)
+
+            obs_id = uuid4()
+            start_time = datetime.now(timezone.utc)
+
+            input_data = None
+            if capture_input:
+                input_data = _serialize_arguments(func, args, kwargs)
+
+            observation = ObservationData(
+                id=obs_id,
+                type=observation_type,
+                name=trace_name,
+                start_time=start_time,
+                input=input_data,
+                metadata=dict(metadata or {}),
+            )
+
+            context.push_observation(observation)
+
+            try:
+                result = await func(*args, **kwargs)
+
+                if capture_output:
+                    observation.output = _serialize_value(result)
+
+                return result
+
+            except Exception as error:  # noqa: BLE001
+                observation.error = str(error)
+                observation.metadata["error_type"] = type(error).__name__
+                observation.metadata["traceback"] = traceback.format_exc()
+                raise
+
+            finally:
+                observation.end_time = datetime.now(timezone.utc)
+                context.pop_observation()
+
+        if inspect.iscoroutinefunction(func):
+            return cast(F, async_wrapper)
+        return cast(F, sync_wrapper)
+
+    return decorator
 
 
 def agent(

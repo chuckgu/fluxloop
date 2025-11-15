@@ -32,6 +32,7 @@ class EvaluatorConfig:
     prompt_template: Optional[str] = None
     max_score: Optional[float] = None
     parser: Optional[str] = None
+    model_parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -229,6 +230,14 @@ class EvaluationConfig:
     report: ReportConfig = field(default_factory=ReportConfig)
     advanced: AdvancedConfig = field(default_factory=AdvancedConfig)
 
+    def set_source_dir(self, source_dir: Path) -> None:
+        """Remember the directory where this config file was loaded from."""
+        self._source_dir = source_dir
+
+    def get_source_dir(self) -> Optional[Path]:
+        """Return the directory where the config file was loaded from."""
+        return getattr(self, "_source_dir", None)
+
 
 def _load_yaml(path: Path) -> Dict[str, Any]:
     if not path.exists():
@@ -281,6 +290,14 @@ def _parse_evaluators(raw_evaluators: Any) -> List[EvaluatorConfig]:
         if evaluator_type not in {"rule_based", "llm_judge"}:
             raise ValueError(f"Unsupported evaluator type: {evaluator_type}")
 
+        model_parameters_raw = entry.get("model_parameters")
+        if model_parameters_raw is None:
+            model_parameters: Dict[str, Any] = {}
+        elif isinstance(model_parameters_raw, dict):
+            model_parameters = dict(model_parameters_raw)
+        else:
+            raise ValueError("model_parameters must be a mapping when provided")
+
         config = EvaluatorConfig(
             name=str(entry["name"]),
             type=evaluator_type,  # type: ignore[arg-type]
@@ -291,6 +308,7 @@ def _parse_evaluators(raw_evaluators: Any) -> List[EvaluatorConfig]:
             prompt_template=entry.get("prompt_template"),
             max_score=entry.get("max_score"),
             parser=entry.get("parser"),
+            model_parameters=model_parameters,
             metadata={
                 k: v
                 for k, v in entry.items()
@@ -305,6 +323,7 @@ def _parse_evaluators(raw_evaluators: Any) -> List[EvaluatorConfig]:
                     "prompt_template",
                     "max_score",
                     "parser",
+                    "model_parameters",
                 }
             },
         )
@@ -693,7 +712,9 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
     report = _parse_report(data.get("report"))
     advanced = _parse_advanced(data.get("advanced"))
 
-    return EvaluationConfig(
+    config_dir = path.parent.resolve()
+
+    config = EvaluationConfig(
         evaluators=evaluators,
         aggregate=aggregate,
         limits=limits,
@@ -703,5 +724,9 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
         report=report,
         advanced=advanced,
     )
+
+    config.set_source_dir(config_dir)
+
+    return config
 
 

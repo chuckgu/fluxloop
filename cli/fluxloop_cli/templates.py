@@ -2,7 +2,9 @@
 Templates for generating configuration and code files.
 """
 
-from textwrap import dedent
+from textwrap import dedent, indent
+
+from fluxloop_cli.evaluation.prompts import get_prompt_bundle
 
 
 def create_project_config(project_name: str) -> str:
@@ -42,7 +44,7 @@ def create_input_config() -> str:
     """Create default input configuration content."""
 
     return dedent(
-        """
+        f"""
         # FluxLoop Input Configuration
         # ------------------------------------------------------------
         # Defines personas, base inputs, and generation modes.
@@ -118,7 +120,7 @@ def create_simulation_config(project_name: str) -> str:
         name: {project_name}_experiment
         description: AI agent simulation experiment
 
-        iterations: 10           # Number of times to cycle through inputs/personas
+        iterations: 1           # Number of times to cycle through inputs/personas
         parallel_runs: 1          # Increase for concurrent execution (ensure thread safety)
         run_delay_seconds: 0      # Optional delay between runs to avoid rate limits
         seed: 42                  # Set for reproducibility; remove for randomness
@@ -147,8 +149,24 @@ def create_simulation_config(project_name: str) -> str:
 def create_evaluation_config() -> str:
     """Create default evaluation configuration content."""
 
+    intent_prompt = indent(get_prompt_bundle("intent_recognition").with_header(), "              ")
+    consistency_prompt = indent(get_prompt_bundle("response_consistency").with_header(), "              ")
+    clarity_prompt = indent(get_prompt_bundle("response_clarity").with_header(), "              ")
+    completeness_prompt = indent(get_prompt_bundle("information_completeness").with_header(), "              ")
+
+    intent_sample = get_prompt_bundle("intent_recognition").sample_response
+    consistency_sample = get_prompt_bundle("response_consistency").sample_response
+    clarity_sample = get_prompt_bundle("response_clarity").sample_response
+    completeness_sample = get_prompt_bundle("information_completeness").sample_response
+
+    sample_indent = "                "
+    intent_sample_block = indent(intent_sample.strip(), sample_indent)
+    consistency_sample_block = indent(consistency_sample.strip(), sample_indent)
+    clarity_sample_block = indent(clarity_sample.strip(), sample_indent)
+    completeness_sample_block = indent(completeness_sample.strip(), sample_indent)
+
     return dedent(
-        """
+        f"""
         # FluxLoop Evaluation Configuration
         # ------------------------------------------------------------
         # Controls how experiment results are evaluated.
@@ -188,7 +206,7 @@ def create_evaluation_config() -> str:
           - name: keyword_quality
             type: rule_based
             enabled: true
-            weight: 0.2
+            weight: 0.1
             rules:
               - check: contains
                 target: output
@@ -200,28 +218,84 @@ def create_evaluation_config() -> str:
           - name: similarity_to_expected
             type: rule_based
             enabled: true
-            weight: 0.2
+            weight: 0.1
             rules:
               - check: similarity
                 target: output
                 expected_path: metadata.expected
                 method: difflib
 
-          - name: llm_response_quality
+          - name: intent_recognition
             type: llm_judge
-            enabled: false
-            weight: 0.2
+            enabled: true
+            weight: 0.25
             model: gpt-5-mini
+            model_parameters:
+              reasoning:
+                effort: medium
+              text:
+                verbosity: medium
             prompt_template: |
-              You are an expert judge. Score the assistant's response from 1-10.
-              Input: {input}
-              Output: {output}
-              Consider relevance, completeness, clarity, and tone.
-              Reply with "Score: <number>/10" and a short reason.
+{intent_prompt}
             max_score: 10
             parser: first_number_1_10
             metadata:
-              model_temperature: 0.0
+              sample_response: |
+{intent_sample_block}
+
+          - name: response_consistency
+            type: llm_judge
+            enabled: true
+            weight: 0.25
+            model: gpt-5-mini
+            model_parameters:
+              reasoning:
+                effort: medium
+              text:
+                verbosity: medium
+            prompt_template: |
+{consistency_prompt}
+            max_score: 10
+            parser: first_number_1_10
+            metadata:
+              sample_response: |
+{consistency_sample_block}
+
+          - name: response_clarity
+            type: llm_judge
+            enabled: true
+            weight: 0.2
+            model: gpt-5-mini
+            model_parameters:
+              reasoning:
+                effort: medium
+              text:
+                verbosity: medium
+            prompt_template: |
+{clarity_prompt}
+            max_score: 10
+            parser: first_number_1_10
+            metadata:
+              sample_response: |
+{clarity_sample_block}
+
+          - name: information_completeness
+            type: llm_judge
+            enabled: false
+            weight: 0.1
+            model: gpt-5-mini
+            model_parameters:
+              reasoning:
+                effort: medium
+              text:
+                verbosity: medium
+            prompt_template: |
+{completeness_prompt}
+            max_score: 10
+            parser: first_number_1_10
+            metadata:
+              sample_response: |
+{completeness_sample_block}
 
         # ------------------------------------------------------------
         # Aggregation Settings
@@ -233,7 +307,7 @@ def create_evaluation_config() -> str:
         # ------------------------------------------------------------
         # Limits (LLM cost controls)
         limits:
-          sample_rate: 0.3          # evaluate 30% of traces with LLM
+          sample_rate: 1.0          # evaluate 100% of traces with LLM
           max_llm_calls: 50         # cap total LLM API calls
           timeout_seconds: 60
           cache: evaluation_cache.jsonl
@@ -458,15 +532,16 @@ def create_env_file() -> str:
         FLUXLOOP_SAMPLE_RATE=1.0
         # Argument Recording (global toggle)
         FLUXLOOP_RECORD_ARGS=false
-        FLUXLOOP_RECORDING_FILE=recordings/args_recording.jsonl
+        FLUXLOOP_RECORDING_FILE=
+        # Example: recordings/args_recording.jsonl (project-relative) or absolute path
 
         # Service Configuration
         FLUXLOOP_SERVICE_NAME=my-agent
         FLUXLOOP_ENVIRONMENT=development
 
         # LLM API Keys (if needed)
-        # OPENAI_API_KEY=sk-...
-        # ANTHROPIC_API_KEY=sk-ant-...
+        OPENAI_API_KEY=
+        # ANTHROPIC_API_KEY=
 
         # Other Configuration
         # Add your custom environment variables here

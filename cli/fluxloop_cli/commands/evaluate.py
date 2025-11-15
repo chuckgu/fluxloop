@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
 
+from ..environment import load_env_chain
 from ..evaluation import EvaluationOptions, load_evaluation_config, run_evaluation
 
 console = Console()
@@ -133,6 +135,20 @@ def experiment(
         raise typer.BadParameter(str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         raise typer.BadParameter(f"Failed to load evaluation config: {exc}") from exc
+
+    def _log_env_error(path: Path, exc: Exception) -> None:
+        console.log(
+            f"[yellow]Warning:[/yellow] Failed to load environment from {path}: {exc}"
+        )
+
+    load_env_chain(
+        evaluation_config.get_source_dir(),
+        refresh_config=True,
+        on_error=_log_env_error,
+    )
+
+    if llm_api_key is None:
+        llm_api_key = os.getenv("FLUXLOOP_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
 
     output_dir = output
     if not output_dir.is_absolute():

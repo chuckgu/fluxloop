@@ -137,27 +137,11 @@ def project(
         section_path = section_paths[key]
         section_path.write_text(content)
     
-    # Create project .env (unified)
-    root_env_file = root_dir / ".env"
+    # Create project .env (single source of truth)
     console.print("🔐 Creating project .env...")
     recordings_dir = project_path / "recordings"
     recordings_dir.mkdir(exist_ok=True)
-
-    # If a root .env exists, seed project .env with its contents so project can override locally
-    if root_env_file.exists():
-        try:
-            root_contents = root_env_file.read_text()
-        except Exception:
-            root_contents = ""
-        merged = (
-            "# Project .env (seeded from FluxLoop root .env)\n"
-            + (root_contents if root_contents.endswith("\n") else root_contents + "\n")
-            + "\n# Project-specific overrides (take precedence)\n"
-        )
-        env_file.write_text(merged)
-        console.print("[dim]Seeded from root .env (project overrides take precedence).[/dim]")
-    else:
-        env_file.write_text(create_env_file())
+    env_file.write_text(create_env_file())
     
     # Update .gitignore
     if not gitignore_file.exists():
@@ -195,12 +179,16 @@ def project(
     # Show next steps
     console.print("\n[bold]Next steps:[/bold]")
     console.print("1. Review configs in [cyan]configs/[/cyan] (project/input/simulation/evaluation)")
-    console.print("2. Set up environment variables in [cyan].env[/cyan]")
+    console.print("2. Configure secrets via [cyan].env[/cyan] or [green]fluxloop config set-llm[/green]")
     if with_example:
-        console.print("3. Try running: [green]fluxloop run experiment[/green]")
+        console.print("3. Customize the sample agent in [cyan]examples/simple_agent.py[/cyan]")
     else:
-        console.print("3. Add your agent code")
-        console.print("4. Run: [green]fluxloop run experiment[/green]")
+        console.print("3. Create your agent: [green]fluxloop init agent <name>[/green]")
+    console.print("4. Generate inputs: [green]fluxloop generate inputs[/green]")
+    console.print("5. Run the experiment: [green]fluxloop run experiment[/green]")
+    console.print("6. Parse outputs: [green]fluxloop parse experiment[/green]")
+    console.print("7. Evaluate results (optional): [green]fluxloop evaluate experiment[/green]")
+    console.print("8. Diagnose environment anytime: [green]fluxloop doctor[/green]")
 
 
 @app.command()
