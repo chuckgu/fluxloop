@@ -9,6 +9,7 @@ next user utterance consistent with the experiment persona and service context.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ import httpx
 
 from fluxloop.schemas import MultiTurnSupervisorConfig
 
+logger = logging.getLogger(__name__)
 SupervisorDecisionType = Literal["continue", "terminate"]
 
 
@@ -35,13 +37,31 @@ class SupervisorDecision:
         return self.decision == "continue"
 
 
+def _coerce_text(value: Any) -> str:
+    """Convert any value into a safe string representation."""
+
+    if value is None:
+        return ""
+
+    if isinstance(value, str):
+        return value
+
+    if isinstance(value, (dict, list, tuple, set)):
+        try:
+            return json.dumps(value, ensure_ascii=False)
+        except Exception:
+            return str(value)
+
+    return str(value)
+
+
 def format_transcript(turns: Sequence[Dict[str, Any]]) -> str:
     """Render a conversation transcript into a bullet list for supervisor prompts."""
 
     lines: List[str] = []
     for idx, turn in enumerate(turns, start=1):
         role = turn.get("role", "unknown").capitalize()
-        content = turn.get("content") or ""
+        content = _coerce_text(turn.get("content"))
         content = content.strip()
 
         if turn.get("tool_calls"):
@@ -51,7 +71,7 @@ def format_transcript(turns: Sequence[Dict[str, Any]]) -> str:
                 for call in tool_calls:
                     name = call.get("name") or call.get("tool") or "tool"
                     args = call.get("arguments") or call.get("args") or {}
-                    tool_summaries.append(f"{name}({json.dumps(args, ensure_ascii=False)})")
+                    tool_summaries.append(f"{name}({_coerce_text(args)})")
                 if tool_summaries:
                     content = f"{content}\n    [Tool Calls] " + "; ".join(tool_summaries)
         lines.append(f"{idx}. {role}: {content}")
@@ -118,6 +138,13 @@ class ConversationSupervisor:
         )
 
         provider = (self.config.provider or "openai").lower()
+        logger.debug(
+            "supervisor.decide provider=%s turns=%d persona=%r service=%r",
+            provider,
+            len(turns),
+            persona_description,
+            service_context,
+        )
         if provider == "mock":
             return self._mock_decision(conversation_state)
         if provider == "openai":
@@ -131,6 +158,11 @@ class ConversationSupervisor:
         """Deterministic supervisor used for tests, scripted runs, or offline modes."""
 
         metadata = self.config.metadata or {}
+        logger.debug(
+            "mock supervisor state: scripted_questions=%s context_keys=%s",
+            isinstance(metadata.get("scripted_questions"), list),
+            list(conversation_state.get("context", {}).keys()),
+        )
 
         scripted_questions = metadata.get("scripted_questions")
         if isinstance(scripted_questions, list):

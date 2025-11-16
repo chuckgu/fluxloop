@@ -13,7 +13,15 @@ from typing import Any, Dict, List, Optional, Tuple, Literal
 
 import shutil
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
+from ..artifacts import PerTraceRecord, load_per_trace_records
 from ..config import AggregateConfig, EvaluationConfig, EvaluatorConfig
 from ..llm import LLMEvaluationManager, LLMResult
 from ..rules import RuleContext, RuleResult, evaluate_rule
@@ -37,6 +45,7 @@ class EvaluationOptions:
     report_format: Optional[Literal["md", "html", "both"]] = None
     report_template: Optional[Path] = None
     baseline_path: Optional[Path] = None
+    per_trace_path: Optional[Path] = None
 
 
 @dataclass
@@ -57,26 +66,6 @@ class TraceOutcome:
     evaluator_outcomes: List[EvaluatorOutcome]
     final_score: float
     passed: bool
-
-
-def _load_trace_summaries(path: Path) -> List[Dict[str, Any]]:
-    if not path.exists():
-        raise FileNotFoundError(f"trace_summary.jsonl not found: {path}")
-
-    traces: List[Dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as handle:
-        for line_no, line in enumerate(handle, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                payload = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise ValueError(
-                    f"Invalid JSON in trace_summary.jsonl at line {line_no}: {exc}"
-                ) from exc
-            traces.append(payload)
-    return traces
 
 
 def _prepare_output_directory(path: Path, overwrite: bool) -> None:
@@ -302,11 +291,16 @@ def run_evaluation(
     if not experiment_dir.is_dir():
         raise NotADirectoryError(f"Experiment directory not found: {experiment_dir}")
 
-    trace_summary_path = experiment_dir / "trace_summary.jsonl"
-    traces = _load_trace_summaries(trace_summary_path)
+    per_trace_records: List[PerTraceRecord] = load_per_trace_records(
+        experiment_dir,
+        options.per_trace_path,
+    )
+    traces = [record.trace for record in per_trace_records]
 
     if not traces:
-        raise ValueError("No trace summaries found. Run an experiment before evaluating.")
+        raise ValueError(
+            "No per-trace records available. Run `fluxloop parse` before evaluating."
+        )
 
     _prepare_output_directory(options.output_dir, options.overwrite)
 
@@ -321,9 +315,26 @@ def run_evaluation(
             output_dir=options.output_dir,
         )
 
-    for trace in traces:
-        outcome = _evaluate_trace(trace, config, llm_manager)
-        results.append(outcome)
+    console.print("\n[bold green]🧪 Evaluating traces...[/bold green]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeRemainingColumn(),
+        TextColumn("({task.completed} of {task.total})"),
+        console=console,
+    ) as progress:
+        task_id = progress.add_task(
+            "Evaluating traces",
+            total=len(traces),
+        )
+
+        for trace in traces:
+            outcome = _evaluate_trace(trace, config, llm_manager)
+            results.append(outcome)
+            progress.advance(task_id)
 
     _write_per_trace(results, options.output_dir)
 

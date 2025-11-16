@@ -213,6 +213,16 @@ def test_evaluate_generates_outputs(tmp_path: Path) -> None:
     experiment_dir.mkdir(parents=True)
     _write_trace_summary(experiment_dir / "trace_summary.jsonl")
 
+    parse_result = runner.invoke(
+        cli_main.app,
+        [
+            "parse",
+            "experiment",
+            str(experiment_dir),
+        ],
+    )
+    assert parse_result.exit_code == 0, parse_result.output
+
     config_path = tmp_path / "configs" / "evaluation.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     _write_eval_config(config_path)
@@ -256,6 +266,16 @@ def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path) -> None:
     experiment_dir.mkdir(parents=True, exist_ok=True)
     _write_trace_summary(experiment_dir / "trace_summary.jsonl")
 
+    parse_result = runner.invoke(
+        cli_main.app,
+        [
+            "parse",
+            "experiment",
+            str(experiment_dir),
+        ],
+    )
+    assert parse_result.exit_code == 0, parse_result.output
+
     config_path = tmp_path / "configs" / "evaluation_llm.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     _write_eval_config(config_path, include_llm=True)
@@ -290,6 +310,16 @@ def test_evaluate_phase2_extended_outputs(tmp_path: Path) -> None:
     experiment_dir.mkdir(parents=True)
     _write_phase2_trace_summary(experiment_dir / "trace_summary.jsonl")
     _write_baseline_summary(experiment_dir / "baseline_summary.json")
+
+    parse_result = runner.invoke(
+        cli_main.app,
+        [
+            "parse",
+            "experiment",
+            str(experiment_dir),
+        ],
+    )
+    assert parse_result.exit_code == 0, parse_result.output
 
     config_path = tmp_path / "configs" / "evaluation_phase2.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -349,6 +379,35 @@ def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch) -> None:
     experiment_dir = project_dir / "experiments" / "run_1"
     experiment_dir.mkdir(parents=True, exist_ok=True)
     _write_trace_summary(experiment_dir / "trace_summary.jsonl")
+    (experiment_dir / "per_trace_analysis").mkdir(parents=True, exist_ok=True)
+    per_trace_path = experiment_dir / "per_trace_analysis" / "per_trace.jsonl"
+    per_trace_path.write_text(
+        json.dumps(
+            {
+                "trace_id": "trace-1",
+                "iteration": 0,
+                "persona": "helper",
+                "input": "Hello",
+                "output": "Hi!",
+                "final_output": "Hi!",
+                "duration_ms": 1000,
+                "success": True,
+                "summary": {
+                    "trace_id": "trace-1",
+                    "iteration": 0,
+                    "persona": "helper",
+                    "input": "Hello",
+                    "output": "Hi!",
+                    "duration_ms": 1000,
+                    "success": True,
+                },
+                "timeline": [],
+                "metrics": {"observation_count": 0},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     captured: dict[str, object] = {}
 

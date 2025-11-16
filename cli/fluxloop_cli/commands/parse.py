@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Optional
+from typing import Any, Dict, Iterable, List, Literal, Optional
 
 import typer
 from rich.console import Console
@@ -44,6 +44,24 @@ class Observation:
         except ValueError:
             return None
 
+    def to_payload(self) -> dict:
+        """Return a JSON-serialisable representation of the observation."""
+
+        payload = {
+            "trace_id": self.trace_id,
+            "type": self.type,
+            "name": self.name,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "level": self.level,
+            "duration_ms": self.duration_ms,
+            "input": self.input,
+            "output": self.output,
+        }
+        # Preserve original record for downstream consumers that need full context.
+        payload["raw"] = self.raw
+        return payload
+
 
 @dataclass
 class TraceSummary:
@@ -57,6 +75,20 @@ class TraceSummary:
     duration_ms: float
     success: bool
     raw: dict
+
+    def to_payload(self) -> dict:
+        """Return a JSON-serialisable representation of the summary entry."""
+
+        return {
+            "trace_id": self.trace_id,
+            "iteration": self.iteration,
+            "persona": self.persona,
+            "input": self.input_text,
+            "output": self.output_text,
+            "duration_ms": self.duration_ms,
+            "success": self.success,
+            "raw": self.raw,
+        }
 
 
 def _load_observations(path: Path) -> Dict[str, List[Observation]]:
@@ -155,10 +187,7 @@ def _format_markdown(
 ) -> str:
     """Create markdown visualization for a single trace."""
 
-    observations_sorted = sorted(
-        observations,
-        key=lambda obs: (obs.start_time or "", obs.end_time or ""),
-    )
+    observations_sorted = _sort_observations(observations)
 
     header = (
         "---\n"
@@ -210,6 +239,65 @@ def _format_markdown(
         timeline_lines.append("(no observations recorded)\n")
 
     return header + summary_section + "".join(timeline_lines)
+
+
+def _sort_observations(
+    observations: List[Observation],
+) -> List[Observation]:
+    """Return observations sorted for timeline display."""
+
+    return sorted(
+        observations,
+        key=lambda obs: (obs.start_time or "", obs.end_time or ""),
+    )
+
+
+def _build_timeline_payload(observations: List[Observation]) -> List[dict]:
+    """Convert observations to structured timeline entries."""
+
+    return [item.to_payload() for item in _sort_observations(observations)]
+
+
+def _build_structured_record(
+    trace: TraceSummary,
+    observations: List[Observation],
+) -> Dict[str, Any]:
+    """Build structured per-trace data for downstream analysis."""
+
+    timeline = _build_timeline_payload(observations)
+    summary_payload = trace.to_payload()
+
+    record: Dict[str, Any] = {
+        "trace_id": summary_payload["trace_id"],
+        "iteration": summary_payload["iteration"],
+        "persona": summary_payload["persona"],
+        "input": summary_payload["input"],
+        "output": summary_payload["output"],
+        "final_output": summary_payload["output"],
+        "duration_ms": summary_payload["duration_ms"],
+        "success": summary_payload["success"],
+        "summary": summary_payload,
+        "timeline": timeline,
+    }
+
+    record["metrics"] = {
+        "observation_count": len(timeline),
+    }
+
+    return record
+
+
+def _write_structured_records(
+    output_dir: Path,
+    records: Iterable[Dict[str, Any]],
+) -> Path:
+    """Persist structured per-trace records as JSONL."""
+
+    target = output_dir / "per_trace.jsonl"
+    with target.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return target
 
 
 def _slugify(name: str) -> str:
@@ -268,7 +356,13 @@ def experiment(
     observations_path = experiment_dir / "observations.jsonl"
     trace_summary_path = experiment_dir / "trace_summary.jsonl"
 
-    observations = _load_observations(observations_path)
+    try:
+        observations = _load_observations(observations_path)
+    except FileNotFoundError:
+        console.print(
+            "[yellow]No observations.jsonl found. Structured timelines will omit observation data.[/yellow]"
+        )
+        observations = defaultdict(list)
     summaries = list(_load_trace_summaries(trace_summary_path))
 
     if not summaries:
@@ -276,8 +370,10 @@ def experiment(
         raise typer.Exit(0)
 
     console.print(
-        f"📝 Found {len(summaries)} trace summaries. Generating markdown..."
+        f"📝 Found {len(summaries)} trace summaries. Generating markdown and structured data..."
     )
+
+    structured_records: List[Dict[str, Any]] = []
 
     for summary in summaries:
         trace_observations = observations.get(summary.trace_id, [])
@@ -286,8 +382,13 @@ def experiment(
         target_path = output_dir / file_name
         target_path.write_text(content, encoding="utf-8")
 
+        structured_records.append(_build_structured_record(summary, trace_observations))
+
+    jsonl_path = _write_structured_records(output_dir, structured_records)
+
     console.print(
         f"✅ Generated {len(summaries)} files in: [green]{output_dir.resolve()}[/green]"
     )
+    console.print(f"🗃️  Structured timeline saved to: [green]{jsonl_path}[/green]")
 
 

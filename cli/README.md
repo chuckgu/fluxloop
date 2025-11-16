@@ -25,8 +25,8 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop init project` – scaffold a new project (configs, `.env`, examples)
 - `fluxloop generate inputs` – produce input variations for the active project
 - `fluxloop run experiment` – execute an experiment using `configs/simulation.yaml`
-- `fluxloop parse experiment` – convert experiment outputs into readable artifacts
-- `fluxloop evaluate experiment` – score experiment outputs using rule-based and LLM evaluators, generate reports with success criteria, analysis, and customizable templates
+- `fluxloop parse experiment` – convert experiment outputs into readable artifacts and emit structured per-trace JSON at `per_trace_analysis/per_trace.jsonl`
+- `fluxloop evaluate experiment` – score experiment outputs using rule-based and LLM evaluators (requires `fluxloop parse` output or `--per-trace`), generate reports with success criteria, analysis, and customizable templates
 - `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
 - `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment
@@ -46,6 +46,16 @@ These flags override the values in `configs/simulation.yaml` (`multi_turn` block
 **Scripted Playback Mode**: For deterministic multi-turn scenarios, switch `supervisor.provider` to `mock` and populate `supervisor.metadata.scripted_questions` with a list of user messages. FluxLoop will replay them sequentially and terminate when the script ends—ideal for regression testing and demos.
 
 Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
+
+## Evaluation Workflow
+
+Evaluation now follows a two-step process so that multi-turn context is preserved:
+
+1. `fluxloop run experiment` – produce `trace_summary.jsonl` (and optionally `observations.jsonl`).
+2. `fluxloop parse experiment <experiment_dir>` – generate markdown summaries and a structured artifact at `per_trace_analysis/per_trace.jsonl`.
+3. `fluxloop evaluate experiment <experiment_dir>` – consume the structured file to calculate scores and reports.
+
+`fluxloop evaluate` exits early with guidance when the per-trace artifact is missing. If you relocate the file, supply an explicit path with `--per-trace /path/to/per_trace.jsonl`.
 
 ## Quick Setup Script
 

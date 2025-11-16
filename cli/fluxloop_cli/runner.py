@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import json
+import logging
 import inspect
 import os
 import time
@@ -27,6 +28,7 @@ from .arg_binder import ArgBinder
 from .conversation_supervisor import ConversationSupervisor, SupervisorDecision
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 class ExperimentRunner:
@@ -123,12 +125,17 @@ class ExperimentRunner:
         except ValueError as exc:
             raise RuntimeError(str(exc)) from exc
 
-    async def run_experiment(self, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+    async def run_experiment(
+        self,
+        progress_callback: Optional[Callable] = None,
+        turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
+    ) -> Dict[str, Any]:
         """
         Run the complete experiment.
         
         Args:
             progress_callback: Optional callback for progress updates
+            turn_progress_callback: Optional callback for multi-turn progress updates
             
         Returns:
             Experiment results summary
@@ -155,6 +162,7 @@ class ExperimentRunner:
                         entry,
                         persona,
                         iteration,
+                        turn_progress_callback=turn_progress_callback,
                     )
 
                     if progress_callback:
@@ -171,6 +179,7 @@ class ExperimentRunner:
                             entry,
                             persona,
                             iteration,
+                            turn_progress_callback=turn_progress_callback,
                         )
 
                         if progress_callback:
@@ -283,11 +292,19 @@ class ExperimentRunner:
         variation: Dict[str, Any],
         persona: Optional[PersonaConfig],
         iteration: int,
+        *,
+        turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
     ) -> None:
         """Run a single execution."""
 
         if self._should_use_multi_turn():
-            await self._run_multi_turn(agent_func, variation, persona, iteration)
+            await self._run_multi_turn(
+                agent_func,
+                variation,
+                persona,
+                iteration,
+                turn_progress_callback=turn_progress_callback,
+            )
             return
 
         self.results["total_runs"] += 1
@@ -418,6 +435,8 @@ class ExperimentRunner:
         variation: Dict[str, Any],
         persona: Optional[PersonaConfig],
         iteration: int,
+        *,
+        turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
     ) -> None:
         """Execute a multi-turn conversation using the supervisor loop."""
 
@@ -497,8 +516,27 @@ class ExperimentRunner:
                 turn_count = 0
 
                 while True:
+                    if turn_progress_callback:
+                        preview = (
+                            current_user_input
+                            if isinstance(current_user_input, str)
+                            else str(current_user_input)
+                        )
+                        turn_progress_callback(
+                            turn_count + 1,
+                            multi_cfg.max_turns or 1,
+                            preview,
+                        )
+
                     callback_messages: Dict[str, Any] = {}
 
+                    logger.debug(
+                        "multi-turn request: iteration=%s turn=%s input_type=%s preview=%r",
+                        iteration,
+                        turn_count,
+                        type(current_user_input).__name__,
+                        current_user_input if isinstance(current_user_input, str) else str(current_user_input),
+                    )
                     result = await self._call_agent(
                         agent_func,
                         current_user_input,
@@ -524,6 +562,13 @@ class ExperimentRunner:
                         coerced = await self._coerce_result_to_text(result)
                         assistant_output = coerced if coerced is not None else str(result)
 
+                    logger.debug(
+                        "multi-turn agent output: raw_type=%s assistant_output_type=%s preview=%r",
+                        type(result).__name__,
+                        type(assistant_output).__name__,
+                        assistant_output if isinstance(assistant_output, str) else str(assistant_output),
+                    )
+
                     final_output = assistant_output
 
                     conversation_state["turns"].append(
@@ -547,6 +592,14 @@ class ExperimentRunner:
                         service_context=service_context,
                     )
                     last_decision = decision
+                    logger.debug(
+                        "multi-turn supervisor decision: decision=%s termination=%r next_type=%s",
+                        decision.decision,
+                        decision.termination_reason,
+                        type(decision.next_user_message).__name__
+                        if decision.next_user_message is not None
+                        else None,
+                    )
 
                     if decision.decision == "terminate":
                         termination_reason = (
@@ -569,6 +622,11 @@ class ExperimentRunner:
                             "Supervisor decided to continue but provided no next_user_message."
                         )
 
+                    logger.debug(
+                        "multi-turn next user message: type=%s preview=%r",
+                        type(next_user_message).__name__,
+                        next_user_message if isinstance(next_user_message, str) else str(next_user_message),
+                    )
                     conversation_state["turns"].append(
                         {
                             "role": "user",
@@ -612,6 +670,13 @@ class ExperimentRunner:
                 trace_entry["supervisor_response"] = last_decision.raw_response
 
             self.results["traces"].append(trace_entry)
+        finally:
+            if turn_progress_callback:
+                turn_progress_callback(
+                    turn_count,
+                    multi_cfg.max_turns or max(turn_count, 1),
+                    None,
+                )
     
     def _resolve_entry_persona(
         self,

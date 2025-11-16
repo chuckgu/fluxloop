@@ -264,15 +264,62 @@ def experiment(
             f"Running {config.name}",
             total=total_runs,
         )
+        multi_turn_total = (
+            config.multi_turn.max_turns
+            if config.multi_turn and config.multi_turn.max_turns
+            else None
+        )
+        turn_task = progress.add_task(
+            "[cyan]Turn 0/0",
+            total=multi_turn_total or 1,
+            visible=False,
+        )
 
         def _progress_callback():
             progress.advance(main_task)
+
+        def _turn_progress_callback(
+            current_turn: int,
+            total_turns: int,
+            message: Optional[str] = None,
+        ) -> None:
+            total = total_turns or 1
+            clamped_turn = max(0, current_turn)
+            if message is None:
+                completed = min(clamped_turn, total)
+                description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: complete"
+                progress.update(
+                    turn_task,
+                    total=total,
+                    completed=completed,
+                    description=description,
+                    visible=False,
+                )
+                return
+
+            if not progress.tasks[turn_task].visible:
+                progress.update(turn_task, visible=True)
+
+            preview = message.replace("\n", " ")
+            if len(preview) > 40:
+                preview = preview[:37] + "..."
+
+            completed = max(0, min(clamped_turn - 1, total))
+            description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: {preview}"
+
+            progress.update(
+                turn_task,
+                total=total,
+                completed=completed,
+                description=description,
+            )
 
         # Run experiment
         try:
             results = asyncio.run(
                 runner.run_experiment(
-                    progress_callback=_progress_callback
+                    progress_callback=_progress_callback,
+                    turn_progress_callback=_turn_progress_callback,
                 )
             )
         except KeyboardInterrupt:
