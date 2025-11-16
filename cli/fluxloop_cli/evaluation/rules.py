@@ -189,6 +189,146 @@ def _evaluate_latency_under(context: RuleContext, definition: RuleDefinition) ->
     return RuleResult(rule=definition, score=score, reason=reason)
 
 
+def _coerce_usage_values(data: Dict[str, Any]) -> Dict[str, float]:
+    usage: Dict[str, float] = {}
+    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        value = data.get(key)
+        if isinstance(value, (int, float)):
+            usage[key] = float(value)
+    return usage
+
+
+def _usage_from_candidate(candidate: Any) -> Dict[str, float]:
+    if not isinstance(candidate, dict):
+        return {}
+    direct = _coerce_usage_values(candidate)
+    if direct:
+        return direct
+    nested = candidate.get("usage")
+    if isinstance(nested, dict):
+        return _coerce_usage_values(nested)
+    return {}
+
+
+def _entry_token_usage(entry: Dict[str, Any]) -> Dict[str, float]:
+    candidates = [entry]
+    raw = entry.get("raw")
+    if isinstance(raw, dict):
+        candidates.append(raw)
+        output = raw.get("output")
+        if isinstance(output, dict):
+            candidates.append(output)
+        metadata = raw.get("metadata")
+        if isinstance(metadata, dict):
+            candidates.append(metadata)
+    for candidate in candidates:
+        usage = _usage_from_candidate(candidate)
+        if usage:
+            return usage
+    return {}
+
+
+def _collect_token_usage(trace: Dict[str, Any]) -> Optional[Dict[str, float]]:
+    totals = {"prompt_tokens": 0.0, "completion_tokens": 0.0, "total_tokens": 0.0}
+    found = False
+
+    summary = trace.get("summary")
+    if isinstance(summary, dict):
+        summary_usage = {}
+        if isinstance(summary.get("token_usage"), dict):
+            summary_usage = _usage_from_candidate(summary["token_usage"])
+        if not summary_usage:
+            raw = summary.get("raw")
+            if isinstance(raw, dict) and isinstance(raw.get("token_usage"), dict):
+                summary_usage = _usage_from_candidate(raw["token_usage"])
+        if summary_usage:
+            found = True
+            for key, value in summary_usage.items():
+                totals[key] += value
+
+    timeline = trace.get("timeline")
+    if isinstance(timeline, list):
+        for entry in timeline:
+            if not isinstance(entry, dict):
+                continue
+            usage = _entry_token_usage(entry)
+            if not usage:
+                continue
+            found = True
+            for key, value in usage.items():
+                totals[key] += value
+
+    if not found:
+        return None
+
+    prompt = totals["prompt_tokens"]
+    completion = totals["completion_tokens"]
+    total = totals["total_tokens"]
+    if total <= 0:
+        total = prompt + completion
+    return {
+        "prompt": prompt,
+        "completion": completion,
+        "total": total,
+    }
+
+
+def _coerce_budget_value(value: Any, label: str) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        budget = float(value)
+    except (TypeError, ValueError) as exc:  # noqa: BLE001
+        raise ValueError(f"token_usage_under {label} must be numeric") from exc
+    if budget <= 0:
+        raise ValueError(f"token_usage_under {label} must be greater than 0")
+    return budget
+
+
+def _evaluate_token_usage_under(context: RuleContext, definition: RuleDefinition) -> RuleResult:
+    usage = _collect_token_usage(context.trace)
+    if usage is None:
+        return RuleResult(
+            rule=definition,
+            score=0.0,
+            reason="token usage data not available",
+        )
+
+    max_total = _coerce_budget_value(definition.params.get("max_total_tokens"), "max_total_tokens")
+    max_prompt = _coerce_budget_value(
+        definition.params.get("max_prompt_tokens"),
+        "max_prompt_tokens",
+    )
+    max_completion = _coerce_budget_value(
+        definition.params.get("max_completion_tokens"),
+        "max_completion_tokens",
+    )
+
+    if max_total is None and max_prompt is None and max_completion is None:
+        raise ValueError("token_usage_under requires at least one max_*_tokens parameter")
+
+    score = 1.0
+    reasons: List[str] = []
+
+    def apply_budget(actual: float, budget: Optional[float], label: str) -> None:
+        nonlocal score
+        if budget is None:
+            return
+        if actual <= budget:
+            return
+        ratio = budget / actual if actual > 0 else 0.0
+        ratio = max(0.0, min(1.0, ratio))
+        score = min(score, ratio)
+        reasons.append(f"{label} {actual:.0f} exceeds budget {budget:.0f}")
+
+    apply_budget(usage["total"], max_total, "total tokens")
+    apply_budget(usage["prompt"], max_prompt, "prompt tokens")
+    apply_budget(usage["completion"], max_completion, "completion tokens")
+
+    reason = "; ".join(reasons) if reasons else None
+    return RuleResult(rule=definition, score=score, reason=reason)
+
+
 def _evaluate_similarity(context: RuleContext, definition: RuleDefinition) -> RuleResult:
     target = definition.params.get("target", "output")
     expected_path = definition.params.get("expected_path")
@@ -233,6 +373,7 @@ RULE_DISPATCH = {
     "not_contains": _evaluate_not_contains,
     "matches_regex": _evaluate_matches_regex,
     "latency_under": _evaluate_latency_under,
+    "token_usage_under": _evaluate_token_usage_under,
     "similarity": _evaluate_similarity,
     "success": _evaluate_success_flag,
 }

@@ -19,6 +19,11 @@ def _write_trace_summary(path: Path) -> None:
             "output": "Sure, I can help you.",
             "duration_ms": 500,
             "success": True,
+            "token_usage": {
+                "prompt_tokens": 600,
+                "completion_tokens": 200,
+                "total_tokens": 800,
+            },
         },
         {
             "trace_id": "trace-2",
@@ -28,6 +33,11 @@ def _write_trace_summary(path: Path) -> None:
             "output": "I cannot assist right now.",
             "duration_ms": 1500,
             "success": False,
+            "token_usage": {
+                "prompt_tokens": 900,
+                "completion_tokens": 500,
+                "total_tokens": 1400,
+            },
         },
     ]
     lines = [json.dumps(item) for item in traces]
@@ -43,8 +53,8 @@ def _write_eval_config(path: Path, include_llm: bool = False) -> None:
         weight: 1.0
         rules:
           - check: output_not_empty
-          - check: latency_under
-            budget_ms: 1200
+          - check: token_usage_under
+            max_total_tokens: 1200
           - check: success
 
     aggregate:
@@ -61,6 +71,8 @@ def _write_eval_config(path: Path, include_llm: bool = False) -> None:
             weight: 1.0
             rules:
               - check: output_not_empty
+              - check: token_usage_under
+                max_total_tokens: 1200
           - name: llm_quality
             type: llm_judge
             enabled: true
@@ -91,6 +103,11 @@ def _write_phase2_trace_summary(path: Path) -> None:
             "output": "Alerts configured successfully.",
             "duration_ms": 900,
             "success": True,
+            "token_usage": {
+                "prompt_tokens": 500,
+                "completion_tokens": 200,
+                "total_tokens": 700,
+            },
         },
         {
             "trace_id": "p2-2",
@@ -100,6 +117,11 @@ def _write_phase2_trace_summary(path: Path) -> None:
             "output": "Retrying the tool call now.",
             "duration_ms": 1800,
             "success": True,
+            "token_usage": {
+                "prompt_tokens": 650,
+                "completion_tokens": 250,
+                "total_tokens": 900,
+            },
         },
         {
             "trace_id": "p2-3",
@@ -109,6 +131,11 @@ def _write_phase2_trace_summary(path: Path) -> None:
             "output": "",
             "duration_ms": 650,
             "success": False,
+            "token_usage": {
+                "prompt_tokens": 450,
+                "completion_tokens": 300,
+                "total_tokens": 750,
+            },
         },
         {
             "trace_id": "p2-4",
@@ -118,6 +145,11 @@ def _write_phase2_trace_summary(path: Path) -> None:
             "output": "Incident report created.",
             "duration_ms": 2100,
             "success": True,
+            "token_usage": {
+                "prompt_tokens": 800,
+                "completion_tokens": 350,
+                "total_tokens": 1150,
+            },
         },
     ]
     lines = [json.dumps(item) for item in traces]
@@ -131,13 +163,13 @@ def _write_phase2_eval_config(path: Path) -> None:
         Validate extended Phase 2 evaluation outputs for persona-aware runs.
 
     evaluators:
-      - name: latency_checker
+      - name: token_checker
         type: rule_based
         enabled: true
         weight: 1.0
         rules:
-          - check: latency_under
-            budget_ms: 1500
+          - check: token_usage_under
+            max_total_tokens: 1500
       - name: intent_recognition
         type: rule_based
         enabled: true
@@ -201,7 +233,7 @@ def _write_baseline_summary(path: Path) -> None:
         "total_traces": 4,
         "passed_traces": 3,
         "evaluator_stats": {
-            "latency_checker": {"average": 0.75, "min": 0.0, "max": 1.0, "count": 4},
+            "token_checker": {"average": 0.75, "min": 0.0, "max": 1.0, "count": 4},
             "intent_recognition": {"average": 1.0, "min": 1.0, "max": 1.0, "count": 4},
         },
     }

@@ -216,13 +216,13 @@ def create_evaluation_config() -> str:
             rules:
               - check: output_not_empty
 
-          - name: latency_budget
+          - name: token_budget
             type: rule_based
             enabled: true
             weight: 0.2
             rules:
-              - check: latency_under
-                budget_ms: 1500
+              - check: token_usage_under
+                max_total_tokens: 4000
 
           - name: keyword_quality
             type: rule_based
@@ -340,7 +340,7 @@ def create_evaluation_config() -> str:
           performance:
             all_traces_successful: true
             avg_response_time:
-              enabled: true
+              enabled: false
               threshold_ms: 2000
             max_response_time:
               enabled: false

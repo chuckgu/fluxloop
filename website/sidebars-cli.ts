@@ -23,6 +23,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'commands/init',
         'commands/generate',
+        'commands/evaluate',
         'commands/run',
         'commands/parse',
         'commands/record',
