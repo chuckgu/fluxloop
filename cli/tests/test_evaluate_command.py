@@ -255,6 +255,16 @@ def test_evaluate_generates_outputs(tmp_path: Path) -> None:
     )
     assert parse_result.exit_code == 0, parse_result.output
 
+    parsed_per_trace_path = experiment_dir / "per_trace_analysis" / "per_trace.jsonl"
+    parsed_records = [
+        json.loads(line)
+        for line in parsed_per_trace_path.read_text(encoding="utf-8").strip().splitlines()
+        if line.strip()
+    ]
+    assert parsed_records, "Expected parsed per-trace records"
+    assert "conversation" in parsed_records[0]
+    assert isinstance(parsed_records[0]["conversation"], list)
+
     config_path = tmp_path / "configs" / "evaluation.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     _write_eval_config(config_path)
@@ -291,6 +301,8 @@ def test_evaluate_generates_outputs(tmp_path: Path) -> None:
     first_trace = json.loads(per_trace_lines[0])
     assert "completeness" in first_trace["scores"]
     assert "final_score" in first_trace
+    assert "conversation" in first_trace
+    assert isinstance(first_trace["conversation"], list)
 
 
 def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path) -> None:

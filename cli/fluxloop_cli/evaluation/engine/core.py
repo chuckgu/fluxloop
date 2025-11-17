@@ -217,6 +217,12 @@ def _write_per_trace(results: List[TraceOutcome], path: Path) -> None:
                     if outcome.trace.get(key) is not None
                 },
             }
+            if outcome.trace.get("conversation") is not None:
+                payload["conversation"] = outcome.trace.get("conversation")
+            if outcome.trace.get("conversation_state") is not None:
+                payload["conversation_state"] = outcome.trace.get("conversation_state")
+            if outcome.trace.get("termination_reason") is not None:
+                payload["termination_reason"] = outcome.trace.get("termination_reason")
             handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 

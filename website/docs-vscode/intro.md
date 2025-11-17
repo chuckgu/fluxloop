@@ -33,7 +33,7 @@ Or via Command Palette: **"Extensions: Install from VSIX..."**
 
 ## Version
 
-Current version: **0.1.1**
+Current version: **0.1.4**
 
 ## Features
 

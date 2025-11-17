@@ -15,7 +15,7 @@ pip install fluxloop-cli
 
 ## Version
 
-Current version: **0.2.1**
+Current version: **0.2.27**
 
 ## Features
 
@@ -23,9 +23,10 @@ Current version: **0.2.1**
 - 📝 **Input Generation**: Create test input variations using LLM or deterministic strategies
 - 🧪 **Experiment Execution**: Run batch simulations with configurable iterations
 - 💬 **Multi-Turn Conversations**: Automatically extend experiments into dynamic dialogues with AI supervisor
-- 📊 **Result Parsing**: Convert raw artifacts to human-readable formats
+- 📊 **Result Parsing & Evaluation**: Convert raw artifacts to human-readable formats and score with evaluators
 - 🔴 **Recording Mode**: Capture and replay complex function arguments
 - ⚙️ **Configuration**: Structured YAML-based configuration system
+- 🩺 **Environment Diagnostics**: Verify installation and detect configuration issues
 
 ## Quick Example
 
@@ -42,6 +43,12 @@ fluxloop run experiment
 
 # Parse results
 fluxloop parse experiment experiments/my_agent_experiment_*/
+
+# Evaluate results
+fluxloop evaluate experiment experiments/my_agent_experiment_*/
+
+# Check environment
+fluxloop doctor
 ```
 
 ## Key Commands
@@ -113,6 +120,7 @@ FluxLoop CLI uses a multi-file configuration structure:
 - **[Installation](/cli/getting-started/installation)** - Detailed installation guide
 - **[Project Setup](/cli/getting-started/project-setup)** - Initialize your first project
 - **[Commands Reference](/cli/commands/init)** - Full command documentation
+- **[Doctor Command](/cli/commands/doctor)** - Diagnose environment and configuration
 - **[Configuration](/cli/configuration/project-config)** - Config file reference
 - **[Multi-Turn Workflow](/cli/workflows/multi-turn-workflow)** - Run dynamic conversations
 - **[Runner Targets](/cli/configuration/runner-targets)** - Connect your code to simulations

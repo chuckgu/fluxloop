@@ -4,80 +4,80 @@ sidebar_position: 1
 
 # Installation
 
-FluxLoop VSCode Extension 설치 방법을 안내합니다.
+Installation guide for the FluxLoop VSCode Extension.
 
-## 설치 방법
+## Installation Methods
 
-FluxLoop Extension은 **Extension Marketplace에서 직접 설치**할 수 있습니다!
+FluxLoop Extension can be **installed directly from the Extension Marketplace**!
 
-### 🎯 방법 1: Extension Marketplace에서 설치 (권장)
+### 🎯 Method 1: Install from Extension Marketplace (Recommended)
 
-#### Cursor 사용자
+#### Cursor Users
 
-1. **Extensions 탭 열기** (왼쪽 사이드바 또는 `Cmd+Shift+X`)
-2. **"FluxLoop" 검색**
-3. **Install 클릭**
-4. **Cursor 재시작**
+1. **Open Extensions tab** (sidebar or `Cmd+Shift+X`)
+2. **Search for "FluxLoop"**
+3. **Click Install**
+4. **Restart Cursor**
 
-> ✨ Cursor는 [Open VSX Registry](https://open-vsx.org/extension/fluxloop/fluxloop)에서 자동으로 Extension을 다운로드합니다.
+> ✨ Cursor automatically downloads the extension from [Open VSX Registry](https://open-vsx.org/extension/fluxloop/fluxloop)
 
-#### VS Code 사용자
+#### VS Code Users
 
-1. **Extensions 탭 열기** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
-2. **"FluxLoop" 검색**
-3. **Install 클릭**
-4. **VS Code 재시작**
+1. **Open Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+2. **Search for "FluxLoop"**
+3. **Click Install**
+4. **Restart VS Code**
 
-> 또는 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)에서 직접 설치
+> Or install directly from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)
 
-**또는 명령 팔레트에서:**
+**Or via Command Palette:**
 ```
 ext install fluxloop.fluxloop
 ```
 
-#### 설치 확인
+#### Verify Installation
 
-재시작 후:
-- 왼쪽 Activity Bar에 **FluxLoop 아이콘** 표시
-- 아이콘 클릭 시 Projects, Inputs, Experiments, Results, Status 패널 표시
+After restart:
+- **FluxLoop icon** appears in the left Activity Bar
+- Clicking the icon displays Projects, Inputs, Experiments, Results, and Status panels
 
-### 📦 방법 2: VSIX 파일로 수동 설치 (대체 방법)
+### 📦 Method 2: Manual Installation from VSIX (Alternative)
 
-Marketplace를 사용할 수 없는 경우:
+If you cannot access the Marketplace:
 
-#### 1. VSIX 파일 다운로드
+#### 1. Download VSIX File
 
-[GitHub Releases](https://github.com/chuckgu/fluxloop/releases) 페이지에서 최신 버전의 VSIX 파일을 다운로드합니다.
+Download the latest VSIX file from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases).
 
-- 파일명 예시: `fluxloop-0.1.1.vsix`
+- Example filename: `fluxloop-0.1.4.vsix`
 
-#### 2. 설치
+#### 2. Install
 
-1. **Command Palette 열기** (`Cmd+Shift+P` 또는 `Ctrl+Shift+P`)
-2. **"Extensions: Install from VSIX..."** 입력 및 선택
-3. **다운로드한 VSIX 파일 선택**
-4. **재시작**
+1. **Open Command Palette** (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+2. **Type and select "Extensions: Install from VSIX..."**
+3. **Select the downloaded VSIX file**
+4. **Restart**
 
-## 필수 요구사항
+## Prerequisites
 
-FluxLoop Extension을 사용하려면 FluxLoop CLI, SDK, MCP 서버가 설치되어 있어야 합니다.
+To use FluxLoop Extension, you need FluxLoop CLI, SDK, and MCP server installed.
 
-### 권장 설치 방법
+### Recommended Installation
 
-프로젝트별 가상환경에 설치하는 것을 권장합니다:
+Install in a project-specific virtual environment (recommended):
 
 ```bash
-# 가상환경 생성
+# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# FluxLoop 패키지 설치
+# Install FluxLoop packages
 pip install fluxloop-cli fluxloop fluxloop-mcp
 ```
 
-### 대체 설치 방법
+### Alternative Installation Methods
 
-#### uv 사용
+#### Using uv
 
 ```bash
 uv venv
@@ -85,134 +85,134 @@ source .venv/bin/activate
 uv pip install fluxloop-cli fluxloop fluxloop-mcp
 ```
 
-#### pipx (글로벌 설치)
+#### Using pipx (Global Installation)
 
 ```bash
 pipx install fluxloop-cli
 pipx install fluxloop-mcp
-pip install fluxloop  # SDK는 프로젝트 venv에 설치 권장
+pip install fluxloop  # SDK recommended in project venv
 ```
 
-### 설치 확인
+### Verify Installation
 
-확장에서 자동으로 진단:
+Automatic diagnostics from extension:
 ```
 FluxLoop: Run Doctor
 ```
 
-또는 터미널에서:
+Or from terminal:
 ```bash
-# CLI 버전 확인
+# Check CLI version
 fluxloop --version
 
-# SDK 확인
+# Verify SDK
 python -c "import fluxloop; print(fluxloop.__version__)"
 
-# MCP 서버 확인
+# Check MCP server
 fluxloop-mcp --help
 
-# 전체 환경 진단
+# Full environment diagnostics
 fluxloop doctor
 ```
 
-## 시스템 요구사항
+## System Requirements
 
-- **Cursor**: 최신 버전 (VSCode 1.74.0+ 기반)
-- **VS Code**: 1.74.0 이상
-- **Python**: 3.8 이상
-- **운영체제**: macOS, Linux, Windows
+- **Cursor**: Latest version (based on VSCode 1.74.0+)
+- **VS Code**: 1.74.0 or higher
+- **Python**: 3.8 or higher (3.11+ recommended for SDK/MCP)
+- **Operating System**: macOS, Linux, Windows
 
-## 문제 해결
+## Troubleshooting
 
-### Extension이 활성화되지 않음
+### Extension Not Activating
 
-**증상**: FluxLoop 아이콘이 보이지 않거나, 패널이 비어있음
+**Symptom**: FluxLoop icon not visible, or panels are empty
 
-**해결**:
-1. Cursor/VS Code 재시작
-2. Developer Tools 열기 (View → Toggle Developer Tools)
-3. Console에서 에러 확인
-4. 일반적으로 FluxLoop CLI 미설치가 원인:
+**Solution**:
+1. Restart Cursor/VS Code
+2. Open Developer Tools (View → Toggle Developer Tools)
+3. Check Console for errors
+4. Usually caused by missing FluxLoop CLI:
    ```bash
    pip install fluxloop-cli fluxloop
    ```
 
-### "Cannot find module 'yaml'" 에러
+### "Cannot find module 'yaml'" Error
 
-**증상**: Extension 활성화 시 에러 발생
+**Symptom**: Error when activating extension
 
-**해결**:
-- 최신 VSIX 파일 다운로드 및 재설치
-- 구버전 VSIX는 런타임 의존성이 누락되었을 수 있습니다
+**Solution**:
+- Download and reinstall latest VSIX file
+- Older VSIX versions may have missing runtime dependencies
 
-### CLI가 인식되지 않음
+### CLI Not Recognized
 
-**증상**: "FluxLoop CLI is not installed" 메시지
+**Symptom**: "FluxLoop CLI is not installed" message
 
-**해결**:
-1. **환경 확인:**
+**Solution**:
+1. **Check environment:**
    ```
    FluxLoop: Show Environment Info
    ```
 
-2. **프로젝트 venv에 설치:**
-```bash
+2. **Install in project venv:**
+   ```bash
    source .venv/bin/activate
    pip install fluxloop-cli fluxloop fluxloop-mcp
    ```
 
-3. **또는 글로벌 설치:**
+3. **Or install globally:**
    ```bash
-pipx install fluxloop-cli
+   pipx install fluxloop-cli
    pipx install fluxloop-mcp
    ```
 
-4. **환경 모드 설정:**
+4. **Configure environment mode:**
    ```
    FluxLoop: Select Environment
    ```
 
-5. **PATH 확인:**
+5. **Verify PATH:**
    ```bash
    which fluxloop
    fluxloop doctor
-```
+   ```
 
-### Cursor에서 Extension이 검색되지 않음
+### Extension Not Found in Cursor
 
-**증상**: Cursor Extensions에서 "FluxLoop" 검색 시 결과 없음
+**Symptom**: Searching for "FluxLoop" in Cursor Extensions returns no results
 
-**해결**:
-1. Extensions 탭이 제대로 로드되었는지 확인
-2. 검색어를 정확히 **"FluxLoop"**로 입력
-3. Cursor를 최신 버전으로 업데이트
-4. 여전히 안 보이면 [Open VSX 페이지](https://open-vsx.org/extension/fluxloop/fluxloop)에서 직접 VSIX 다운로드 후 수동 설치
+**Solution**:
+1. Verify Extensions tab loaded properly
+2. Search exactly for **"FluxLoop"**
+3. Update Cursor to latest version
+4. If still not visible, download VSIX directly from [Open VSX page](https://open-vsx.org/extension/fluxloop/fluxloop) and install manually
 
-## 업데이트
+## Updates
 
-### 자동 업데이트 (Cursor & VS Code)
+### Automatic Updates (Cursor & VS Code)
 
-**Marketplace에서 설치한 경우 자동 업데이트가 지원됩니다:**
+**Auto-update is supported when installed from Marketplace:**
 
-- **Cursor**: Open VSX에서 새 버전 감지 시 자동 업데이트 또는 알림 표시
-- **VS Code**: Marketplace에서 새 버전 감지 시 자동 업데이트 또는 알림 표시
+- **Cursor**: Auto-updates or shows notification when new version detected on Open VSX
+- **VS Code**: Auto-updates or shows notification when new version detected on Marketplace
 
-Extensions 탭에서 FluxLoop을 찾아 **Update** 버튼이 있으면 클릭하세요.
+Check Extensions tab for FluxLoop and click **Update** button if available.
 
-### 수동 업데이트
+### Manual Update
 
-VSIX로 설치한 경우:
+If installed from VSIX:
 
-1. GitHub Releases에서 최신 VSIX 다운로드
-2. 기존 Extension 제거: Extensions 탭에서 FluxLoop → Uninstall
-3. 재시작
+1. Download latest VSIX from GitHub Releases
+2. Uninstall existing extension: Extensions tab → FluxLoop → Uninstall
+3. Restart
 4. Command Palette (`Cmd+Shift+P`) → **"Extensions: Install from VSIX..."**
-5. 새 VSIX 파일 선택 후 재시작
+5. Select new VSIX file and restart
 
-## 다음 단계
+## Next Steps
 
-Extension 설치 후:
+After installing the extension:
 
-- [프로젝트 생성하기](creating-first-project)
-- [실험 실행하기](running-experiments)
-- [사용자 가이드](../user-guide/creating-projects)
+- [Creating Your First Project](creating-first-project)
+- [Running Experiments](running-experiments)
+- [User Guide](../user-guide/creating-projects)

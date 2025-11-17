@@ -13,7 +13,7 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 import fluxloop
 import yaml
@@ -375,6 +375,8 @@ class ExperimentRunner:
             if trace_id:
                 observations = self._load_observations_for_trace(trace_id)
 
+            seen_observation_keys: Set[Tuple[Optional[str], Optional[str], Optional[str]]] = set()
+
             final_output = self._extract_final_output(callback_messages, observations)
             if final_output is not None:
                 result = final_output
@@ -412,6 +414,38 @@ class ExperimentRunner:
 
             if observations:
                 trace_entry["observation_count"] = len(observations)
+
+            # Build normalized conversation transcript
+            conversation: List[Dict[str, Any]] = []
+            turn_index = 1
+            conversation.append(
+                self._make_conversation_entry(
+                    turn_index=turn_index,
+                    role="user",
+                    content=input_text,
+                    source="input",
+                    persona=persona.name if persona else None,
+                )
+            )
+            actions = self._summarize_observation_actions(observations, seen_observation_keys)
+            assistant_text = self._ensure_text(result)
+            trace_entry["output"] = assistant_text
+            conversation.append(
+                self._make_conversation_entry(
+                    turn_index=turn_index,
+                    role="assistant",
+                    content=assistant_text,
+                    source="agent",
+                    actions=actions or None,
+                )
+            )
+            trace_entry["conversation"] = conversation
+            trace_entry["conversation_state"] = {
+                "turns": [
+                    {"role": "user", "content": input_text},
+                    {"role": "assistant", "content": assistant_text},
+                ]
+            }
 
             self.results["traces"].append(trace_entry)
             
@@ -489,6 +523,19 @@ class ExperimentRunner:
             },
             "context": {},
         }
+
+        normalized_conversation: List[Dict[str, Any]] = []
+        turn_index = 1
+        normalized_conversation.append(
+            self._make_conversation_entry(
+                turn_index=turn_index,
+                role="user",
+                content=input_text,
+                source="input",
+                persona=persona.name if persona else None,
+            )
+        )
+        seen_observation_keys: Set[Tuple[Optional[str], Optional[str], Optional[str]]] = set()
 
         trace_name = f"{self.config.name}_iter{iteration}"
         if persona:
@@ -569,14 +616,29 @@ class ExperimentRunner:
                         assistant_output if isinstance(assistant_output, str) else str(assistant_output),
                     )
 
-                    final_output = assistant_output
+                    assistant_text = self._ensure_text(assistant_output)
+                    final_output = assistant_text
 
                     conversation_state["turns"].append(
                         {
                             "role": "assistant",
-                            "content": assistant_output,
+                            "content": assistant_text,
                         }
                     )
+                    new_actions = self._summarize_observation_actions(
+                        observations,
+                        seen_observation_keys,
+                    )
+                    normalized_conversation.append(
+                        self._make_conversation_entry(
+                            turn_index=turn_index,
+                            role="assistant",
+                            content=assistant_text,
+                            source="agent",
+                            actions=new_actions or None,
+                        )
+                    )
+                    turn_index += 1
 
                     turn_count += 1
                     ctx.add_metadata("turn_count", turn_count)
@@ -606,12 +668,23 @@ class ExperimentRunner:
                             decision.termination_reason or "supervisor_terminate"
                         )
                         if decision.closing_user_message:
+                            closing_text = self._ensure_text(decision.closing_user_message)
                             conversation_state["turns"].append(
                                 {
                                     "role": "user",
-                                    "content": decision.closing_user_message,
+                                    "content": closing_text,
                                     "closing": True,
                                 }
+                            )
+                            normalized_conversation.append(
+                                self._make_conversation_entry(
+                                    turn_index=turn_index,
+                                    role="user",
+                                    content=closing_text,
+                                    source="supervisor",
+                                    persona=persona.name if persona else None,
+                                    closing=True,
+                                )
                             )
                         ctx.add_metadata("termination_reason", termination_reason)
                         break
@@ -627,11 +700,21 @@ class ExperimentRunner:
                         type(next_user_message).__name__,
                         next_user_message if isinstance(next_user_message, str) else str(next_user_message),
                     )
+                    next_user_text = self._ensure_text(next_user_message)
                     conversation_state["turns"].append(
                         {
                             "role": "user",
-                            "content": next_user_message,
+                            "content": next_user_text,
                         }
+                    )
+                    normalized_conversation.append(
+                        self._make_conversation_entry(
+                            turn_index=turn_index,
+                            role="user",
+                            content=next_user_text,
+                            source="supervisor" if decision.raw_response else "user",
+                            persona=persona.name if persona else None,
+                        )
                     )
                     current_user_input = next_user_message
 
@@ -664,7 +747,8 @@ class ExperimentRunner:
                 "duration_ms": duration_ms,
                 "success": True,
                 "termination_reason": termination_reason,
-                "conversation": conversation_state,
+                "conversation": normalized_conversation,
+                "conversation_state": conversation_state,
             }
             if last_decision and last_decision.raw_response:
                 trace_entry["supervisor_response"] = last_decision.raw_response
@@ -969,6 +1053,75 @@ class ExperimentRunner:
             "kwargs": kwargs,
         }
 
+    @staticmethod
+    def _ensure_text(value: Any) -> str:
+        """Best-effort conversion of arbitrary values into displayable text."""
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        try:
+            return json.dumps(value, ensure_ascii=False)
+        except (TypeError, ValueError):
+            return str(value)
+
+    @staticmethod
+    def _make_conversation_entry(
+        *,
+        turn_index: int,
+        role: str,
+        content: Any,
+        source: str,
+        persona: Optional[str] = None,
+        closing: bool = False,
+        actions: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Compose a normalized conversation entry."""
+        entry: Dict[str, Any] = {
+            "turn_index": turn_index,
+            "role": role,
+            "content": ExperimentRunner._ensure_text(content),
+            "source": source,
+        }
+        metadata: Dict[str, Any] = {}
+        if persona:
+            metadata["persona"] = persona
+        if closing:
+            metadata["closing"] = True
+        if actions:
+            metadata["actions"] = actions
+
+        entry["metadata"] = metadata
+        return entry
+
+    @staticmethod
+    def _summarize_observation_actions(
+        observations: Sequence[Dict[str, Any]],
+        seen: Set[Tuple[Optional[str], Optional[str], Optional[str]]],
+    ) -> List[str]:
+        """Return new action descriptors discovered in observations, tracking seen items."""
+        actions: List[str] = []
+        for obs in sorted(
+            observations,
+            key=lambda item: (
+                item.get("start_time") or "",
+                item.get("end_time") or "",
+                item.get("name") or "",
+            ),
+        ):
+            key = (
+                obs.get("id"),
+                obs.get("start_time"),
+                obs.get("name"),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            obs_type = obs.get("type") or "event"
+            obs_name = obs.get("name") or obs_type
+            actions.append(f"{obs_type}:{obs_name}")
+        return actions
+
     async def _coerce_result_to_text(self, value: Any) -> Optional[str]:
         """Best-effort conversion of agent result into text for summaries.
 
@@ -1035,20 +1188,22 @@ class ExperimentRunner:
 
         with summary_path.open("w", encoding="utf-8") as summary_file:
             for trace in self.results["traces"]:
-                summary_file.write(
-                    json.dumps(
-                        {
-                            "trace_id": trace.get("trace_id"),
-                            "iteration": trace.get("iteration"),
-                            "persona": trace.get("persona"),
-                            "input": trace.get("input"),
-                            "output": trace.get("output"),
-                            "duration_ms": trace.get("duration_ms"),
-                            "success": trace.get("success"),
-                        }
-                    )
-                    + "\n"
-                )
+                summary_payload = {
+                    "trace_id": trace.get("trace_id"),
+                    "iteration": trace.get("iteration"),
+                    "persona": trace.get("persona"),
+                    "input": trace.get("input"),
+                    "output": trace.get("output"),
+                    "duration_ms": trace.get("duration_ms"),
+                    "success": trace.get("success"),
+                }
+                if trace.get("conversation") is not None:
+                    summary_payload["conversation"] = trace.get("conversation")
+                if trace.get("conversation_state") is not None:
+                    summary_payload["conversation_state"] = trace.get("conversation_state")
+                if trace.get("termination_reason") is not None:
+                    summary_payload["termination_reason"] = trace.get("termination_reason")
+                summary_file.write(json.dumps(summary_payload) + "\n")
 
     def _save_experiment_observations(self) -> None:
         """Copy matching observations from the offline store into the experiment directory."""

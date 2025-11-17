@@ -115,9 +115,9 @@ After running evaluation, the output directory contains:
 ```
 evaluation/
 ├── summary.json          # Aggregate statistics
-├── per_trace.jsonl       # Per-trace scores and reasons
+├── per_trace.jsonl       # Per-trace scores, reasons, and conversations
 ├── report.md             # Human-readable report
-└── report.html           # Interactive HTML report (Phase 2)
+└── report.html           # Interactive HTML report (Phase 2, includes Conversation View tab)
 ```
 
 ### Summary Structure
@@ -154,6 +154,8 @@ evaluation/
   "llm_sample_rate": 0.3
 }
 ```
+
+Each entry in `per_trace.jsonl` now contains the serialized conversation transcript used by the HTML report’s **Conversation View**. When you open `report.html`, look for the new tab to explore human/AI turns, action summaries, and supervisor terminations without leaving the report.
 
 ## Phase 2: Advanced Evaluation
 

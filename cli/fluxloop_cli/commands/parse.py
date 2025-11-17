@@ -75,6 +75,9 @@ class TraceSummary:
     duration_ms: float
     success: bool
     raw: dict
+    conversation: Optional[List[Dict[str, Any]]] = None
+    conversation_state: Optional[Dict[str, Any]] = None
+    termination_reason: Optional[str] = None
 
     def to_payload(self) -> dict:
         """Return a JSON-serialisable representation of the summary entry."""
@@ -88,6 +91,9 @@ class TraceSummary:
             "duration_ms": self.duration_ms,
             "success": self.success,
             "raw": self.raw,
+            "conversation": self.conversation,
+            "conversation_state": self.conversation_state,
+            "termination_reason": self.termination_reason,
         }
 
 
@@ -164,6 +170,9 @@ def _load_trace_summaries(path: Path) -> Iterable[TraceSummary]:
                 output_text=payload.get("output"),
                 duration_ms=payload.get("duration_ms", 0.0),
                 success=payload.get("success", False),
+                conversation=payload.get("conversation"),
+                conversation_state=payload.get("conversation_state"),
+                termination_reason=payload.get("termination_reason"),
                 raw=payload,
             )
 
@@ -214,6 +223,30 @@ def _format_markdown(
         f"{_format_json_block({'output': trace.output_text})}\n\n"
     )
 
+    conversation_section = ""
+    if trace.conversation:
+        conversation_lines = ["## Conversation\n"]
+        for entry in trace.conversation:
+            role = (entry.get("role") or "unknown").capitalize()
+            content = entry.get("content") or ""
+            source = entry.get("source")
+            metadata = entry.get("metadata") or {}
+            meta_bits: List[str] = []
+            if source:
+                meta_bits.append(f"source={source}")
+            actions = metadata.get("actions") or []
+            if actions:
+                meta_bits.append("actions=" + ", ".join(actions))
+            if metadata.get("closing"):
+                meta_bits.append("closing=true")
+            persona = metadata.get("persona")
+            if persona:
+                meta_bits.append(f"persona={persona}")
+            meta_suffix = f" _({' ; '.join(meta_bits)})_" if meta_bits else ""
+            conversation_lines.append(f"- **{role}**: {content}{meta_suffix}")
+        conversation_lines.append("")
+        conversation_section = "\n".join(conversation_lines)
+
     timeline_lines = ["## Timeline\n"]
 
     for index, obs in enumerate(observations_sorted, start=1):
@@ -238,7 +271,7 @@ def _format_markdown(
     if not observations_sorted:
         timeline_lines.append("(no observations recorded)\n")
 
-    return header + summary_section + "".join(timeline_lines)
+    return header + summary_section + conversation_section + "".join(timeline_lines)
 
 
 def _sort_observations(
@@ -278,11 +311,39 @@ def _build_structured_record(
         "success": summary_payload["success"],
         "summary": summary_payload,
         "timeline": timeline,
+        "conversation": trace.conversation or summary_payload.get("conversation") or [],
     }
+
+    def _maybe_decode_content(value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip()
+            if text and text[0] in "{[" and text[-1] in "}]" and len(text) >= 2:
+                try:
+                    return json.loads(text)
+                except (json.JSONDecodeError, TypeError):
+                    return value
+        return value
 
     record["metrics"] = {
         "observation_count": len(timeline),
     }
+
+    if trace.conversation_state:
+        record["conversation_state"] = trace.conversation_state
+    if trace.termination_reason:
+        record["termination_reason"] = trace.termination_reason
+    if not record["conversation"] and trace.raw.get("conversation"):
+        record["conversation"] = trace.raw.get("conversation")
+    if record["conversation"]:
+        normalized_conversation: List[Dict[str, Any]] = []
+        for entry in record["conversation"]:
+            if not isinstance(entry, dict):
+                normalized_conversation.append(entry)
+                continue
+            normalized_entry = dict(entry)
+            normalized_entry["content"] = _maybe_decode_content(entry.get("content"))
+            normalized_conversation.append(normalized_entry)
+        record["conversation"] = normalized_conversation
 
     return record
 

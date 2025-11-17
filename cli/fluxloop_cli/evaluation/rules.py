@@ -204,6 +204,11 @@ def _usage_from_candidate(candidate: Any) -> Dict[str, float]:
     direct = _coerce_usage_values(candidate)
     if direct:
         return direct
+    token_usage = candidate.get("token_usage")
+    if isinstance(token_usage, dict):
+        values = _coerce_usage_values(token_usage)
+        if values:
+            return values
     nested = candidate.get("usage")
     if isinstance(nested, dict):
         return _coerce_usage_values(nested)
@@ -212,15 +217,36 @@ def _usage_from_candidate(candidate: Any) -> Dict[str, float]:
 
 def _entry_token_usage(entry: Dict[str, Any]) -> Dict[str, float]:
     candidates = [entry]
+    output = entry.get("output")
+    if isinstance(output, dict):
+        candidates.append(output)
+        messages = output.get("messages")
+        if isinstance(messages, dict):
+            candidates.append(messages)
+            response_metadata = messages.get("response_metadata")
+            if isinstance(response_metadata, dict):
+                candidates.append(response_metadata)
     raw = entry.get("raw")
     if isinstance(raw, dict):
         candidates.append(raw)
-        output = raw.get("output")
-        if isinstance(output, dict):
-            candidates.append(output)
+        raw_output = raw.get("output")
+        if isinstance(raw_output, dict):
+            candidates.append(raw_output)
+            response_metadata = raw_output.get("response_metadata")
+            if isinstance(response_metadata, dict):
+                candidates.append(response_metadata)
+            messages = raw_output.get("messages")
+            if isinstance(messages, dict):
+                candidates.append(messages)
+                response_metadata = messages.get("response_metadata")
+                if isinstance(response_metadata, dict):
+                    candidates.append(response_metadata)
         metadata = raw.get("metadata")
         if isinstance(metadata, dict):
             candidates.append(metadata)
+        response_metadata = raw.get("response_metadata")
+        if isinstance(response_metadata, dict):
+            candidates.append(response_metadata)
     for candidate in candidates:
         usage = _usage_from_candidate(candidate)
         if usage:

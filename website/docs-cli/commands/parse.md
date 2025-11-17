@@ -10,8 +10,8 @@ Generate human-readable and machine-readable artifacts for each experiment trace
 
 `fluxloop parse experiment` processes the raw outputs produced by `fluxloop run experiment` and creates:
 
-- Markdown files under `per_trace_analysis/*.md` containing per-trace summaries, timelines, and observation details.
-- A structured JSONL file at `per_trace_analysis/per_trace.jsonl` that captures summary fields, conversation metadata, and observation timelines for every trace.  
+- Markdown files under `per_trace_analysis/*.md` containing per-trace summaries, conversation transcripts, timelines, and observation details.
+- A structured JSONL file at `per_trace_analysis/per_trace.jsonl` that captures summary fields, normalized conversations, and observation timelines for every trace.  
   This file is the canonical input for `fluxloop evaluate` starting with CLI v0.2.26.
 
 Running `parse` is now a required step before evaluation unless you manually supply a compatible `--per-trace` path to the `evaluate` command.
@@ -51,6 +51,8 @@ Each JSONL entry includes:
 - Top-level trace metadata (`trace_id`, `iteration`, `persona`, `input`, `output`, `duration_ms`, `success`)
 - A `summary` object mirroring the original `trace_summary.jsonl` row
 - A `timeline` array with serialized observations (type, timestamps, inputs/outputs)
+- A `conversation` array with normalized `{turn_index, role, content, source, metadata}` entries used by the evaluation UI
+- Optional `conversation_state` and `termination_reason` fields for multi-turn runs that ended via supervisor intervention
 - Derived metrics such as `observation_count`
 
 This structure allows downstream tooling to evaluate or analyze multi-turn traces without re-reading large observation logs.
