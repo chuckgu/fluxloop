@@ -5,7 +5,7 @@ Run command for executing experiments and simulations.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import typer
 from rich.console import Console
@@ -112,6 +112,11 @@ def experiment(
         False,
         "--dry-run",
         help="Show what would be run without executing",
+    ),
+    display: bool = typer.Option(
+        True,
+        "--display/--no-display",
+        help="Show rich console output (disable for plain log streaming)",
     ),
 ):
     """
@@ -227,7 +232,7 @@ def experiment(
     summary.add_row("Output", config.output_directory)
     
     console.print(summary)
-    
+
     if dry_run:
         console.print("\n[yellow]Dry run mode - no execution will occur[/yellow]")
         return
@@ -250,33 +255,100 @@ def experiment(
     # Run experiment with progress tracking
     console.print("\n[bold green]▶️ Starting experiment...[/bold green]\n")
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        TimeRemainingColumn(),
-        TextColumn("({task.completed} of {task.total})"),
-        console=console,
-    ) as progress:
-        # Create main task
-        main_task = progress.add_task(
-            f"Running {config.name}",
-            total=total_runs,
-        )
-        multi_turn_total = (
-            config.multi_turn.max_turns
-            if config.multi_turn and config.multi_turn.max_turns
-            else None
-        )
-        turn_task = progress.add_task(
-            "[cyan]Turn 0/0",
-            total=multi_turn_total or 1,
-            visible=False,
-        )
+    def _execute_with_callbacks(
+        progress_callback: Optional[Callable[[], None]],
+        turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]],
+    ):
+        try:
+            return asyncio.run(
+                runner.run_experiment(
+                    progress_callback=progress_callback,
+                    turn_progress_callback=turn_progress_callback,
+                )
+            )
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Experiment interrupted by user[/yellow]")
+            raise typer.Exit(1)
+        except Exception as e:
+            console.print(f"\n[red]Error during experiment:[/red] {e}")
+            if "--debug" in sys.argv:
+                console.print_exception()
+            raise typer.Exit(1)
 
-        def _progress_callback():
-            progress.advance(main_task)
+    if display and console.is_terminal:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            TextColumn("({task.completed} of {task.total})"),
+            console=console,
+        ) as progress:
+            main_task = progress.add_task(
+                f"Running {config.name}",
+                total=total_runs,
+            )
+            multi_turn_total = (
+                config.multi_turn.max_turns
+                if config.multi_turn and config.multi_turn.max_turns
+                else None
+            )
+            turn_task = progress.add_task(
+                "[cyan]Turn 0/0",
+                total=multi_turn_total or 1,
+                visible=False,
+            )
+
+            def _progress_callback() -> None:
+                progress.advance(main_task)
+
+            def _turn_progress_callback(
+                current_turn: int,
+                total_turns: int,
+                message: Optional[str] = None,
+            ) -> None:
+                total = total_turns or 1
+                clamped_turn = max(0, current_turn)
+                if message is None:
+                    completed = min(clamped_turn, total)
+                    description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: complete"
+                    progress.update(
+                        turn_task,
+                        total=total,
+                        completed=completed,
+                        description=description,
+                        visible=False,
+                    )
+                    return
+
+                if not progress.tasks[turn_task].visible:
+                    progress.update(turn_task, visible=True)
+
+                preview = message.replace("\n", " ")
+                if len(preview) > 40:
+                    preview = preview[:37] + "..."
+
+                completed = max(0, min(clamped_turn - 1, total))
+                description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: {preview}"
+                progress.update(
+                    turn_task,
+                    total=total,
+                    completed=completed,
+                    description=description,
+                )
+
+            results = _execute_with_callbacks(_progress_callback, _turn_progress_callback)
+    else:
+        completed_runs = 0
+
+        def _progress_callback() -> None:
+            nonlocal completed_runs
+            completed_runs += 1
+            print(
+                f"[fluxloop] run progress {completed_runs}/{total_runs}",
+                flush=True,
+            )
 
         def _turn_progress_callback(
             current_turn: int,
@@ -285,52 +357,25 @@ def experiment(
         ) -> None:
             total = total_turns or 1
             clamped_turn = max(0, current_turn)
-            if message is None:
-                completed = min(clamped_turn, total)
-                description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: complete"
-                progress.update(
-                    turn_task,
-                    total=total,
-                    completed=completed,
-                    description=description,
-                    visible=False,
+            if message:
+                preview = message.replace("\n", " ")
+                if len(preview) > 80:
+                    preview = preview[:77] + "..."
+                print(
+                    f"[fluxloop] turn progress {min(clamped_turn, total)}/{total}: {preview}",
+                    flush=True,
                 )
-                return
-
-            if not progress.tasks[turn_task].visible:
-                progress.update(turn_task, visible=True)
-
-            preview = message.replace("\n", " ")
-            if len(preview) > 40:
-                preview = preview[:37] + "..."
-
-            completed = max(0, min(clamped_turn - 1, total))
-            description = f"[cyan]Turn {min(clamped_turn, total)}/{total}: {preview}"
-
-            progress.update(
-                turn_task,
-                total=total,
-                completed=completed,
-                description=description,
-            )
-
-        # Run experiment
-        try:
-            results = asyncio.run(
-                runner.run_experiment(
-                    progress_callback=_progress_callback,
-                    turn_progress_callback=_turn_progress_callback,
+            else:
+                print(
+                    f"[fluxloop] turn progress {min(clamped_turn, total)}/{total}: complete",
+                    flush=True,
                 )
-            )
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Experiment interrupted by user[/yellow]")
-            raise typer.Exit(1)
-        except Exception as e:
-            console.print(f"\n[red]Error during experiment:[/red] {e}")
-            # Debug mode - show full traceback
-            if "--debug" in sys.argv:
-                console.print_exception()
-            raise typer.Exit(1)
+
+        print(
+            f"[fluxloop] running {config.name} ({total_runs} total runs)",
+            flush=True,
+        )
+        results = _execute_with_callbacks(_progress_callback, _turn_progress_callback)
     
     config.set_resolved_input_count(results.get("input_count", config.get_input_count()))
 

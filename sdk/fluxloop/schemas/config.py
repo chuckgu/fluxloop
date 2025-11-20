@@ -35,7 +35,7 @@ class LLMGeneratorConfig(BaseModel):
 
     enabled: bool = False
     provider: str = "openai"
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-5-mini"
     api_key: Optional[str] = None
     system_prompt: Optional[str] = None
     user_prompt_template: Optional[str] = None

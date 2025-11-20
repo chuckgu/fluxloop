@@ -156,14 +156,14 @@ fluxloop doctor
    ```
 
 2. **Install in project venv:**
-   ```bash
+```bash
    source .venv/bin/activate
    pip install fluxloop-cli fluxloop fluxloop-mcp
    ```
 
 3. **Or install globally:**
    ```bash
-   pipx install fluxloop-cli
+pipx install fluxloop-cli
    pipx install fluxloop-mcp
    ```
 
@@ -176,7 +176,7 @@ fluxloop doctor
    ```bash
    which fluxloop
    fluxloop doctor
-   ```
+```
 
 ### Extension Not Found in Cursor
 

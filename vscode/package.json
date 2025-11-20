@@ -202,7 +202,7 @@
       },
       {
         "command": "fluxloop.integration.openKnowledgeSearch",
-        "title": "Open Knowledge Search",
+        "title": "Search in Documents",
         "category": "FluxLoop Integration"
       },
       {
@@ -364,6 +364,11 @@
           "default": "auto",
           "scope": "resource",
           "description": "Controls how FluxLoop selects the Python environment (auto, workspace only, global PATH, or custom executables)."
+        },
+        "fluxloop.projectRoot": {
+          "type": "string",
+          "default": "~/FluxLoopProjects",
+          "description": "Default location where new FluxLoop projects are created when using the streamlined flow."
         },
         "fluxloop.pythonPath": {
           "type": "string",

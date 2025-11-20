@@ -146,7 +146,7 @@ def test_openai_payload_omits_reasoning_and_text_when_unset(monkeypatch):
             "llm": {
                 "enabled": True,
                 "provider": "openai",
-                "model": "gpt-4o-mini",
+                "model": "gpt-5-mini",
             },
         },
     )

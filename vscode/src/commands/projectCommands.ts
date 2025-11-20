@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import * as yaml from 'yaml';
 import { ProjectManager, ProjectEntry } from '../project/projectManager';
@@ -7,6 +8,7 @@ import { ProjectContext } from '../project/projectContext';
 import { CLIManager } from '../cli/cliManager';
 import { EnvironmentManager, EnvironmentCheckResult } from '../environment/environmentManager';
 import { OutputChannelManager } from '../utils/outputChannel';
+import { discoverEnvironmentCandidates, EnvironmentCandidate } from '../utils/environmentDiscovery';
 
 type PreparedEnvironment =
     | { mode: 'workspace'; root: string }
@@ -31,6 +33,91 @@ export class ProjectCommands {
     }
 
     private async createProject(): Promise<void> {
+        const mode = await this.promptCreationMode();
+        if (!mode) {
+            return;
+        }
+
+        if (mode === 'default') {
+            await this.runDefaultProjectFlow();
+        } else {
+            await this.runCustomProjectFlow();
+        }
+    }
+
+    private async promptCreationMode(): Promise<'default' | 'custom' | undefined> {
+        const items: Array<vscode.QuickPickItem & { mode: 'default' | 'custom' }> = [
+            {
+                label: '$(star) Default (Recommended)',
+                description: 'Create FluxLoop project in shared FluxLoop folder and reuse your current workspace environment.',
+                detail: 'Fastest setup • Keeps simulation data separate from workspace code.',
+                mode: 'default'
+            },
+            {
+                label: '$(tools) Custom (Advanced)',
+                description: 'Choose project location and environment manually.',
+                detail: 'Use when you need full control over folders or custom environments.',
+                mode: 'custom'
+            }
+        ];
+
+        const pick = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select how you would like to set up your FluxLoop project.'
+        });
+
+        return pick?.mode;
+    }
+
+    private async runDefaultProjectFlow(): Promise<void> {
+        const workspaceRoot = await this.selectWorkspaceRoot();
+        if (!workspaceRoot) {
+            return;
+        }
+
+        const defaultProjectRoot = await this.ensureDefaultProjectRoot();
+        if (!defaultProjectRoot) {
+            return;
+        }
+
+        const projectName = await this.promptProjectName({
+            basePath: defaultProjectRoot
+        });
+        if (!projectName) {
+            return;
+        }
+
+        const includeExample = await this.promptIncludeExample();
+        if (includeExample === undefined) {
+            return;
+        }
+
+        const projectRoot = path.join(defaultProjectRoot, projectName);
+        const environmentSelector = async () =>
+            await this.promptDefaultEnvironmentChoice([workspaceRoot]);
+
+        const initialSelection = await environmentSelector();
+        if (!initialSelection) {
+            return;
+        }
+
+        const environmentChoice = await this.prepareProjectEnvironment(projectRoot, projectName, {
+            initialSelection,
+            selectionProvider: environmentSelector
+        });
+        if (!environmentChoice) {
+            return;
+        }
+
+        await this.initializeProject({
+            rootDir: defaultProjectRoot,
+            projectRoot,
+            projectName,
+            includeExample,
+            environmentChoice
+        });
+    }
+
+    private async runCustomProjectFlow(): Promise<void> {
         const projectFolder = await vscode.window.showOpenDialog({
             canSelectFolders: true,
             canSelectFiles: false,
@@ -48,36 +135,229 @@ export class ProjectCommands {
             return;
         }
 
-        const rootBaseName = path.basename(selectedPath);
-
-        const projectName = await vscode.window.showInputBox({
-            prompt: 'Project name',
-            placeHolder: 'Enter a new project folder name (will be created inside selected folder)',
-            validateInput: value => {
-                if (!value || !value.trim()) {
-                    return 'Project name is required';
-                }
-                if (value.trim() === rootBaseName) {
-                    return 'Project name must be different from the selected folder name';
-                }
-                return undefined;
-            }
+        const projectName = await this.promptProjectName({
+            basePath: selectedPath,
+            disallowName: path.basename(selectedPath)
         });
-
         if (!projectName) {
             return;
         }
 
-        const includeExample = await vscode.window.showQuickPick(['Include example agent', 'Skip example agent'], {
-            placeHolder: 'Would you like to include the example agent?'
-        });
+        const includeExample = await this.promptIncludeExample();
+        if (includeExample === undefined) {
+            return;
+        }
 
         const { rootDir, projectRoot } = this.resolvePathsForNewProject(selectedPath, projectName);
-
         const environmentChoice = await this.prepareProjectEnvironment(projectRoot, projectName);
         if (!environmentChoice) {
             return;
         }
+
+        await this.initializeProject({
+            rootDir,
+            projectRoot,
+            projectName,
+            includeExample,
+            environmentChoice
+        });
+    }
+
+    private async selectWorkspaceRoot(): Promise<string | undefined> {
+        const folders = vscode.workspace.workspaceFolders;
+        if (!folders || folders.length === 0) {
+            void vscode.window.showErrorMessage('Open the workspace that contains your agent project before creating a FluxLoop project.');
+            return undefined;
+        }
+
+        if (folders.length === 1) {
+            return folders[0].uri.fsPath;
+        }
+
+        const pick = await vscode.window.showQuickPick(
+            folders.map(folder => ({
+                label: folder.name,
+                description: folder.uri.fsPath,
+                folder
+            })),
+            {
+                placeHolder: 'Select the workspace folder that contains your agent project.'
+            }
+        );
+
+        return pick?.folder.uri.fsPath;
+    }
+
+    private async ensureDefaultProjectRoot(): Promise<string | undefined> {
+        const configuration = vscode.workspace.getConfiguration('fluxloop');
+        const setting = configuration.get<string>('projectRoot')?.trim() ?? '~/FluxLoopProjects';
+        const expanded = setting.startsWith('~') ? path.join(os.homedir(), setting.slice(1)) : setting;
+        const resolved = path.isAbsolute(expanded) ? path.resolve(expanded) : path.resolve(os.homedir(), expanded);
+
+        try {
+            await fs.promises.mkdir(resolved, { recursive: true });
+            this.log(`[Project Init] Using FluxLoop project root at ${resolved}.`);
+            return resolved;
+        } catch (error) {
+            void vscode.window.showErrorMessage(`Failed to prepare FluxLoop project root at ${resolved}: ${String(error)}`);
+            this.log(`[Project Init] Failed to create default project root at ${resolved}. ${String(error)}`);
+            return undefined;
+        }
+    }
+
+    private async promptProjectName(options: { basePath: string; disallowName?: string }): Promise<string | undefined> {
+        const normalizedBase = path.resolve(options.basePath);
+        const input = await vscode.window.showInputBox({
+            prompt: 'Project name',
+            placeHolder: 'agent-e2e-tests',
+            validateInput: value => this.validateProjectName(value, normalizedBase, options.disallowName)
+        });
+
+        return input?.trim();
+    }
+
+    private validateProjectName(value: string | undefined, basePath: string, disallow?: string): string | undefined {
+        if (!value || !value.trim()) {
+            return 'Project name is required';
+        }
+
+        const trimmed = value.trim();
+        if (trimmed === '.' || trimmed === '..') {
+            return 'Project name cannot be "." or ".."';
+        }
+
+        if (disallow && trimmed === disallow) {
+            return 'Project name must be different from the selected folder name';
+        }
+
+        if (/[\\/:*?"<>|]/.test(trimmed)) {
+            return 'Project name contains invalid characters';
+        }
+
+        const target = path.join(basePath, trimmed);
+        if (fs.existsSync(target)) {
+            return `A folder named "${trimmed}" already exists in ${basePath}`;
+        }
+
+        return undefined;
+    }
+
+    private async promptIncludeExample(): Promise<'Include example agent' | 'Skip example agent' | undefined> {
+        return await vscode.window.showQuickPick(
+            [
+                {
+                    label: 'Include example agent',
+                    detail: 'Adds sample agent files and configurations (recommended).',
+                    picked: true
+                },
+                {
+                    label: 'Skip example agent',
+                    detail: 'Create an empty FluxLoop project structure.'
+                }
+            ],
+            {
+                placeHolder: 'Would you like to include the example agent?',
+                canPickMany: false
+            }
+        ).then(pick => pick?.label as 'Include example agent' | 'Skip example agent' | undefined);
+    }
+
+    private async promptDefaultEnvironmentChoice(searchRoots: readonly string[]): Promise<PreparedEnvironment | undefined> {
+        const candidates = await discoverEnvironmentCandidates({
+            searchPaths: searchRoots,
+            includePythonExtension: true,
+            includeGlobal: false
+        });
+
+        type DefaultEnvironmentPick =
+            | (vscode.QuickPickItem & { type: 'candidate'; candidate: EnvironmentCandidate })
+            | (vscode.QuickPickItem & { type: 'browse' })
+            | (vscode.QuickPickItem & { type: 'global' });
+
+        const items: DefaultEnvironmentPick[] = candidates.map((candidate, index) => ({
+            label: `${candidate.source === 'pythonExtension' ? '$(star) ' : ''}${candidate.label}`,
+            description: buildCandidateDescription(candidate),
+            detail: candidate.detail ?? candidate.pythonPath ?? candidate.path,
+            picked: index === 0,
+            type: 'candidate',
+            candidate
+        }));
+
+        items.push(
+            {
+                label: '$(folder) Choose another environment…',
+                description: 'Select an existing virtual environment folder.',
+                type: 'browse'
+            },
+            {
+                label: '$(warning) Use system Python (Not recommended)',
+                description: 'Use python from PATH. May cause version conflicts.',
+                detail: 'Only choose this if no virtual environment is available.',
+                type: 'global'
+            }
+        );
+
+        const pick = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select the Python environment to use with FluxLoop.',
+            matchOnDetail: true
+        });
+
+        if (!pick) {
+            return undefined;
+        }
+
+        if (pick.type === 'global') {
+            return { mode: 'global' };
+        }
+
+        if (pick.type === 'browse') {
+            const folder = await this.promptEnvironmentFolder();
+            if (!folder) {
+                return await this.promptDefaultEnvironmentChoice(searchRoots);
+            }
+            return { mode: 'workspace', root: folder };
+        }
+
+        return { mode: 'workspace', root: pick.candidate.path };
+
+        function buildCandidateDescription(candidate: EnvironmentCandidate): string | undefined {
+            const parts: string[] = [];
+            if (candidate.description) {
+                parts.push(candidate.description);
+            }
+            if (candidate.kind && candidate.kind !== 'unknown') {
+                parts.push(candidate.kind);
+            }
+            if (candidate.confidence === 'low') {
+                parts.push('low confidence');
+            }
+            return parts.length ? parts.join(' • ') : undefined;
+        }
+    }
+
+    private async promptEnvironmentFolder(): Promise<string | undefined> {
+        const folder = await vscode.window.showOpenDialog({
+            canSelectFolders: true,
+            canSelectFiles: false,
+            canSelectMany: false,
+            openLabel: 'Select Python environment root'
+        });
+
+        if (!folder || folder.length === 0) {
+            return undefined;
+        }
+
+        return folder[0].fsPath;
+    }
+
+    private async initializeProject(options: {
+        rootDir: string;
+        projectRoot: string;
+        projectName: string;
+        includeExample: 'Include example agent' | 'Skip example agent';
+        environmentChoice: PreparedEnvironment;
+    }): Promise<void> {
+        const { rootDir, projectRoot, projectName, includeExample, environmentChoice } = options;
 
         const args = ['init', 'project', rootDir, '--name', projectName];
         if (includeExample === 'Skip example agent') {
@@ -97,9 +377,12 @@ export class ProjectCommands {
         manager.addProject({ name: projectName, path: projectRoot, setActive: true });
         await this.environmentManager.refreshActiveEnvironment();
 
-        const openAction = await vscode.window.showQuickPick(['Open in current window', 'Open in new window', 'Stay in current workspace'], {
-            placeHolder: 'How would you like to work with this project?'
-        });
+        const openAction = await vscode.window.showQuickPick(
+            ['Open in current window', 'Open in new window', 'Stay in current workspace'],
+            {
+                placeHolder: 'How would you like to work with this project?'
+            }
+        );
 
         const projectRootUri = vscode.Uri.file(projectRoot);
         if (openAction === 'Open in current window') {
@@ -111,46 +394,51 @@ export class ProjectCommands {
         ProjectContext.ensureActiveProject();
     }
 
-    private async prepareProjectEnvironment(projectRoot: string, projectName: string): Promise<PreparedEnvironment | undefined> {
-        let selectedRoot: string | undefined;
+    private async prepareProjectEnvironment(
+        projectRoot: string,
+        projectName: string,
+        options?: {
+            initialSelection?: PreparedEnvironment;
+            selectionProvider?: () => Promise<PreparedEnvironment | undefined>;
+        }
+    ): Promise<PreparedEnvironment | undefined> {
+        let selection = options?.initialSelection;
+        const provider =
+            options?.selectionProvider ?? (async () => await this.promptEnvironmentChoice(projectRoot, projectName));
 
         let shouldContinue = true;
         while (shouldContinue) {
-            if (!selectedRoot) {
-                const choice = await this.promptEnvironmentChoice(projectRoot, projectName);
-                if (!choice) {
+            if (!selection) {
+                selection = await provider();
+                if (!selection) {
                     return undefined;
                 }
-
-                if (choice.mode === 'global') {
-                    if (await this.confirmGlobalUsage()) {
-                        return { mode: 'global' };
-                    }
-                    continue;
-                }
-
-                selectedRoot = choice.root;
             }
 
-            const status = await this.environmentManager.checkEnvironment(selectedRoot);
+            if (selection.mode === 'global') {
+                if (await this.confirmGlobalUsage()) {
+                    return { mode: 'global' };
+                }
+                selection = undefined;
+                continue;
+            }
+
+            const status = await this.environmentManager.checkEnvironment(selection.root);
             if (status.hasPython && status.hasFluxloop && status.hasFluxloopMcp) {
                 this.showEnvironmentConfirmation(status);
-                return { mode: 'workspace', root: selectedRoot };
+                return { mode: 'workspace', root: selection.root };
             }
 
-            const resolution = await this.promptEnvironmentResolution(status, selectedRoot);
+            const resolution = await this.promptEnvironmentResolution(status, selection.root);
             if (resolution === 'retry') {
                 continue;
             }
             if (resolution === 'select') {
-                selectedRoot = undefined;
+                selection = undefined;
                 continue;
             }
             if (resolution === 'global') {
-                if (await this.confirmGlobalUsage()) {
-                    return { mode: 'global' };
-                }
-                selectedRoot = undefined;
+                selection = { mode: 'global' };
                 continue;
             }
             shouldContinue = false;
@@ -191,18 +479,12 @@ export class ProjectCommands {
         }
 
         if (pick.type === 'browse') {
-            const folder = await vscode.window.showOpenDialog({
-                canSelectFolders: true,
-                canSelectFiles: false,
-                canSelectMany: false,
-                openLabel: 'Select Python environment root'
-            });
-
-            if (!folder || folder.length === 0) {
+            const folder = await this.promptEnvironmentFolder();
+            if (!folder) {
                 return undefined;
             }
 
-            return { mode: 'workspace', root: folder[0].fsPath };
+            return { mode: 'workspace', root: folder };
         }
 
         return { mode: 'workspace', root: projectRoot };

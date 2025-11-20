@@ -77,7 +77,7 @@ def _write_eval_config(path: Path, include_llm: bool = False) -> None:
             type: llm_judge
             enabled: true
             weight: 0.0
-            model: gpt-4o-mini
+            model: gpt-5-mini
             prompt_template: |
               Score the assistant response from 1-10.
               Input: {input}

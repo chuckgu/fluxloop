@@ -80,8 +80,9 @@ export class IntegrationService {
 
     async openKnowledgeSearch(): Promise<void> {
         const query = await vscode.window.showInputBox({
-            prompt: 'Enter a question for the FluxLoop documentation.',
-            placeHolder: 'Example: How do I initialize the FluxLoop SDK in FastAPI?',
+            prompt: 'Ask anything about the FluxLoop documentation.',
+            placeHolder:
+                'Examples: "How do I initialize the FluxLoop SDK in FastAPI?" · "Where do I configure MCP credentials?" · "What does the MCP index include?"',
         });
 
         if (!query) {
@@ -91,14 +92,14 @@ export class IntegrationService {
         await this.refreshStatus();
         const mcpStatus = this.lastStatuses.find((status) => status.id === 'fluxloop-mcp');
         if (mcpStatus?.state !== 'ok') {
-            vscode.window.showErrorMessage('fluxloop-mcp package is not installed. Install it before running a knowledge search.');
+            vscode.window.showErrorMessage('fluxloop-mcp package is not installed. Install it before running a document search.');
             return;
         }
 
         this.output.show();
         this.output.appendLine('');
         this.output.appendLine('='.repeat(60));
-        this.output.appendLine(`[MCP FAQ] ${query}`);
+        this.output.appendLine(`[Document Search] ${query}`);
 
         const workspacePath =
             ProjectContext.getActiveWorkspacePath() || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;

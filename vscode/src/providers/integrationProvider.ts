@@ -256,16 +256,16 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
 
         rootItems.push(
             new IntegrationItem(
-                'Knowledge Search…',
+                'Search in Documents…',
                 vscode.TreeItemCollapsibleState.None,
                 'knowledgeSearch',
                 {
                     command: {
                         command: 'fluxloop.integration.openKnowledgeSearch',
-                        title: 'Open Knowledge Search',
+                        title: 'Search in Documents',
                     },
                     iconId: 'search',
-                    tooltip: 'Search FluxLoop docs using the MCP knowledge index',
+                    tooltip: 'Search FluxLoop documentation using the MCP index',
                 },
             ),
         );

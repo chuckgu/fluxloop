@@ -38,7 +38,7 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 
 ### 🤖 Integration Assistant
 - Dedicated **Integration** view with MCP connection status and recent suggestions
-- One-click knowledge search backed by the FluxLoop MCP server
+- One-click document search backed by the FluxLoop MCP server
 - Flux Agent combines repository analysis + LLM guidance with rich Markdown output
 - Suggestion history stores file context, selected code, and the generated plan
 
@@ -185,7 +185,7 @@ Use the prompt dialog to override the output directory or keep the default `eval
 
 1. Open the **Integration** view in the FluxLoop activity bar.
 2. Press **Connect MCP** to verify `fluxloop-mcp` is available and the knowledge index is present.
-3. Press **Knowledge Search** to run a one-off documentation query (`fluxloop-mcp --once --query "<question>"`).
+3. Press **Search in Documents** to run a one-off documentation query (`fluxloop-mcp --once --query "<question>"`).
 4. Open a file, highlight any relevant snippet, and press **Run Flux Agent** to:
    - Execute `run_integration_workflow` inside your repo
    - Collect the result and feed it to the configured OpenAI model
@@ -273,7 +273,7 @@ Access via Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 - `FluxLoop: Run Single Execution`
 - `FluxLoop: Show Status`
 - `FluxLoop: Connect MCP`
-- `FluxLoop: Open Knowledge Search`
+- `FluxLoop: Search in Documents`
 - `FluxLoop: Run Flux Agent`
 - `FluxLoop: Refresh Integration View`
 - `FluxLoop: Clear Integration Suggestion History`

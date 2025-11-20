@@ -16,10 +16,9 @@ function HomepageHeader() {
         <Heading as="h1" className="hero__title">
           {siteConfig.title}
         </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <p className="hero__subtitle">Ship Agents with Data. Scale Business.</p>
         <p className={styles.heroDescription}>
-          Stop guessing, start simulating. Test your AI agents rigorously with reproducible, 
-          offline-first experiments before shipping to production.
+          Test your AI agents rigorously with reproducible, offline-first experiments before shipping to production.
         </p>
         <div className={styles.buttons}>
           <Link

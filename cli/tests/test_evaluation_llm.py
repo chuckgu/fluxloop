@@ -77,7 +77,7 @@ def test_cache_key_includes_model_parameters(manager: LLMEvaluationManager) -> N
 
 
 def test_non_gpt5_does_not_set_reasoning(manager: LLMEvaluationManager) -> None:
-    evaluator = EvaluatorConfig(name="llm", type="llm_judge", model="gpt-4o-mini")
+    evaluator = EvaluatorConfig(name="llm", type="llm_judge", model="gpt-5-mini")
     max_tokens, params = manager._build_model_parameters(evaluator)
 
     assert max_tokens == 512

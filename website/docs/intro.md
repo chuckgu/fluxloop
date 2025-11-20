@@ -5,6 +5,19 @@ slug: /
 
 # Welcome to FluxLoop
 
+## Ship Agents with Data. Scale Business.
+
+### 🎯 Simulate at Scale
+Run thousands of realistic multi-turn scenarios in parallel. Find edge cases before production.
+
+### 📊 Align to Your Standards
+Capture your implicit decision criteria. Turn intuition into automated evaluation.
+
+### 🚀 Act on Insights
+Reports that show what to fix and how. Analysis that drives action.
+
+---
+
 **FluxLoop is an open-source toolkit for running reproducible, offline-first simulations of AI agents against dynamic scenarios.** It empowers developers to rigorously test agent behavior, evaluate performance against custom criteria, and build confidence before shipping to production.
 
 ## Why FluxLoop?
