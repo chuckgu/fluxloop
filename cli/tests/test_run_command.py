@@ -44,6 +44,7 @@ def test_run_experiment_multi_turn_cli(tmp_path: Path):
         [
             "run",
             "experiment",
+            "--yes",
             "--config",
             str(config_path),
             "--multi-turn",
@@ -101,10 +102,6 @@ def test_run_experiment_passes_turn_progress_callback(tmp_path: Path, monkeypatc
         "fluxloop_cli.commands.run.ExperimentRunner.run_experiment",
         fake_run_experiment,
     )
-    monkeypatch.setattr(
-        "fluxloop_cli.commands.run.typer.confirm",
-        lambda *args, **kwargs: True,
-    )
 
     runner = CliRunner()
     result = runner.invoke(
@@ -112,6 +109,7 @@ def test_run_experiment_passes_turn_progress_callback(tmp_path: Path, monkeypatc
         [
             "run",
             "experiment",
+            "--yes",
             "--config",
             str(config_path),
             "--multi-turn",

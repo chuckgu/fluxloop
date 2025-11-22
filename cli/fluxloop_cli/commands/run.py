@@ -118,6 +118,12 @@ def experiment(
         "--display/--no-display",
         help="Show rich console output (disable for plain log streaming)",
     ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip confirmation prompt and run immediately",
+    ),
 ):
     """
     Run an experiment based on configuration file.
@@ -248,7 +254,11 @@ def experiment(
             f"\nThis will execute {total_runs} runs."
         )
 
-    if not typer.confirm("Continue?"):
+    if yes:
+        proceed = True
+    else:
+        proceed = typer.confirm("Continue?")
+    if not proceed:
         raise typer.Abort()
     
     # Create runner

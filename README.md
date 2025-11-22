@@ -83,6 +83,8 @@ Add `@fluxloop.agent()` decorator to your code to automatically capture traces, 
 
 Initialize projects, generate test inputs with LLM, run batch simulations, and parse results into human-readable formats—all from your terminal.
 
+- **New:** Pytest Bridge (`fluxloop init pytest-template`) produces a ready-to-run smoke test wired to the `fluxloop_runner` fixture; see `docs/guides/pytest_bridge.md` for examples and the sample GitHub Actions workflow.
+
 📖 **Documentation**: [https://fluxloop.io/cli/](https://fluxloop.io/cli/)  
 📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
 

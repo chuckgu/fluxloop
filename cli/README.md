@@ -30,6 +30,7 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
 - `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment
+- `--yes/-y` (for `fluxloop run experiment`) – skip the interactive confirmation prompt, ideal for CI and the Pytest bridge
 
 ### Multi-turn supervisor options
 
@@ -46,6 +47,16 @@ These flags override the values in `configs/simulation.yaml` (`multi_turn` block
 **Scripted Playback Mode**: For deterministic multi-turn scenarios, switch `supervisor.provider` to `mock` and populate `supervisor.metadata.scripted_questions` with a list of user messages. FluxLoop will replay them sequentially and terminate when the script ends—ideal for regression testing and demos.
 
 Run `fluxloop --help` or `fluxloop <command> --help` for more detail.
+
+## Pytest Bridge (0.2.29+)
+
+- `fluxloop init pytest-template [project_root]` creates `tests/test_fluxloop_smoke.py`, already wired to the new `fluxloop_runner` fixture.
+- Fixtures live in `fluxloop_cli.testing.pytest_plugin` and return a `FluxLoopTestResult`, so you can assert on `total_runs`, `success_rate`, or call `require_success()`.
+- Full guide + CI example: see `docs/guides/pytest_bridge.md` (includes GitHub Actions workflow at `examples/ci/fluxloop_pytest.yml`).
+- Typical workflow:
+  1. `pip install -e packages/cli[dev]`
+  2. `fluxloop init pytest-template .`
+  3. `pytest -k fluxloop_smoke --maxfail=1`
 
 ## Evaluation Workflow
 

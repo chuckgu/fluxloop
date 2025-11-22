@@ -81,6 +81,7 @@ Python SDK documentation for agent instrumentation.
 CLI tool documentation for project management and experiments.
 - Current version: 0.2.1
 - Source: `packages/cli/`
+- Guides include the new Pytest Bridge walkthrough (`docs-cli/guides/pytest-bridge.md`) plus the accompanying CI workflow (`examples/ci/fluxloop_pytest.yml`) referenced throughout the site.
 
 ### VSCode Extension (`/vscode`)
 

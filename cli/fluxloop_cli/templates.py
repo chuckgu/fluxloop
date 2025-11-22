@@ -429,6 +429,31 @@ def create_evaluation_config() -> str:
     ).strip() + "\n"
 
 
+def create_pytest_bridge_template(config_relative_path: str) -> str:
+    """Return a ready-to-run pytest smoke test referencing the bridge fixtures."""
+
+    return dedent(
+        f"""
+        \"\"\"FluxLoop Pytest smoke test generated via `fluxloop init pytest-template`.\"\"\"
+
+        from pathlib import Path
+
+
+        PROJECT_ROOT = Path(__file__).resolve().parents[1]
+        SIMULATION_CONFIG = PROJECT_ROOT / "{config_relative_path}"
+
+
+        def test_fluxloop_smoke(fluxloop_runner):
+            result = fluxloop_runner(
+                project_root=PROJECT_ROOT,
+                simulation_config=SIMULATION_CONFIG,
+                env={{"PYTHONPATH": str(PROJECT_ROOT)}},
+            )
+            result.require_success(label="fluxloop smoke")
+        """
+    ).strip() + "\n"
+
+
 def create_sample_agent() -> str:
     """Create a sample agent implementation."""
 

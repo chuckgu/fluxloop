@@ -18,6 +18,7 @@ from ..templates import (
     create_sample_agent,
     create_gitignore,
     create_env_file,
+    create_pytest_bridge_template,
 )
 from ..project_paths import resolve_root_dir, resolve_project_dir
 from ..constants import (
@@ -189,6 +190,73 @@ def project(
     console.print("6. Parse outputs: [green]fluxloop parse experiment[/green]")
     console.print("7. Evaluate results (optional): [green]fluxloop evaluate experiment[/green]")
     console.print("8. Diagnose environment anytime: [green]fluxloop doctor[/green]")
+
+
+@app.command("pytest-template")
+def pytest_template(
+    project_root: Path = typer.Argument(
+        Path.cwd(),
+        help="Project root containing configs/ or setting.yaml",
+    ),
+    tests_dir: str = typer.Option(
+        "tests",
+        "--tests-dir",
+        help="Directory (relative to project root) where tests live",
+    ),
+    filename: str = typer.Option(
+        "test_fluxloop_smoke.py",
+        "--filename",
+        help="Test file name to create inside the tests directory",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite existing template without confirmation",
+    ),
+) -> None:
+    """
+    Scaffold a pytest smoke test that uses the FluxLoop runner fixtures.
+    """
+
+    root_path = project_root.expanduser().resolve()
+    if not root_path.exists():
+        console.print(f"[red]Error:[/red] Project root {root_path} does not exist.")
+        raise typer.Exit(1)
+
+    tests_path = (root_path / tests_dir).resolve()
+    tests_path.mkdir(parents=True, exist_ok=True)
+
+    target_file = tests_path / filename
+
+    if target_file.exists() and not force:
+        if not Confirm.ask(
+            f"{target_file} already exists. Overwrite?",
+            default=False,
+        ):
+            raise typer.Abort()
+
+    configs_sim = root_path / CONFIG_DIRECTORY_NAME / CONFIG_SECTION_FILENAMES["simulation"]
+    legacy_config = root_path / "setting.yaml"
+
+    if configs_sim.exists():
+        relative_config = configs_sim.relative_to(root_path).as_posix()
+    elif legacy_config.exists():
+        relative_config = legacy_config.relative_to(root_path).as_posix()
+    else:
+        # Fall back to configs/simulation.yaml even if it does not exist yet
+        relative_config = (CONFIG_DIRECTORY_NAME + "/" + CONFIG_SECTION_FILENAMES["simulation"])
+        console.print(
+            "[yellow]Warning:[/yellow] Could not find configs/simulation.yaml or setting.yaml. "
+            "Template will reference the default simulation path."
+        )
+
+    template_content = create_pytest_bridge_template(relative_config)
+    target_file.write_text(template_content, encoding="utf-8")
+
+    console.print(
+        f"[green]✓[/green] Pytest template created at [cyan]{target_file}[/cyan]. "
+        "Run [bold]pytest -k fluxloop_smoke[/bold] to execute the sample test."
+    )
 
 
 @app.command()
