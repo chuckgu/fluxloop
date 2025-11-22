@@ -323,7 +323,12 @@ def _run_via_cli(
 
         experiment_dir = _latest_experiment_dir(outputs_base)
 
-        parse_args = ["parse", "experiment", str(experiment_dir)]
+        parse_args = [
+            "parse",
+            "experiment",
+            str(experiment_dir),
+            "--overwrite",
+        ]
         parse_proc = _invoke_cli_command(
             parse_args,
             env=env,
