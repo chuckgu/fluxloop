@@ -20,6 +20,7 @@ This package exposes tools for documentation Q&A, repository analysis, framework
 - **Edit Plan Proposal**: Creates structured edit plans with anchors, payload, post-checks, and rollback
 - **Plan Validation**: Verifies file existence, anchor patterns, and duplicate code detection
 - **End-to-End Workflow**: `analyze → detect → steps → plan → validate` pipeline in one call
+- **Multi-Mode Context APIs**: `fetch_integration_context`, `fetch_base_input_context`, `fetch_experiment_context`, `fetch_insight_context` provide mode-specific payloads for the VS Code Flux Agent (Integration, Base Input, Experiment, Insight)
 
 ### Indexing & Knowledge Base
 - Document ingestion from `docs/`, `packages/website/docs-{cli,sdk}`, `samples/`
@@ -121,6 +122,28 @@ pytest
 | `propose_edit_plan` | Generates structured edit plan with anchors and validation |
 | `validate_edit_plan` | Verifies plan structure and checks file/anchor existence |
 | `run_integration_workflow` | Executes full pipeline from analysis to validated plan |
+| `fetch_integration_context` | Returns repo profile + integration workflow payloads for VS Code planner |
+| `fetch_base_input_context` | Packages base input samples/service settings + RAG topics |
+| `fetch_experiment_context` | Summarizes past experiments, runner configs, simulation templates |
+| `fetch_insight_context` | Collects evaluation reports and aggregated metrics for Insight mode |
+
+### Multi-Mode Planner Support
+
+Flux Agent in VS Code now selects between four modes:
+
+| Mode | MCP Tool | Data Provided |
+| --- | --- | --- |
+| Integration | `fetch_integration_context` | Repository profile, integration workflow, structure context, RAG topics |
+| Base Input | `fetch_base_input_context` | Existing `inputs/` samples, `setting.yaml` preview, suggested RAG topics |
+| Experiment | `fetch_experiment_context` | `experiments/` summaries, runner configs, simulation templates |
+| Insight | `fetch_insight_context` | Evaluation reports (`summary.json`, `traces.jsonl`) and aggregated success metrics |
+
+The VS Code extension uses these APIs alongside the local planner to route LLM prompts per mode. Run the regression suite to ensure MCP changes don’t break planners:
+
+```bash
+. .venv/bin/activate
+python3 -m pytest packages/mcp -k multi_mode_regression
+```
 
 ## Protocol (stdio)
 

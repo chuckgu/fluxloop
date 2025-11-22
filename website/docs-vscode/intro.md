@@ -78,11 +78,14 @@ Current version: **0.1.4**
 
 ### 1. Create a Project
 
-Open the **FluxLoop** Activity Bar and click **"Create New Project…"** or use Command Palette:
+Open the **FluxLoop** Activity Bar and click **"Create New Project…"** (or run `FluxLoop: Create FluxLoop Project`).  
+Choose **Default (Recommended)** to:
 
-```
-FluxLoop: Create FluxLoop Project
-```
+- Reuse the open workspace as the agent source
+- Detect its Python environment automatically
+- Create the FluxLoop project inside the shared root (`~/FluxLoopProjects` by default, configurable via `fluxloop.projectRoot`)
+
+Select **Custom (Advanced)** when you need to pick both the project location and environment manually.
 
 ### 2. Generate Inputs
 

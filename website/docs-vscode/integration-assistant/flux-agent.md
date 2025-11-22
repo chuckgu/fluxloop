@@ -38,7 +38,20 @@ If you want Flux Agent to focus on a specific code block:
 1. Press `Cmd+Shift+P` (or `Ctrl+Shift+P`)
 2. Type and select: `FluxLoop: Run Flux Agent`
 
-### Step 4: Review Suggestions
+### Step 4: Choose a Mode
+
+After clicking **Run Flux Agent**, the extension prompts you to pick a mode:
+
+| Mode | When to use it | MCP context |
+| --- | --- | --- |
+| **Integration** | Need end-to-end integration guidance (default) | Repository profile + integration workflow |
+| **Base Input** | Want new base input candidates or personas | `inputs/` samples + service settings |
+| **Experiment** | Planning `simulation.yaml` or multi-turn scripts | Runner configs + recent experiments |
+| **Insight** | Reviewing evaluation logs / telemetry | `experiments/*/summary.json`, metrics |
+
+Each mode still analyzes your current file/selection, but emphasizes different MCP datasets before calling the LLM.
+
+### Step 5: Review Suggestions
 
 The agent opens a dedicated panel showing:
 
@@ -48,7 +61,7 @@ The agent opens a dedicated panel showing:
 - **Validation Checklist**: Post-integration verification steps
 - **References**: Citations to source documentation
 
-### Step 5: Apply Changes
+### Step 6: Apply Changes
 
 Review each suggested change and apply manually:
 

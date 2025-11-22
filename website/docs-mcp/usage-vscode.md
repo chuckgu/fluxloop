@@ -65,7 +65,8 @@ For detailed integration suggestions:
 
 1. Open a file you want to enhance
 2. Click **Run Flux Agent**
-3. The extension:
+3. Choose a mode (Integration, Base Input, Experiment, Insight) depending on whether you need code changes, base inputs, simulation updates, or insight analysis
+4. The extension:
    - Runs `fluxloop-mcp` with `run_integration_workflow` tool
    - Combines analysis with LLM reasoning
    - Presents a detailed integration plan

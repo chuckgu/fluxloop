@@ -10,33 +10,49 @@ Create your first FluxLoop project in VSCode.
 
 1. Open the **FluxLoop** activity bar.
 2. Click **Create New Project…** (or run `FluxLoop: Create FluxLoop Project` from the Command Palette).
-3. Pick the parent folder where the project folder should be created.
-4. Enter a project name (the extension creates `<parent>/<name>`).
+3. Choose a flow:
+   - **Default (recommended)** – Reuses the workspace you have open as the agent source, auto-detects its Python environment, and creates the FluxLoop project inside the shared root (default `~/FluxLoopProjects`).
+   - **Custom (advanced)** – Lets you manually pick both the FluxLoop project location and the Python environment (same experience as previous releases).
 
-## 2. Select the Python Environment
+## 2. Default Flow in Detail
 
-After you pick the project name, FluxLoop detects available environments and prompts you to choose:
+When you pick **Default**, the wizard guides you through:
 
-- **Use project folder** – create/use `.venv` inside the new project directory.
-- **Choose another folder…** – point to an existing virtual environment (conda, uv, etc.).
-- **Use Global PATH** – run with globally installed `fluxloop` (not recommended unless you know you want it).
+1. **Project name** – Enter the name; the target path preview updates (e.g. `~/FluxLoopProjects/agent-e2e`).
+2. **Environment selection** – FluxLoop lists detected interpreters from:
+   - VSCode Python extension’s active interpreter
+   - `.venv`, `poetry`, `conda`, or `pyenv` folders under your workspace
+   - Manual browse option (`Choose another environment…`) and a safety fallback (`Use system Python` – not recommended)
+3. **Example content** – Decide whether to include the sample agent.
 
-If FluxLoop packages are missing, you can:
+If required packages (`fluxloop-cli`, `fluxloop`, `fluxloop-mcp`) are missing, a modal dialog offers:
 
-- Click **Run Setup Script** to launch `setup_fluxloop_env.sh --target-source-root <path>` in a terminal.
-- Click **Open Terminal** to install manually (instructions are pre-filled).
-- Install the packages yourself and press **Retry** when ready.
+- **Install Automatically** (runs pip install)
+- **Open Terminal & Install Manually** (pre-fills instructions)
+- **Select Different Environment**
 
-The wizard shows exactly which components are missing (Python, `fluxloop`, `fluxloop-mcp`) and logs all checks in the **FluxLoop** Output channel.
+All checks are logged to **View → Output → FluxLoop**.
 
-## 3. Initialization
+## 3. Custom Flow (previous behavior)
 
-Once the environment is ready, the extension:
+When you choose **Custom**, you:
 
-- Runs `fluxloop init project` with the selected environment.
+1. Select the FluxLoop project root manually.
+2. Enter the project name (created inside the folder you picked).
+3. Choose or browse to the environment to use.
+4. Decide on including the example agent.
+
+This is useful for mono-repo setups, remote folders, or when you want the FluxLoop project alongside your source code.
+
+## 4. Initialization
+
+After the environment is validated (in either flow), the extension:
+
+- Runs `fluxloop init project`.
 - Generates `configs/` (project/input/simulation/evaluation) plus `.env`, `examples/`, `inputs/`, `recordings/`, `experiments/`.
 - Registers the project and sets it as active.
-- Saves `.vscode/settings.json` with `fluxloop.executionMode` and `fluxloop.targetSourceRoot`.
+- Saves `.vscode/settings.json` with the selected environment (`fluxloop.executionMode`, `fluxloop.targetSourceRoot`).  
+- Stores/updates the shared project root in `fluxloop.projectRoot` (change it later via Settings → FluxLoop → Project Root).
 
 ## 4. Verify the Environment
 

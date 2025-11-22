@@ -1,4 +1,13 @@
 """Indexing utilities for the Fluxloop MCP server."""
 
-__all__ = []
+from .embedder import StubEmbedder
+from .retriever import Retriever
+from .store import IndexStore, ChunkRecord
+
+__all__ = [
+    "StubEmbedder",
+    "Retriever",
+    "IndexStore",
+    "ChunkRecord",
+]
 

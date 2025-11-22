@@ -20,43 +20,48 @@ Learn how to create and manage FluxLoop projects in VSCode.
 
 ## Creating Your First Project
 
-### Method 1: From Activity Bar
+### Method 1: Default Flow (Recommended)
 
-1. **Open FluxLoop Activity Bar**
-   - Click the FluxLoop icon in the Activity Bar (left sidebar)
+1. **Launch the wizard**
+   - Click **Create New Project…** in the Projects view  
+   - or run `FluxLoop: Create FluxLoop Project`
+2. **Select the flow**
+   - Choose **Default (Recommended)**
+3. **Name your FluxLoop project**
+   - Enter a name (preview shows `~/FluxLoopProjects/<name>` by default)  
+   - The shared root is configurable via **Settings → FluxLoop → Project Root**
+4. **Pick an environment**
+   - Auto-detected interpreters (workspace `.venv`, Poetry, Conda, pyenv) are listed first
+   - QuickPick includes:
+     - ⭐ Detected workspace environment
+     - 📂 **Choose another environment…** (browse to any folder)
+     - ⚠️ **Use system Python** (fallback)
+   - Missing package dialog offers automatic install, manual terminal, or re-select options
+5. **Include sample agent (optional)**
+6. **Finish**
+   - `fluxloop init project` runs inside the shared root
+   - Project is registered and activated in VSCode
 
-2. **Click "Create New Project"**
-   - In the Projects view, click the "+" button
-   - Or use the "Create FluxLoop Project" button
+### Method 2: Custom Flow (Advanced)
 
-3. **Enter Project Details**
-   - Project name: `my-chatbot`
-   - Parent directory: Select where to create the project
+Use this when you need to place the FluxLoop project alongside your source repo or manage multiple envs manually.
 
-4. **Project Created!**
-   - New project structure created in `fluxloop/my-chatbot/`
-   - Automatically set as active project
-
-### Method 2: From Command Palette
-
-1. **Open Command Palette**
-   - Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
-
-2. **Run Command**
-   ```
-   FluxLoop: Create FluxLoop Project
-   ```
-
-3. **Follow Prompts**
-   - Enter project name
-   - Select parent directory
+1. **Launch the wizard** (`FluxLoop: Create FluxLoop Project`)
+2. **Choose Custom (Advanced)**
+3. **Pick FluxLoop project folder**
+4. **Enter project name** (created inside the folder you picked)
+5. **Select environment**
+   - Create a `.venv` inside the project or browse to any interpreter
+6. **Include sample agent (optional)**
+7. **Finish**
+   - Same initialization steps as Default flow, but settings (`fluxloop.targetSourceRoot`, `fluxloop.executionMode`) are saved relative to the custom folder
 
 ## Project Structure
 
 After creation, your project contains:
 
 ```
-fluxloop/my-chatbot/
+~/FluxLoopProjects/my-chatbot/        # Default flow result (configurable)
 ├── configs/
 │   ├── project.yaml       # Project metadata
 │   ├── input.yaml         # Input generation
@@ -69,6 +74,8 @@ fluxloop/my-chatbot/
 ├── inputs/                # Generated inputs
 └── recordings/            # Recorded args (optional)
 ```
+
+> Custom flow places the project wherever you choose, but the directory structure is identical.
 
 ## Configuring Your Project
 
@@ -130,11 +137,11 @@ base_inputs:
 
 ### Add Existing Project
 
-If you already have a FluxLoop project:
+If you already have a FluxLoop project (Default or Custom flow):
 
 1. **Command Palette** → `FluxLoop: Add Existing FluxLoop Project`
-2. Select the project directory
-3. Project added to Projects view
+2. Select the project directory (the folder containing `configs/`)
+3. Project added to Projects view (shared root detection is optional)
 
 ### Switch Between Projects
 

@@ -1,10 +1,15 @@
 import * as vscode from 'vscode';
+import { FluxAgentMode } from './planner/types';
 
 interface IntegrationPanelData {
     filePath: string;
     selection: string;
-    workflow: unknown;
+    workflow?: unknown;
     suggestion: string;
+    contextSummary?: string;
+    mode?: FluxAgentMode;
+    modeContext?: unknown;
+    warnings?: string[];
 }
 
 export class IntegrationPanel {
@@ -37,11 +42,18 @@ export class IntegrationPanel {
 
     private static buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri, data: IntegrationPanelData): string {
         const safeSelection = data.selection ? this.escapeHtml(data.selection) : 'N/A';
-        const workflowJson = this.escapeHtml(JSON.stringify(data.workflow, null, 2));
+        const workflowJson = data.workflow ? this.escapeHtml(JSON.stringify(data.workflow, null, 2)) : undefined;
+        const modeContextJson = data.modeContext
+            ? this.escapeHtml(JSON.stringify(data.modeContext, null, 2))
+            : undefined;
         const suggestionMarkdown = this.escapeHtml(data.suggestion);
         const fileName = this.escapeHtml(data.filePath);
-
-        const nonce = Math.random().toString(36).slice(2);
+        const contextSummary = data.contextSummary ? this.escapeHtml(data.contextSummary) : undefined;
+        const modeLabel = data.mode ? `${data.mode.charAt(0).toUpperCase()}${data.mode.slice(1)}` : undefined;
+        const warnings =
+            data.warnings && data.warnings.length
+                ? data.warnings.map((warning) => `<li>${this.escapeHtml(warning)}</li>`).join('')
+                : undefined;
 
         return `
 <!DOCTYPE html>
@@ -86,14 +98,30 @@ export class IntegrationPanel {
             <div class="label">Target File</div>
             <pre>${fileName}</pre>
         </section>
+        ${modeLabel ? `<section>
+            <div class="label">Mode</div>
+            <pre>${this.escapeHtml(modeLabel)}</pre>
+        </section>` : ''}
         <section>
             <div class="label">Selected Snippet</div>
             <pre>${safeSelection}</pre>
         </section>
-        <section>
+        ${contextSummary ? `<section>
+            <div class="label">Context Summary</div>
+            <pre>${contextSummary}</pre>
+        </section>` : ''}
+        ${warnings ? `<section>
+            <div class="label">Warnings</div>
+            <ul>${warnings}</ul>
+        </section>` : ''}
+        ${workflowJson ? `<section>
             <h2>Integration Workflow</h2>
             <pre>${workflowJson}</pre>
-        </section>
+        </section>` : ''}
+        ${!workflowJson && modeContextJson ? `<section>
+            <h2>Mode Context</h2>
+            <pre>${modeContextJson}</pre>
+        </section>` : ''}
         <section>
             <h2>Suggested Plan</h2>
             <pre>${suggestionMarkdown}</pre>

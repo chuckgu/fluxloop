@@ -36,11 +36,15 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - Enable/disable recording mode from Command Palette or Experiments view
 - Status panel shows current recording state and target file
 
-### 🤖 Integration Assistant
+### 🤖 Integration Assistant (Multi-Mode Flux Agent)
 - Dedicated **Integration** view with MCP connection status and recent suggestions
 - One-click document search backed by the FluxLoop MCP server
-- Flux Agent combines repository analysis + LLM guidance with rich Markdown output
-- Suggestion history stores file context, selected code, and the generated plan
+- Flux Agent now supports four modes selectable per run:
+  - **Integration** – classic repository analysis + edit plan workflow
+  - **Base Input** – inspects `inputs/` & service configs to draft new base input candidates
+  - **Experiment** – summarizes runner configs + experiment history to propose simulation updates
+  - **Insight** – ingests evaluation logs (`summary.json`, `traces.jsonl`) to surface findings & follow-up actions
+- Suggestion history stores file context, selected code, mode metadata, and the generated plan
 
 ---
 
@@ -106,17 +110,34 @@ python3 --version
 
 ### 1. Create a Project
 
-Open the **FluxLoop** Activity Bar and click **"Create New Project…"** or use Command Palette:
+Open the **FluxLoop** Activity Bar and click **"Create New Project…"** or run:
 ```
 FluxLoop: Create FluxLoop Project
 ```
 
-This now guides you through:
-- Selecting a parent folder and project name
-- Choosing a Python environment (project `.venv`, existing env, or global PATH)
-- Running `setup_fluxloop_env.sh` automatically if FluxLoop packages are missing
-- Generating `configs/` (project/input/simulation/evaluation) plus `.env`, `examples/`, `inputs/`, `recordings/`, `experiments/`
-- Registering the project and setting it as active
+You’ll first choose between two flows:
+
+- **Default (Recommended)** – Use your current workspace as the agent source, detect its Python environment, and create the FluxLoop project inside the shared root (default `~/FluxLoopProjects`).  
+- **Custom (Advanced)** – Manually pick both the FluxLoop project location and the environment (original flow retained for power users).
+
+#### Default Flow
+1. **Project name** – Enter a name; the extension previews the target path (e.g. `~/FluxLoopProjects/agent-e2e`).
+2. **Environment selection** – FluxLoop auto-discovers interpreters from:
+   - VSCode Python extension’s active interpreter
+   - `.venv`, `poetry`, `conda`, `pyenv` folders under your workspace
+   - Manual browse option and a fall-back “Use system Python (not recommended)”
+3. **Example content** – Decide whether to include the sample agent.
+4. The project is generated inside the shared root, the environment is validated (with guided retries/install options), and the project is registered/activated.  
+   - The shared root is stored in `fluxloop.projectRoot` (change via Settings → FluxLoop → Project Root).
+
+#### Custom Flow
+Follow the original prompts:
+- Pick the FluxLoop project root manually
+- Enter the project name
+- Choose/Create the environment (including project-local `.venv`)
+- Decide on example content
+
+In both flows the extension runs `fluxloop init project`, creates `configs/`, `.env`, `examples/`, `inputs/`, `recordings/`, `experiments/`, and saves workspace settings that point to the chosen environment.
 
 Check the detected environment anytime via:
 ```
@@ -186,12 +207,18 @@ Use the prompt dialog to override the output directory or keep the default `eval
 1. Open the **Integration** view in the FluxLoop activity bar.
 2. Press **Connect MCP** to verify `fluxloop-mcp` is available and the knowledge index is present.
 3. Press **Search in Documents** to run a one-off documentation query (`fluxloop-mcp --once --query "<question>"`).
-4. Open a file, highlight any relevant snippet, and press **Run Flux Agent** to:
+4. Open a file, highlight any relevant snippet, and press **Run Flux Agent**.
+5. When prompted, choose a mode:
+   - **Integration**: full repo analysis + edit plan workflow (default)
+   - **Base Input**: drafts candidate inputs using existing `inputs/` and service configs
+   - **Experiment**: proposes `simulation.yaml` updates using past runs + runner settings
+   - **Insight**: summarizes evaluation logs and suggests next improvements
+6. The extension will:
    - Execute `run_integration_workflow` inside your repo
    - Collect the result and feed it to the configured OpenAI model
    - Render the plan (summary, step list, validation checklist) in a dedicated panel
-5. Provide your OpenAI API key when prompted (the extension can store it in Secret Storage).
-6. Revisit previous answers from **Recent Suggestions**; each entry reopens the full plan.
+7. Provide your OpenAI API key when prompted (the extension can store it in Secret Storage).
+8. Revisit previous answers from **Recent Suggestions**; each entry reopens the full plan, including the mode that produced it.
 
 ---
 

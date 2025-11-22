@@ -37,6 +37,8 @@ class Retriever:
         self._vectors = self.embedder.embed(chunk["content"] for chunk in self._chunks)
 
     def top_k(self, query: str, k: int = 5) -> List[Tuple[Dict, float]]:
+        if not self._chunks:
+            return []
         query_vec = self.embedder.embed([query])[0]
         scored = []
         for chunk, vector in zip(self._chunks, self._vectors):

@@ -15,6 +15,17 @@ import { ProjectContext } from '../project/projectContext';
 import * as https from 'https';
 import { IntegrationPanel } from './integrationPanel';
 import { EnvironmentManager } from '../environment/environmentManager';
+import { IntegrationPlannerBridge } from './planner/integrationPlannerBridge';
+import { PlannerOrchestrator } from './planner/plannerOrchestrator';
+import {
+    ChatMessage,
+    FluxAgentMode,
+    IntegrationContextSelection,
+    IntegrationContextResponse,
+    ModeContextResponse,
+    RagDocument,
+    RagTopic,
+} from './planner/types';
 
 interface CommandResult {
     success: boolean;
@@ -22,10 +33,34 @@ interface CommandResult {
     stderr: string;
 }
 
+const FLUX_AGENT_MODES: { id: FluxAgentMode; label: string; description: string }[] = [
+    {
+        id: 'integration',
+        label: 'Integration',
+        description: 'Generate code integration plans (structure + doc-driven suggestion).',
+    },
+    {
+        id: 'baseInput',
+        label: 'Base Input',
+        description: 'Craft base input candidates referencing existing samples and repo signals.',
+    },
+    {
+        id: 'experiment',
+        label: 'Experiment',
+        description: 'Design simulation.yaml updates and multi-turn experiment scenarios.',
+    },
+    {
+        id: 'insight',
+        label: 'Insight',
+        description: 'Analyze evaluation logs to surface insights and recommendations.',
+    },
+];
+
 export class IntegrationService {
     private readonly output = OutputChannelManager.getInstance();
     private readonly refreshLock = new Map<string, boolean>();
     private lastStatuses: SystemStatusItem[] = [];
+    private readonly plannerBridge = new IntegrationPlannerBridge();
 
     constructor(
         private readonly context: vscode.ExtensionContext,
@@ -158,49 +193,75 @@ export class IntegrationService {
                     const document = editor.document;
                     const selection = editor.selection;
                     const selectedText = selection && !selection.isEmpty ? document.getText(selection) : '';
-                    const fullText = document.getText();
-                    const truncatedContent = this.truncate(fullText, 4000);
                     const truncatedSelection = selectedText ? this.truncate(selectedText, 4000) : '';
 
                     this.output.show();
                     this.output.appendLine('');
                     this.output.appendLine('='.repeat(60));
-                    this.output.appendLine('[Flux Agent] Running integration workflow...');
+                    this.output.appendLine('[Flux Agent] Running Flux Agent MCP pipeline...');
 
-                    progress.report({ message: 'Analyzing repository...' });
-                    const workflowResult = await this.runIntegrationWorkflow(workspacePath);
-                    this.output.appendLine('[Flux Agent] Workflow result received.');
+                    const integrationContext = await this.promptIntegrationContext(
+                        workspacePath,
+                        document,
+                        selection,
+                        truncatedSelection,
+                    );
+                    const mode = await this.promptAgentMode();
+                    const modeLabel = this.getModeLabel(mode);
+                    this.output.appendLine(`[Flux Agent] Context Scope Selected:`);
+                    this.output.appendLine(integrationContext.summary);
+                    this.output.appendLine(`[Flux Agent] Mode Selected: ${modeLabel}`);
 
                     const apiKey = await this.ensureOpenAIApiKey();
-                    const model =
-                        vscode.workspace.getConfiguration('fluxloop').get<string>('openaiModel') || 'gpt-4o-mini';
+                    const config = vscode.workspace.getConfiguration('fluxloop');
+                    const structureModel =
+                        config.get<string>('fluxAgent.structureModel')?.trim() || 'gpt-5-turbo';
+                    const suggestionModel =
+                        config.get<string>('fluxAgent.suggestionModel')?.trim() || 'gpt-5.1-mini';
 
-                    const prompt = this.composePrompt({
-                        workspacePath,
-                        filePath: document.uri.fsPath,
-                        content: truncatedContent,
-                        selection: truncatedSelection,
-                        workflow: workflowResult,
+                    progress.report({ message: `Running ${modeLabel} planning flow...` });
+                    const orchestrator = this.createPlannerOrchestrator(apiKey, workspacePath);
+                    const runResult = await orchestrator.run({
+                        mode,
+                        contextSelection: integrationContext,
+                        contextSummary: integrationContext.summary,
+                        structureModel,
+                        suggestionModel,
                     });
-
-                    progress.report({ message: 'Generating recommendation...' });
-                    this.output.appendLine('[Flux Agent] Requesting suggestion from OpenAI...');
-                    const suggestion = await this.requestOpenAiCompletion(apiKey, model, prompt);
                     this.output.appendLine('[Flux Agent] Suggestion received.');
+
+                    const workflowPayload = runResult.workflow
+                        ? {
+                              ...runResult.workflow,
+                        contextSummary: integrationContext.summary,
+                        planner: {
+                                  structureReport: runResult.structureReport,
+                                  ragDocuments: runResult.ragDocuments,
+                                  ragTopics: runResult.ragTopics,
+                        },
+                          }
+                        : undefined;
 
                     IntegrationPanel.render(this.context.extensionUri, {
                         filePath: document.uri.fsPath,
                         selection: truncatedSelection,
-                        workflow: workflowResult,
-                        suggestion,
+                        workflow: workflowPayload,
+                        suggestion: runResult.suggestion,
+                        contextSummary: integrationContext.summary,
+                        mode,
+                        modeContext: runResult.modeContext,
+                        warnings: runResult.warnings,
                     });
 
                     await this.integrationProvider.addSuggestion({
-                        query: `Integration suggestion for ${path.basename(document.uri.fsPath)}`,
-                        answer: suggestion,
+                        query: `${modeLabel} suggestion for ${path.basename(document.uri.fsPath)}`,
+                        answer: runResult.suggestion,
                         filePath: document.uri.fsPath,
                         selection: truncatedSelection,
-                        workflow: workflowResult,
+                        workflow: workflowPayload,
+                        mode,
+                        modeContext: runResult.modeContext,
+                        warnings: runResult.warnings,
                     });
                 },
             );
@@ -212,12 +273,21 @@ export class IntegrationService {
     }
 
     showSuggestionDetail(suggestion: IntegrationSuggestion): void {
-        if (suggestion.workflow || suggestion.filePath) {
+        if (suggestion.workflow || suggestion.filePath || suggestion.modeContext) {
+            const contextSummary =
+                suggestion.workflow && typeof suggestion.workflow === 'object'
+                    ? (suggestion.workflow as { contextSummary?: string }).contextSummary
+                    : undefined;
+
             IntegrationPanel.render(this.context.extensionUri, {
                 filePath: suggestion.filePath ?? 'Unknown file',
                 selection: suggestion.selection ?? '',
-                workflow: suggestion.workflow ?? {},
+                workflow: suggestion.workflow,
                 suggestion: suggestion.answer ?? 'No response stored.',
+                contextSummary,
+                mode: suggestion.mode,
+                modeContext: suggestion.modeContext,
+                warnings: suggestion.warnings,
             });
             return;
         }
@@ -300,39 +370,6 @@ export class IntegrationService {
         }
     }
 
-    private composePrompt(input: {
-        workspacePath: string;
-        filePath: string;
-        content: string;
-        selection: string;
-        workflow: unknown;
-    }): string {
-        const relativePath = path.relative(input.workspacePath, input.filePath);
-        return [
-            'You are Flux Agent, an assistant that helps developers integrate FluxLoop SDK into repositories.',
-            'Use the provided repository analysis and edit plan to craft actionable, step-by-step guidance.',
-            '',
-            `Active file: ${relativePath}`,
-            '',
-            input.selection
-                ? `Selected code snippet:\n${input.selection}\n`
-                : 'No explicit selection was provided. Focus on the entire file context.',
-            '',
-            'File excerpt (truncated):',
-            input.content,
-            '',
-            'Integration workflow result (JSON):',
-            JSON.stringify(input.workflow, null, 2),
-            '',
-            'Instructions:',
-            '- Provide a concise summary (less than 5 sentences).',
-            '- Outline the recommended changes as ordered steps.',
-            '- Highlight any critical checks or testing commands.',
-            '- Include relevant files or anchors mentioned in the plan.',
-            '- Use Markdown formatting (## headings, bullet lists, code blocks).',
-        ].join('\n');
-    }
-
     private async ensureOpenAIApiKey(): Promise<string> {
         const secretKey = await this.context.secrets.get('fluxloop.openaiApiKey');
         if (secretKey) {
@@ -363,14 +400,16 @@ export class IntegrationService {
         return entered;
     }
 
-    private async requestOpenAiCompletion(apiKey: string, model: string, prompt: string): Promise<string> {
+    private async requestOpenAiChatCompletion(
+        apiKey: string,
+        model: string,
+        messages: ChatMessage[],
+        temperature = 0.3,
+    ): Promise<string> {
         const requestBody = JSON.stringify({
             model,
-            messages: [
-                { role: 'system', content: 'You are Flux Agent, an expert developer advocate for FluxLoop SDK.' },
-                { role: 'user', content: prompt },
-            ],
-            temperature: 0.3,
+            messages,
+            temperature,
         });
 
         return new Promise<string>((resolve, reject) => {
@@ -418,29 +457,320 @@ export class IntegrationService {
         });
     }
 
-    private async runIntegrationWorkflow(root: string): Promise<unknown> {
+    private async promptAgentMode(): Promise<FluxAgentMode> {
+        const pick = await vscode.window.showQuickPick(
+            FLUX_AGENT_MODES.map((mode) => ({
+                label: mode.label,
+                description: mode.description,
+                mode: mode.id,
+            })),
+            {
+                title: 'Select Flux Agent Mode',
+                placeHolder: 'Choose the objective for this Flux Agent run',
+            },
+        );
+
+        if (!pick) {
+            throw new Error('Flux Agent cancelled by user.');
+        }
+
+        return pick.mode;
+    }
+
+    private getModeLabel(mode: FluxAgentMode): string {
+        return FLUX_AGENT_MODES.find((entry) => entry.id === mode)?.label ?? mode;
+    }
+
+    private async promptIntegrationContext(
+        workspacePath: string,
+        document: vscode.TextDocument,
+        selection: vscode.Selection,
+        truncatedSelection: string,
+    ): Promise<IntegrationContextSelection> {
+        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+        let selectedWorkspace = workspacePath;
+
+        if (workspaceFolders.length > 1) {
+            const workspacePick = await vscode.window.showQuickPick(
+                workspaceFolders.map((folder) => ({
+                    label: folder.name,
+                    description: folder.uri.fsPath,
+                })),
+                {
+                    title: 'Select workspace for Flux Agent',
+                    placeHolder: 'Choose the workspace that contains your FluxLoop project',
+                },
+            );
+
+            if (!workspacePick) {
+                throw new Error('Flux Agent cancelled by user.');
+            }
+
+            selectedWorkspace = workspacePick.description ?? workspacePath;
+        }
+
+        const editorPath = document.uri.fsPath;
+        const relativeFilePath = path.relative(selectedWorkspace, editorPath) || path.basename(editorPath);
+        const hasSelection = selection && !selection.isEmpty;
+
+        const scopeChoices: vscode.QuickPickItem[] = [
+            {
+                label: '$(file-code) Active file',
+                description: relativeFilePath,
+                detail: 'Use the entire active file as context',
+                picked: true,
+            },
+        ];
+
+        if (hasSelection) {
+            scopeChoices.push({
+                label: '$(selection) Selection only',
+                description: relativeFilePath,
+                detail: 'Use only the highlighted text as context',
+            });
+        }
+
+        scopeChoices.push(
+            {
+                label: '$(folder-opened) Pick folder…',
+                description: 'Choose one or more folders to emphasize',
+            },
+            {
+                label: '$(files) Pick files…',
+                description: 'Choose one or more files to emphasize',
+            },
+        );
+
+        const scopePick = await vscode.window.showQuickPick(scopeChoices, {
+            title: 'Flux Agent context scope',
+            placeHolder: 'Control which paths are prioritized for MCP analysis',
+        });
+
+        if (!scopePick) {
+            throw new Error('Flux Agent cancelled by user.');
+        }
+
+        let scope: IntegrationContextSelection['scope'] = 'activeFile';
+        let targets: string[] = [editorPath];
+
+        if (scopePick.label.includes('Selection') && hasSelection) {
+            scope = 'selection';
+        } else if (scopePick.label.includes('folder')) {
+            scope = 'folder';
+            const folders = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: true,
+                defaultUri: vscode.Uri.file(selectedWorkspace),
+                openLabel: 'Select folders',
+            });
+
+            if (!folders || folders.length === 0) {
+                throw new Error('No folders selected for Flux Agent context.');
+            }
+
+            targets = folders.map((uri) => uri.fsPath);
+        } else if (scopePick.label.includes('files')) {
+            scope = 'files';
+            const files = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: true,
+                defaultUri: document.uri,
+                openLabel: 'Select files',
+            });
+
+            if (!files || files.length === 0) {
+                throw new Error('No files selected for Flux Agent context.');
+            }
+
+            targets = files.map((uri) => uri.fsPath);
+        }
+
+        const summaryLines = [
+            `Workspace: ${selectedWorkspace}`,
+            `Scope: ${scopePick.label
+                .replace('$(file-code) ', '')
+                .replace('$(selection) ', '')
+                .replace('$(folder-opened) ', '')
+                .replace('$(files) ', '')}`,
+            'Targets:',
+            ...targets.map((target) => ` • ${path.relative(selectedWorkspace, target) || target}`),
+        ];
+
+        return {
+            workspacePath: selectedWorkspace,
+            scope,
+            targets,
+            summary: summaryLines.join('\n'),
+            selectionSnippet: scope === 'selection' ? truncatedSelection : undefined,
+        };
+    }
+
+    private createPlannerOrchestrator(apiKey: string, workspacePath: string): PlannerOrchestrator {
+        return new PlannerOrchestrator({
+            integrationBridge: this.plannerBridge,
+            fetchIntegrationContext: (selection) => this.fetchIntegrationContext(workspacePath, selection),
+            fetchBaseInputContext: (selection) => this.fetchBaseInputContext(workspacePath, selection),
+            fetchExperimentContext: (selection) => this.fetchExperimentContext(workspacePath, selection),
+            fetchInsightContext: (selection) => this.fetchInsightContext(workspacePath, selection),
+            retrieveRagDocuments: (topics) => this.retrieveRagDocuments(workspacePath, topics),
+            callOpenAi: (model, messages, temperature) =>
+                this.requestOpenAiChatCompletion(apiKey, model, messages, temperature),
+        });
+    }
+
+    private async fetchIntegrationContext(
+        root: string,
+        context: IntegrationContextSelection,
+    ): Promise<IntegrationContextResponse> {
+        const raw = await this.invokeContextTool<Record<string, unknown>>(root, context, 'IntegrationContextTool');
+        return raw as IntegrationContextResponse;
+    }
+
+    private async fetchBaseInputContext(root: string, context: IntegrationContextSelection): Promise<ModeContextResponse> {
+        const raw = await this.invokeContextTool<Record<string, unknown>>(root, context, 'BaseInputContextTool', {
+            limit: 5,
+        });
+        return {
+            data: raw,
+            rag_topics: (Array.isArray(raw['rag_topics']) ? (raw['rag_topics'] as RagTopic[]) : undefined) ?? [],
+            warnings: this.normalizeWarnings(raw['warnings']),
+            error: typeof raw['error'] === 'string' ? (raw['error'] as string) : undefined,
+        };
+    }
+
+    private async fetchExperimentContext(
+        root: string,
+        context: IntegrationContextSelection,
+    ): Promise<ModeContextResponse> {
+        const raw = await this.invokeContextTool<Record<string, unknown>>(root, context, 'ExperimentContextTool', {
+            limit: 5,
+        });
+        return {
+            data: raw,
+            rag_topics: (Array.isArray(raw['rag_topics']) ? (raw['rag_topics'] as RagTopic[]) : undefined) ?? [],
+            warnings: this.normalizeWarnings(raw['warnings']),
+            error: typeof raw['error'] === 'string' ? (raw['error'] as string) : undefined,
+        };
+    }
+
+    private async fetchInsightContext(root: string, context: IntegrationContextSelection): Promise<ModeContextResponse> {
+        const raw = await this.invokeContextTool<Record<string, unknown>>(root, context, 'InsightContextTool', {
+            limit: 5,
+        });
+        return {
+            data: raw,
+            rag_topics: (Array.isArray(raw['rag_topics']) ? (raw['rag_topics'] as RagTopic[]) : undefined) ?? [],
+            warnings: this.normalizeWarnings(raw['warnings']),
+            error: typeof raw['error'] === 'string' ? (raw['error'] as string) : undefined,
+        };
+    }
+
+    private async invokeContextTool<T extends Record<string, unknown>>(
+        root: string,
+        context: IntegrationContextSelection,
+        toolName: string,
+        extras?: Record<string, unknown>,
+    ): Promise<T> {
+        const payload = {
+            root,
+            context: {
+                scope: context.scope,
+                targets: context.targets,
+                selectionSnippet: context.selectionSnippet,
+            },
+            ...(extras ?? {}),
+        };
+
         const script = `
 import json
 import pathlib
 import sys
-from fluxloop_mcp.tools import RunIntegrationWorkflowTool
+from fluxloop_mcp.tools import ${toolName}
 
-root_path = pathlib.Path(${JSON.stringify(root)}).resolve()
-result = RunIntegrationWorkflowTool().run({"root": root_path.as_posix()})
+payload = ${JSON.stringify(payload)}
+payload["root"] = pathlib.Path(payload["root"]).expanduser().resolve().as_posix()
+ctx = payload.get("context") or {}
+    targets = ctx.get("targets") or []
+    resolved_targets = []
+    for target in targets:
+        target_path = pathlib.Path(target)
+        if not target_path.is_absolute():
+        target_path = pathlib.Path(payload["root"]) / target_path
+        resolved_targets.append(target_path.resolve().as_posix())
+    ctx["targets"] = resolved_targets
+
+tool = ${toolName}()
+result = tool.fetch(payload)
 json.dump(result, sys.stdout)
 `;
 
         const result = await this.runCommand('python3', ['-c', script], root);
         if (!result.success) {
-            throw new Error(result.stderr || 'Failed to execute integration workflow via fluxloop-mcp.');
+            throw new Error(result.stderr || `Failed to execute ${toolName} via fluxloop-mcp.`);
         }
 
         try {
-            return JSON.parse(result.stdout);
+            return JSON.parse(result.stdout || '{}') as T;
         } catch (error) {
-            throw new Error(`Unable to parse workflow output: ${String(error)}`);
+            throw new Error(`Unable to parse ${toolName} output: ${String(error)}`);
         }
     }
+
+    private normalizeWarnings(value: unknown): string[] {
+        if (Array.isArray(value)) {
+            return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '');
+        }
+        if (typeof value === 'string' && value.trim()) {
+            return [value.trim()];
+        }
+        return [];
+    }
+
+    private async retrieveRagDocuments(root: string, topics: RagTopic[]): Promise<RagDocument[]> {
+        const sanitizedTopics = topics
+            .filter((topic) => typeof topic?.query === 'string' && topic.query.trim() !== '')
+            .map((topic, index): RagTopic | undefined => {
+                const query = typeof topic.query === 'string' ? topic.query.trim() : '';
+                if (!query) {
+                    return undefined;
+                }
+                return {
+                id: topic.id || `topic_${index}`,
+                    query,
+                };
+            })
+            .filter((topic): topic is RagTopic => Boolean(topic?.query));
+
+        if (sanitizedTopics.length === 0) {
+            return [];
+        }
+
+        const script = `
+import json
+import sys
+from fluxloop_mcp.tools import RagService
+
+topics = json.loads(${JSON.stringify(JSON.stringify(sanitizedTopics))})
+service = RagService()
+docs = service.retrieve(topics)
+json.dump(docs, sys.stdout)
+`;
+
+        const result = await this.runCommand('python3', ['-c', script], root);
+        if (!result.success) {
+            throw new Error(result.stderr || 'Failed to retrieve RAG documents via fluxloop-mcp.');
+        }
+
+        try {
+            return JSON.parse(result.stdout || '[]') as RagDocument[];
+        } catch (error) {
+            this.output.appendLine(`[Flux Agent] Warning: Unable to parse RAG output (${String(error)})`);
+            return [];
+        }
+    }
+
 
     private truncate(text: string, maxLength: number): string {
         if (text.length <= maxLength) {

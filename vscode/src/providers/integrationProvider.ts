@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { FluxAgentMode } from '../integration/planner/types';
 
 export type IntegrationNodeType =
     | 'mcpConnection'
@@ -32,6 +33,9 @@ export interface IntegrationSuggestion {
     filePath?: string;
     selection?: string;
     workflow?: unknown;
+    mode?: FluxAgentMode;
+    modeContext?: unknown;
+    warnings?: string[];
 }
 
 interface RootMcpState {
@@ -156,6 +160,9 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
             filePath: suggestion.filePath,
             selection: suggestion.selection,
             workflow: suggestion.workflow,
+            mode: suggestion.mode,
+            modeContext: suggestion.modeContext,
+            warnings: suggestion.warnings,
             timestamp: Date.now(),
         };
 
@@ -361,7 +368,14 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         const suggestionItems = this.suggestions.map((suggestion) => {
             const date = new Date(suggestion.timestamp);
             const label = `${date.toLocaleString()} • ${suggestion.query}`;
-            const description = suggestion.filePath ? suggestion.filePath.split(/[\\/]/).pop() : undefined;
+            const descriptionParts: string[] = [];
+            if (suggestion.mode) {
+                descriptionParts.push(suggestion.mode);
+            }
+            if (suggestion.filePath) {
+                descriptionParts.push(suggestion.filePath.split(/[\\/]/).pop() ?? suggestion.filePath);
+            }
+            const description = descriptionParts.length ? descriptionParts.join(' • ') : undefined;
             const tooltip = suggestion.answer
                 ? `${suggestion.answer.slice(0, 180)}${suggestion.answer.length > 180 ? '…' : ''}`
                 : suggestion.query;
@@ -527,6 +541,9 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
             filePath: suggestion.filePath ?? null,
             selection: suggestion.selection ?? null,
             workflow: suggestion.workflow ?? null,
+            mode: suggestion.mode ?? null,
+            modeContext: suggestion.modeContext ?? null,
+            warnings: suggestion.warnings ?? null,
         };
 
         const content =
@@ -588,6 +605,11 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
             filePath: typeof metadata.filePath === 'string' ? metadata.filePath : undefined,
             selection: typeof metadata.selection === 'string' ? metadata.selection : undefined,
             workflow: workflowValue,
+            mode: typeof metadata.mode === 'string' ? (metadata.mode as FluxAgentMode) : undefined,
+            modeContext: metadata.modeContext ?? undefined,
+            warnings: Array.isArray(metadata.warnings)
+                ? metadata.warnings.filter((entry: unknown): entry is string => typeof entry === 'string')
+                : undefined,
         };
 
         return suggestion;

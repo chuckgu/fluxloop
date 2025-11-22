@@ -85,7 +85,7 @@ CLI tool documentation for project management and experiments.
 ### VSCode Extension (`/vscode`)
 
 Guides for the FluxLoop VSCode extension, including the Integration Assistant.
-- Covers: project workflow, Integration view, MCP knowledge search, Flux Agent setup
+- Covers: project workflow, Integration view, MCP knowledge search, Flux Agent multi-mode operation (Integration/Base Input/Experiment/Insight) and setup
 - Current version: 0.1.0
 - Source: `packages/vscode/`
 - API docs auto-generated from TypeScript source using TypeDoc
@@ -96,7 +96,7 @@ Model Context Protocol server for AI-assisted FluxLoop integration.
 - Current version: 0.1.0
 - Source: `packages/mcp/`
 - Requires: Python 3.11+
-- Provides: repository analysis, framework detection, integration planning tools
+- Provides: repository analysis, framework detection, integration planning tools, and the `fetch_<mode>_context` APIs consumed by the VSCode multi-mode planner
 - Companion docs explain how VSCode’s Flux Agent consumes each MCP tool
 
 ## Generating API Documentation

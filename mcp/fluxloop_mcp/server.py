@@ -13,12 +13,19 @@ from msgspec import json as msgjson
 
 from .tools import (
     AnalyzeRepositoryTool,
+    CollectRepoProfileTool,
     DetectFrameworksTool,
     FAQTool,
     GenerateIntegrationStepsTool,
+    IntegrationContextTool,
     ProposeEditPlanTool,
     RunIntegrationWorkflowTool,
     ValidateEditPlanTool,
+)
+from .tools.mode_context import (
+    BaseInputContextTool,
+    ExperimentContextTool,
+    InsightContextTool,
 )
 
 
@@ -50,6 +57,11 @@ class ToolRegistry:
         self._propose_plan = ProposeEditPlanTool()
         self._validate_plan = ValidateEditPlanTool()
         self._workflow = RunIntegrationWorkflowTool()
+        self._profile_v2 = CollectRepoProfileTool()
+        self._integration_context = IntegrationContextTool()
+        self._base_input_context = BaseInputContextTool()
+        self._experiment_context = ExperimentContextTool()
+        self._insight_context = InsightContextTool()
 
     async def dispatch(self, request: Dict[str, Any]) -> Dict[str, Any]:
         tool = request.get("tool")
@@ -67,6 +79,11 @@ class ToolRegistry:
                         "propose_edit_plan",
                         "validate_edit_plan",
                         "run_integration_workflow",
+                        "collect_repo_profile",
+                        "fetch_integration_context",
+                        "fetch_base_input_context",
+                        "fetch_experiment_context",
+                        "fetch_insight_context",
                     ],
                 },
             }
@@ -100,6 +117,31 @@ class ToolRegistry:
             return {
                 "tool": "run_integration_workflow",
                 "data": self._workflow.run(request),
+            }
+        if tool == "collect_repo_profile":
+            return {
+                "tool": "collect_repo_profile",
+                "data": self._profile_v2.collect(request),
+            }
+        if tool == "fetch_integration_context":
+            return {
+                "tool": "fetch_integration_context",
+                "data": self._integration_context.fetch(request),
+            }
+        if tool == "fetch_base_input_context":
+            return {
+                "tool": "fetch_base_input_context",
+                "data": self._base_input_context.fetch(request),
+            }
+        if tool == "fetch_experiment_context":
+            return {
+                "tool": "fetch_experiment_context",
+                "data": self._experiment_context.fetch(request),
+            }
+        if tool == "fetch_insight_context":
+            return {
+                "tool": "fetch_insight_context",
+                "data": self._insight_context.fetch(request),
             }
 
         raise ToolError("unknown_tool", f"Unknown tool '{tool}'")
