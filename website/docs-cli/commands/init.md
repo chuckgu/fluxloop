@@ -343,7 +343,7 @@ fluxloop init pytest-template /path/to/project
 ## See Also
 
 - [Project Setup Guide](/cli/getting-started/project-setup) - Detailed setup walkthrough
-- [Pytest Bridge Guide](/docs/guides/pytest_bridge.md) - Complete pytest integration docs
+- [Pytest Bridge Guide](/cli/workflows/pytest-integration) - Complete pytest integration docs
 - [Generate Command](/cli/commands/generate) - Generate input variations
 - [Run Command](/cli/commands/run) - Execute experiments
 - [Configuration Reference](/cli/configuration/project-config) - Config file schemas
