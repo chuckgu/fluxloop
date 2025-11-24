@@ -15,7 +15,7 @@ pip install fluxloop-cli
 
 ## Version
 
-Current version: **0.2.27**
+Current version: **0.2.30**
 
 ## Features
 

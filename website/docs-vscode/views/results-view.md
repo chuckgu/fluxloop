@@ -18,6 +18,7 @@ Results
 └─ Experiments
    └─ customer_support_test_20251104_143610
       ├─ Parse Results (action)
+      ├─ Evaluate Results (action)
       ├─ per_trace_analysis/ (folder, appears after parsing)
       │  ├─ 01_trace_abc123.md
       │  └─ 02_trace_def456.md
@@ -44,12 +45,27 @@ Example label: `customer_support_test` with description `2025-11-04 14:36:10 •
 
 ### Parse Results Action
 
-Clicking **Parse Results** at the top of any experiment:
+Click **Parse Results** inside an experiment folder to generate per-trace Markdown:
 1. Prompts for output directory (default: `per_trace_analysis`)
 2. Checks if output already exists
 3. Confirms overwrite if needed
 4. Runs `fluxloop parse experiment <folder> --output <dir>`
 5. Refreshes view to show new `per_trace_analysis/` folder
+
+### Evaluate Results Action
+
+Generates evaluator reports defined in `configs/evaluation.yaml`:
+
+1. Prompts for output directory (default: `evaluation`)
+2. Confirms overwrite if directory exists
+3. Runs `fluxloop evaluate experiment <folder> --output <dir>`
+4. Refreshes the tree to show the new `evaluation/` folder
+
+The `evaluation/` folder contains:
+- `summary.json`
+- `per_trace.jsonl`
+- `report.md`
+- `report.html` (Phase 2 interactive report)
 
 ### Per-Trace Analysis Folder
 
@@ -62,13 +78,15 @@ After parsing, a `per_trace_analysis/` folder appears:
 ### Artifact Files
 
 Standard experiment output files:
-- **summary.json**: Aggregate statistics, metadata, success rates
-- **traces.jsonl**: Line-delimited trace records (one per iteration)
-- **observations.jsonl**: Observation stream with inputs/outputs
-- **errors.json**: Error details (only if failures occurred)
-- **logs.json**: Runtime and debug logs
+- **summary.json**
+- **traces.jsonl**
+- **observations.jsonl**
+- **errors.json**
+- **logs.json**
+- **per_trace_analysis/** (appears after parsing)
+- **evaluation/** (appears after running Evaluate Results)
 
-Files only appear if they exist in the experiment directory.
+Files only appear if present in the experiment directory.
 
 ## Actions
 
@@ -82,6 +100,15 @@ Appears inside each experiment folder. Executes:
 ```bash
 fluxloop parse experiment <experiment_path> --output <dir> [--overwrite]
 ```
+
+### Evaluate Results
+
+Runs the evaluator pipeline:
+```bash
+fluxloop evaluate experiment <experiment_path> --output evaluation [--overwrite]
+```
+
+Outputs land in the `evaluation/` folder under the selected experiment.
 
 ### Open Files
 

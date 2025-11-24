@@ -8,13 +8,13 @@ FluxLoop manages inputs through the **Inputs** view in the VSCode extension. Inp
 
 ## Viewing Inputs
 
-The **Inputs** view shows:
+Open the **Inputs** view in the FluxLoop activity bar to see everything related to scenarios:
 
-- **Base Inputs**: Core inputs defined in `configs/input.yaml`
-- **Generated Inputs**: Variations created by input generation
-- **Recordings**: Captured argument traces for replay
+- **Base Inputs** – Personas + prompts from `configs/input.yaml`
+- **Generated Inputs** – Variations created via the wizard, annotated with strategy + persona
+- **Recordings** – Argument captures saved to `recordings/*.jsonl`
 
-Click any input to open its configuration file or navigate to the generated YAML.
+Clicking any entry opens the underlying YAML/JSONL. The panel refreshes automatically whenever configuration files change.
 
 ## Base Inputs
 
@@ -46,15 +46,17 @@ Generate variations from base inputs using LLM or deterministic strategies.
 
 ### From Inputs View
 
-1. Click **Generate New Inputs…** in the **Inputs** view
-2. Follow the wizard:
-   - **Mode**: Deterministic (rule-based) or LLM (requires API key)
-   - **Strategies**: Select variation types (rephrase, verbose, error_prone, etc.)
-   - **Limit**: Number of variations per base input
-   - **Overwrite**: Replace existing generated inputs
-   - **Dry Run**: Preview without writing files
+1. Click **Generate New Inputs…**
+2. Configure the wizard:
+   - **Generation Mode** – Deterministic or LLM
+   - **Strategies** – Pick one or more strategies (rephrase, verbose, concise, error_prone, persona_mix, multilingual, etc.)
+   - **Variation Limit** – Number of outputs per base input
+   - **Output File** – Defaults to `inputs/generated.yaml` (auto-populated from config)
+   - **Overwrite / Append** – Control whether the existing file should be replaced
+   - **Dry Run** – Preview results without writing files
+   - **LLM Provider & API Key** – Prompt appears for LLM mode; the key can be saved to VS Code secret storage and appended to `.env` if you approve
 
-Generated inputs appear under **Generated Inputs** in the Inputs view.
+Generated inputs immediately appear under **Generated Inputs** with metadata (strategy, persona, timestamp). Double-click any entry to open the YAML.
 
 ### From Command Palette
 
@@ -152,25 +154,12 @@ Input generation and experiments depend on your Python environment.
 
 Before generating inputs or running experiments:
 
-1. **Check environment:**
-   ```
-   FluxLoop: Show Environment Info
-   ```
+1. Run `FluxLoop: Show Environment Info`
+2. Confirm CLI, SDK, and MCP packages live inside the detected interpreter
+3. Adjust with `FluxLoop: Select Environment` (Auto / Workspace / Global / Custom)
+4. If you run commands with wrappers (`uv run`, `pipx run`), configure them once via `FluxLoop: Configure Execution Wrapper`
 
-2. **Verify FluxLoop packages are installed:**
-   - FluxLoop CLI detected
-   - SDK available in Python path
-   - Correct virtual environment active
-
-3. **If using venv:**
-   - Ensure FluxLoop is installed in `.venv`
-   - Set execution mode to **Auto** or **Workspace only**
-
-4. **If using global install:**
-   - Use pipx for isolated CLI tools
-   - Set execution mode to **Global PATH**
-
-See [Environment Configuration](../getting-started/environment-configuration) for details.
+See [Environment Configuration](../getting-started/environment-configuration.md) for the full matrix.
 
 ## Next Steps
 

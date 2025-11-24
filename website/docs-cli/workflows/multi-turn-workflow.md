@@ -32,7 +32,7 @@ multi_turn:
   
   supervisor:
     provider: openai
-    model: gpt-5-mini
+    model: gpt-4o-mini
     temperature: 0.2
 ```
 
@@ -123,7 +123,7 @@ Or when complete:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `provider` | string | `"openai"` | LLM provider (openai, mock) |
-| `model` | string | `"gpt-5-mini"` | Model for supervision |
+| `model` | string | `"gpt-4o-mini"` | Model for supervision |
 | `temperature` | float | `0.2` | Sampling temperature |
 | `api_key` | string | `null` | API key override (uses env by default) |
 | `system_prompt` | string | `null` | Custom supervisor prompt |

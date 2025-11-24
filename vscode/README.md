@@ -36,15 +36,16 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects.
 - Enable/disable recording mode from Command Palette or Experiments view
 - Status panel shows current recording state and target file
 
-### 🤖 Integration Assistant (Multi-Mode Flux Agent)
+### 🤖 Integration Assistant (Flux Agent)
 - Dedicated **Integration** view with MCP connection status and recent suggestions
 - One-click document search backed by the FluxLoop MCP server
-- Flux Agent now supports four modes selectable per run:
-  - **Integration** – classic repository analysis + edit plan workflow
-  - **Base Input** – inspects `inputs/` & service configs to draft new base input candidates
-  - **Experiment** – summarizes runner configs + experiment history to propose simulation updates
-  - **Insight** – ingests evaluation logs (`summary.json`, `traces.jsonl`) to surface findings & follow-up actions
-- Suggestion history stores file context, selected code, mode metadata, and the generated plan
+- Flux Agent runs in **Integration** mode:
+  - Repository analysis + framework detection
+  - Generates edit plan with validation checklist
+  - Uses `source_root` from `project.yaml` to analyze target source code (not FluxLoop project folder)
+  - No need to open a file—just select folders/files from a picker when running the agent
+  - Automatically appends caution notice reminding users to confirm changes before applying
+- Suggestion history stores file context, selected code, workflow metadata, and the generated plan
 
 ---
 
@@ -207,18 +208,18 @@ Use the prompt dialog to override the output directory or keep the default `eval
 1. Open the **Integration** view in the FluxLoop activity bar.
 2. Press **Connect MCP** to verify `fluxloop-mcp` is available and the knowledge index is present.
 3. Press **Search in Documents** to run a one-off documentation query (`fluxloop-mcp --once --query "<question>"`).
-4. Open a file, highlight any relevant snippet, and press **Run Flux Agent**.
-5. When prompted, choose a mode:
-   - **Integration**: full repo analysis + edit plan workflow (default)
-   - **Base Input**: drafts candidate inputs using existing `inputs/` and service configs
-   - **Experiment**: proposes `simulation.yaml` updates using past runs + runner settings
-   - **Insight**: summarizes evaluation logs and suggests next improvements
+4. Press **Run Flux Agent** (no need to open a file first).
+5. Choose whether to pick folders or files for analysis—the agent will scan the selected scope.
 6. The extension will:
-   - Execute `run_integration_workflow` inside your repo
+   - Read `source_root` from your `project.yaml` to determine the target codebase
+   - Execute `IntegrationContextTool` on the selected folders/files
    - Collect the result and feed it to the configured OpenAI model
    - Render the plan (summary, step list, validation checklist) in a dedicated panel
+   - Append a caution notice reminding you to keep original source intact and confirm changes
 7. Provide your OpenAI API key when prompted (the extension can store it in Secret Storage).
-8. Revisit previous answers from **Recent Suggestions**; each entry reopens the full plan, including the mode that produced it.
+8. Revisit previous answers from **Recent Suggestions**; each entry reopens the full plan and workflow metadata.
+
+> **Note:** The Flux Agent currently operates in **Integration** mode only. Future releases will add Base Input, Experiment, and Insight modes as described in the multi-mode PRD.
 
 ---
 
@@ -374,9 +375,11 @@ Choose from:
 
 **Setting Target Source Root:**
 When you select `Target Source Root…` in the Projects view, FluxLoop:
-1. Detects virtual environments in that directory
-2. Updates FluxLoop Output channel with detected paths
-3. Prompts you to review/adjust the environment via Select Environment
+1. Updates `project.yaml` with the relative or absolute path to your source code
+2. Detects virtual environments in that directory
+3. Updates FluxLoop Output channel with detected paths
+4. Prompts you to review/adjust the environment via Select Environment
+5. **Flux Agent will use this `source_root` as the workspace for repository analysis**
 
 See the FluxLoop Output channel for detailed environment logs.
 

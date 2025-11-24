@@ -8,52 +8,53 @@ The **Integration Assistant** is a powerful feature in the FluxLoop VSCode exten
 
 ## What is the Integration Assistant?
 
-Integration Assistant combines three key technologies:
+Integration Assistant combines four key technologies:
 
-1. **FluxLoop MCP Server**: Provides knowledge about FluxLoop documentation, recipes, and framework-specific patterns
-2. **Repository Analysis**: Scans your codebase to detect languages, frameworks, and integration points
-3. **LLM Suggestions**: Uses OpenAI GPT models to generate contextualized code modification suggestions
+1. **FluxLoop MCP Server** – Provides documentation, recipes, and framework-specific workflows
+2. **Repository Analysis** – Runs `run_integration_workflow` to detect languages, frameworks, entry points, and risk flags
+3. **Mode-Specific Context APIs** – Integration, Base Input, Experiment, and Insight payloads (Integration mode available today; others in preview)
+4. **LLM Suggestions** – Uses OpenAI Chat Completions models to generate contextualized integration plans
 
 ## Key Features
 
 ### 🔍 Knowledge Search
-- Query FluxLoop documentation directly from VSCode
-- Get answers with source citations
-- Access framework-specific recipes and examples
+- Ask documentation questions directly from VSCode
+- Answers include file citations and section names
+- Great for quick “how do I configure X?” lookups before running the agent
 
 ### 🤖 Flux Agent
-- Analyzes your current file and project structure
-- Combines MCP insights with LLM reasoning
-- Generates detailed integration suggestions in Markdown format
-- **No automatic code changes** - you review and apply suggestions manually
+- Analyzes the folders/files you select (no need to open the file)
+- Combines MCP repository data + mode-specific context with OpenAI reasoning
+- Generates structured plans (summary, suggested edits, validation checklist, references)
+- Keeps the human-in-the-loop: suggestions are review-only
 
 ### 📊 System Status
-- Real-time MCP connection monitoring
-- Python environment and package validation
-- Knowledge index status tracking
+- Real-time MCP connection and knowledge index checks
+- Environment + dependency validation (CLI, SDK, MCP)
+- One-click access to `FluxLoop: Run Doctor`
 
 ### 📝 Suggestion History
-- Stores recent suggestions with full context
-- Revisit previous plans anytime
-- Copy code snippets with one click
+- Stores your last five suggestions per project
+- Reopen any entry with full context and copy buttons
+- Helpful for comparing iterations or sharing plans with teammates
 
 ## How It Works
 
 ```mermaid
 graph TD
-    A[User Opens File] --> B[Run Flux Agent]
-    B --> C[Collect Context]
-    C --> D[MCP Analysis]
+    A[Select Files/Folders] --> B[Run Flux Agent]
+    B --> C[Collect Project Context]
+    C --> D[MCP Analysis + Mode Payload]
     D --> E[LLM Generation]
-    E --> F[Render Suggestion]
+    E --> F[Render Plan + History]
     F --> G[User Reviews & Applies]
 ```
 
-1. **Context Collection**: Gathers active file, selected code block, and project metadata
-2. **MCP Analysis**: Runs `run_integration_workflow` to analyze repository and detect frameworks
-3. **LLM Generation**: Sends analysis + context to OpenAI model for intelligent suggestions
-4. **Presentation**: Displays plan in dedicated panel with copy/check actions
-5. **Manual Application**: You review, copy, and apply changes yourself
+1. **Context Collection** – You pick folders/files; the agent also reads `source_root`, project metadata, and selection snippets (if any).
+2. **MCP Analysis** – Runs `run_integration_workflow` plus mode-specific context tools (Integration today; Base Input/Experiment/Insight in preview) to gather repo profile, detection results, and suggested edits.
+3. **LLM Generation** – Sends all context to the configured OpenAI Chat Completions model to craft a plan.
+4. **Presentation** – Renders Markdown with summary, suggested edits, validation checklist, and citations. Copy buttons make applying changes easy.
+5. **Manual Application** – You review, copy, and apply changes manually in your codebase.
 
 ## Benefits
 
@@ -67,10 +68,11 @@ graph TD
 
 Before using Integration Assistant, ensure you have:
 
-- Python 3.11 or newer
-- `fluxloop-mcp` package installed (`pip install fluxloop-mcp`)
-- MCP knowledge index built (runs automatically or via `rebuild_index.sh`)
-- OpenAI API key (prompted on first use, can be stored securely)
+- Python **3.11+** (Flux Agent uses the MCP server)
+- `fluxloop-cli`, `fluxloop`, and `fluxloop-mcp` installed in the active environment
+- MCP knowledge index built (`packages/mcp/scripts/rebuild_index.sh`)
+- `configs/project.yaml` includes the correct `source_root` (set via **Target Source Root…**)
+- OpenAI API key (prompted on first use; securely stored if you allow it)
 
 ## Next Steps
 

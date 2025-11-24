@@ -129,16 +129,18 @@ pytest
 
 ### Multi-Mode Planner Support
 
-Flux Agent in VS Code now selects between four modes:
+Flux Agent in VS Code currently operates in **Integration** mode only:
 
 | Mode | MCP Tool | Data Provided |
 | --- | --- | --- |
 | Integration | `fetch_integration_context` | Repository profile, integration workflow, structure context, RAG topics |
-| Base Input | `fetch_base_input_context` | Existing `inputs/` samples, `setting.yaml` preview, suggested RAG topics |
-| Experiment | `fetch_experiment_context` | `experiments/` summaries, runner configs, simulation templates |
-| Insight | `fetch_insight_context` | Evaluation reports (`summary.json`, `traces.jsonl`) and aggregated success metrics |
 
-The VS Code extension uses these APIs alongside the local planner to route LLM prompts per mode. Run the regression suite to ensure MCP changes don’t break planners:
+Future releases will add:
+- **Base Input** mode using `fetch_base_input_context`: Existing `inputs/` samples, `setting.yaml` preview, suggested RAG topics
+- **Experiment** mode using `fetch_experiment_context`: `experiments/` summaries, runner configs, simulation templates
+- **Insight** mode using `fetch_insight_context`: Evaluation reports (`summary.json`, `traces.jsonl`) and aggregated success metrics
+
+The VS Code extension uses these APIs alongside the local planner to route LLM prompts per mode. Run the regression suite to ensure MCP changes don't break planners:
 
 ```bash
 . .venv/bin/activate

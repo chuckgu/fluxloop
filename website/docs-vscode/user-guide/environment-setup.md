@@ -4,231 +4,180 @@ sidebar_position: 6
 
 # Environment Setup
 
-FluxLoop VSCode extension automatically detects and uses your project's Python environment (venv, conda, uv, etc.) for all operations. This ensures experiments run with the correct dependencies and FluxLoop tools are executed in the right context.
+FluxLoop automatically detects and uses your project’s Python environment so experiments, CLI commands, and the Integration Assistant run inside the correct interpreter.
 
-## Automatic Detection
+> **Python Requirements**  
+> • FluxLoop CLI → Python 3.8+  
+> • FluxLoop SDK & MCP → Python 3.11+ (required for Flux Agent)
 
-When you open a FluxLoop project or set a target source root, the extension scans for:
+## Quick Setup
 
-- `.venv/` (Python venv or uv)
-- `venv/`, `env/` (alternative venv locations)
-- `.conda/` (Conda environments)
-- Global PATH executables (fallback)
-
-Detected paths appear in the **FluxLoop Output** channel:
-
-```
-[FluxLoop Env] ----------------------------------------
-[FluxLoop Env] Source root: /path/to/your/project
-[FluxLoop Env] Environment type: venv
-[FluxLoop Env] Python: /path/to/project/.venv/bin/python
-[FluxLoop Env] fluxloop: /path/to/project/.venv/bin/fluxloop
-[FluxLoop Env] fluxloop-mcp: /path/to/project/.venv/bin/fluxloop-mcp
-[FluxLoop Env] ----------------------------------------
-```
-
-## Configuring Execution Mode
-
-### Via Command Palette
-
-1. Open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-2. Run `FluxLoop: Select Environment`
-3. Choose an execution mode:
-   - **Auto (recommended)**: Detect project environment, fallback to global
-   - **Workspace only**: Require virtual environment in project
-   - **Global PATH**: Always use globally installed executables
-   - **Custom executables**: Manually specify Python and fluxloop-mcp paths
-
-### Via Integration View
-
-1. Open the **FluxLoop** Activity Bar
-2. Navigate to **Integration** → **System Status**
-3. Click **Select Environment**
-4. Choose your preferred execution mode
-
-### Via Settings File
-
-Add to `.vscode/settings.json` in your workspace:
-
-```json
-{
-  "fluxloop.executionMode": "auto",
-  "fluxloop.pythonPath": "/custom/path/to/python",
-  "fluxloop.mcpCommandPath": "/custom/path/to/fluxloop-mcp"
-}
-```
-
-## Setting Target Source Root
-
-The target source root defines where FluxLoop searches for virtual environments and project files.
-
-### From Projects View
-
-1. Expand your project in the **Projects** view
-2. Click **Target Source Root…**
-3. Choose **Choose Folder…** and select the directory
-4. FluxLoop will:
-   - Refresh environment detection
-   - Show detected executables
-   - Prompt to adjust environment settings if needed
-
-### Via Configuration File
-
-Edit `configs/project.yaml`:
-
-```yaml
-source_root: "./backend"  # Relative to project root
-# or
-source_root: "/absolute/path/to/source"
-```
-
-After editing, the extension automatically refreshes and re-detects the environment.
-
-## Checking Environment Status
-
-### FluxLoop Output Channel
-
-View → Output → Select **FluxLoop** from the dropdown.
-
-Every time the environment is refreshed, detailed logs appear showing:
-- Source root path
-- Environment type (venv, conda, global, etc.)
-- Python executable path
-- fluxloop CLI path
-- fluxloop-mcp path
-- Any warnings or notes
-
-### Show Environment Info Command
-
-Run `FluxLoop: Show Environment Info` for a quick modal summary of the current environment.
-
-### Run Doctor Command
-
-For comprehensive diagnostics, run:
-
-**From Command Palette:**
-```
-FluxLoop: Run Doctor
-```
-
-**From Integration View:**
-1. Open **Integration** → **System Status**
-2. Click **Run Doctor**
-
-**From Terminal:**
-```bash
-fluxloop doctor
-```
-
-Doctor output includes:
-- Python version and path
-- Virtual environment status
-- FluxLoop CLI version and location
-- FluxLoop MCP availability
-- MCP index status
-- Project configuration state
-
-Use `--json` flag for machine-readable output:
-```bash
-fluxloop doctor --json
-```
-
-## Common Scenarios
-
-### Using uv
-
-If you manage your project with `uv`:
-
-1. Install FluxLoop in the uv environment:
+1. **Create / activate a venv**
    ```bash
-   uv pip install fluxloop-cli fluxloop fluxloop-mcp
+   python3.11 -m venv .venv
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
    ```
-
-2. FluxLoop will automatically detect `.venv/` created by uv
-
-3. (Optional) Set execution wrapper if needed:
-   ```json
-   {
-     "fluxloop.executionWrapper": "uv run"
-   }
-   ```
-
-### Using pipx
-
-If you installed FluxLoop globally via pipx:
-
-1. Ensure `~/.local/bin` is in your PATH
-2. Set execution mode to **Global PATH**:
-   ```
-   FluxLoop: Select Environment → Global PATH
-   ```
-
-3. Verify with `FluxLoop: Show Environment Info`
-
-### Multiple Projects with Different Environments
-
-FluxLoop caches environment information per `targetSourceRoot`. When you switch projects:
-
-1. Environment is automatically re-detected
-2. Cached paths are used if available
-3. FluxLoop Output channel shows the active environment
-
-Each project can have its own:
-- Execution mode (`fluxloop.executionMode`)
-- Custom paths (`fluxloop.pythonPath`, `fluxloop.mcpCommandPath`)
-- Target source root
-
-Configure these per-workspace in `.vscode/settings.json` for each project.
-
-### Conda Environments
-
-FluxLoop detects conda environments if:
-- `.conda/` directory exists in the project
-- `CONDA_PREFIX` is set when running commands
-
-To use a specific conda environment:
-
-1. Activate it in your terminal:
-   ```bash
-   conda activate myenv
-   ```
-
-2. Install FluxLoop packages:
+2. **Install FluxLoop packages**
    ```bash
    pip install fluxloop-cli fluxloop fluxloop-mcp
    ```
+3. **Select execution mode**
+   - Command Palette → `FluxLoop: Select Environment`
+   - Choose **Auto (detect project environment)** or **Workspace only**
+   - If dependencies are missing the wizard offers automatic install or manual instructions
+4. **Verify detection**
+   - Command Palette → `FluxLoop: Show Environment Info`
+   - Confirm Python/fluxloop/fluxloop-mcp paths point to `.venv`
+   - View → Output → **FluxLoop** for detailed logs
+5. **Set Target Source Root…**
+   - Projects view → **Target Source Root…**
+   - Select the directory containing your actual agent code (Flux Agent uses this for analysis)
 
-3. FluxLoop will detect and use the conda environment automatically
+FluxLoop now uses this environment for experiments, CLI commands, and Integration Assistant runs.
 
-Or set custom paths via `FluxLoop: Select Environment → Custom executables`.
+## Automated Setup Script
 
-## Troubleshooting Environment Issues
+For faster onboarding run:
 
-### Environment Not Detected
+```bash
+cd your-project
+bash packages/cli/scripts/setup_fluxloop_env.sh \
+  --python python3.11 \
+  --target-source-root ./src
+```
 
-1. Run `FluxLoop: Show Environment Info` to see what was detected
-2. Check FluxLoop Output channel for error messages
-3. Run `FluxLoop: Run Doctor` for detailed diagnostics
-4. Ensure your virtual environment contains `fluxloop` and `fluxloop-mcp`:
+The script:
+- Creates `.venv` (if needed)
+- Installs CLI, SDK, MCP
+- Writes `.vscode/settings.json` with `fluxloop.executionMode`, `fluxloop.targetSourceRoot`, `fluxloop.projectRoot`
+- Updates `configs/project.yaml → source_root`
+- Runs `fluxloop doctor`
+
+The VS Code project wizard exposes this as **Run Setup Script**.
+
+## Execution Modes
+
+Choose how FluxLoop locates executables:
+
+| Mode | Description | Use When |
+|------|-------------|----------|
+| **Auto** (default) | Detect `.venv`, Poetry, Conda, uv; fallback to PATH | General use |
+| **Workspace only** | Require a project-local venv; fail otherwise | Teams enforcing per-project envs |
+| **Global PATH** | Always use global executables (pipx, Homebrew) | Quick prototyping |
+| **Custom executables** | Manually specify Python + `fluxloop-mcp` paths | Complex Conda/pyenv setups |
+
+Set via:
+- Command Palette → `FluxLoop: Select Environment`
+- Integration view → System Status → **Select Environment**
+- `.vscode/settings.json`:
+  ```json
+  {
+    "fluxloop.executionMode": "auto",
+    "fluxloop.pythonPath": "/custom/python",
+    "fluxloop.mcpCommandPath": "/custom/fluxloop-mcp"
+  }
+  ```
+
+## Target Source Root
+
+Defines where FluxLoop searches for envs and source files (also used by Flux Agent).
+
+**Projects view workflow**
+1. Expand your project
+2. Click **Target Source Root…**
+3. Choose a folder (relative paths stored automatically)
+4. FluxLoop refreshes detection and logs the results
+
+**Manual configuration**
+```yaml
+# configs/project.yaml
+source_root: "./backend"
+```
+
+## Monitoring Environment Status
+
+### Show Environment Info
+`FluxLoop: Show Environment Info` → quick modal with:
+- Source root
+- Execution mode
+- Python/fluxloop/fluxloop-mcp paths
+- Detection notes (missing packages, etc.)
+
+### Output Channel
+View → Output → select **FluxLoop**. Every refresh prints:
+```
+[FluxLoop Env] Source root: /Users/me/src/app
+[FluxLoop Env] Environment: venv
+[FluxLoop Env] Python: .../.venv/bin/python
+[FluxLoop Env] fluxloop: .../.venv/bin/fluxloop
+[FluxLoop Env] fluxloop-mcp: .../.venv/bin/fluxloop-mcp
+[FluxLoop Env] Notes:
+[FluxLoop Env]  • fluxloop-mcp not found; install fluxloop-mcp in this environment.
+```
+
+### Doctor
+
+Run comprehensive diagnostics:
+- Command Palette → `FluxLoop: Run Doctor`
+- Integration view → System Status → **Run Doctor**
+- Terminal → `fluxloop doctor [--json]`
+
+Doctor checks Python, venv, CLI, SDK, MCP, knowledge index, and config structure.
+
+## Common Scenarios
+
+### uv
+1. `uv venv && source .venv/bin/activate`
+2. `uv pip install fluxloop-cli fluxloop fluxloop-mcp`
+3. (Optional) `FluxLoop: Configure Execution Wrapper → uv run`
+
+### pipx
+1. `pipx install fluxloop-cli` / `pipx install fluxloop-mcp`
+2. Install `fluxloop` SDK in your project venv
+3. Set execution mode to **Global PATH**
+
+### Conda
+1. `conda create -n agent python=3.11`
+2. `conda activate agent`
+3. `pip install fluxloop-cli fluxloop fluxloop-mcp`
+4. If VS Code doesn’t detect it automatically, use **Custom executables** and point to `/opt/conda/envs/agent/bin/python`
+
+### Multiple Projects
+- Each project stores its own execution mode, target source root, wrapper, etc.
+- Switching projects triggers a fresh detection using the cached settings.
+
+## Troubleshooting
+
+### “Environment not detected”
+1. Run `FluxLoop: Show Environment Info`
+2. Check FluxLoop Output for errors
+3. Run `FluxLoop: Run Doctor`
+4. Ensure the selected interpreter actually contains `fluxloop` and `fluxloop-mcp`:
    ```bash
    source .venv/bin/activate
    which fluxloop
    which fluxloop-mcp
    ```
 
-### Wrong Environment Being Used
+### “Commands use global Python instead of venv”
+1. Ensure `.venv` exists under your target source root
+2. Set execution mode to **Auto** or **Workspace only**
+3. Confirm `fluxloop.targetSourceRoot` points at the folder containing `.venv`
 
-1. Check current execution mode: `FluxLoop: Show Environment Info`
-2. Adjust via `FluxLoop: Select Environment`
-3. Verify `.vscode/settings.json` doesn't have conflicting overrides
-4. Clear cache by changing execution mode to a different value and back
+### “Flux Agent says MCP missing”
+1. Verify MCP installed in active env
+2. Check doctor output for index path
+3. Rebuild index: `packages/mcp/scripts/rebuild_index.sh`
+4. Confirm `fluxloop.mcpCommandPath` isn’t pointing to an old installation
 
-### Commands Use Global Instead of Project Environment
+### “Wrong project analyzed”
+- Run **Target Source Root…** again and choose the correct folder
+- Ensure `configs/project.yaml → source_root` matches your selection
+- Integration view displays the currently active source root in System Status
 
-1. Ensure `.venv` exists in your target source root directory
-2. Set execution mode to **Workspace only** or **Auto**
-3. Check FluxLoop Output channel to confirm venv was detected
-4. Run `FluxLoop: Run Doctor` to verify paths
+## Next Steps
 
----
+- [Creating Projects](./creating-projects.md)
+- [Managing Inputs](./managing-inputs.md)
+- [Integration Assistant Overview](../integration-assistant/overview.md)
 

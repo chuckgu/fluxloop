@@ -32,11 +32,12 @@ Shows the current state of the MCP server connection:
 
 ### Flux Agent
 
-Launch button for running the integration assistant.
+Launch button for running the integration assistant on selected files/folders.
 
 **Actions**:
-- **Click** to run Flux Agent on the current file
-- Requires an active file open in the editor
+- Click **Run Flux Agent** → pick one or more folders/files from the selection dialog (no need to open them first)
+- Choose the mode (Integration today; Base Input / Experiment / Insight coming soon)
+- Provide OpenAI API key if prompted (securely stored via VS Code secrets when allowed)
 
 ### System Status
 
@@ -48,6 +49,7 @@ Expandable section showing dependency checks:
 | **Python Environment** | Python 3.11+ availability | ✅ Ready / ❌ Missing |
 | **fluxloop-mcp Package** | MCP server package | ✅ Installed / ❌ Not installed |
 | **MCP Index** | Knowledge base status | ✅ Ready / ⚠️ Missing / ❌ Error |
+| **Source Root** | `configs/project.yaml → source_root` | ✅ Set / ⚠️ Not set |
 
 **Auto-refresh**:
 - Status updates when project changes
@@ -106,12 +108,12 @@ The view toolbar (top-right) provides quick actions:
 
 ### Daily Workflow
 
-1. Open a file you want to enhance
-2. (Optional) Select a specific code block
-3. Click **Flux Agent** in Integration view
-4. Review suggestion in the panel
-5. Apply changes manually
-6. Verify with validation checklist
+1. Click **Run Flux Agent**
+2. Select the folders/files you want analyzed (e.g., `app/main.py`, `routers/`)
+3. Choose mode (Integration / Base Input / Experiment / Insight)
+4. Review the generated plan in the panel (or reopen it later from **Recent Suggestions**)
+5. Copy/apply the recommended edits manually
+6. Run the validation checklist (tests, linters, doctor) before committing
 
 ### Knowledge Search
 

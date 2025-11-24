@@ -22,43 +22,49 @@ Learn how to create and manage FluxLoop projects in VSCode.
 
 ### Method 1: Default Flow (Recommended)
 
-1. **Launch the wizard**
-   - Click **Create New Project…** in the Projects view  
-   - or run `FluxLoop: Create FluxLoop Project`
-2. **Select the flow**
-   - Choose **Default (Recommended)**
-3. **Name your FluxLoop project**
-   - Enter a name (preview shows `~/FluxLoopProjects/<name>` by default)  
-   - The shared root is configurable via **Settings → FluxLoop → Project Root**
-4. **Pick an environment**
-   - Auto-detected interpreters (workspace `.venv`, Poetry, Conda, pyenv) are listed first
-   - QuickPick includes:
-     - ⭐ Detected workspace environment
-     - 📂 **Choose another environment…** (browse to any folder)
-     - ⚠️ **Use system Python** (fallback)
-   - Missing package dialog offers automatic install, manual terminal, or re-select options
-5. **Include sample agent (optional)**
+Best for most users—FluxLoop reuses your open workspace as the agent source, auto-detects its environment, and places the FluxLoop configs in a shared root (`~/FluxLoopProjects` by default).
+
+1. **Launch the wizard**  
+   - Projects view → **Create New Project…**  
+   - or Command Palette → `FluxLoop: Create FluxLoop Project`
+2. **Choose flow → Default (Recommended)**
+3. **Name your project** (preview shows target location, e.g. `~/FluxLoopProjects/support-agent`)
+4. **Select environment**  
+   - Wizard lists interpreters discovered via VS Code Python extension, `.venv`, Poetry, Conda, pyenv, uv, etc.  
+   - Options include:
+     - ⭐ Detected workspace venv (preferred)
+     - 📂 **Choose another environment…** to browse anywhere
+     - ⚠️ **Use system Python** (fallback only)
+   - If required packages (`fluxloop-cli`, `fluxloop`, `fluxloop-mcp`) are missing, a dialog offers:
+     - **Install automatically** (runs pip inside chosen env)
+     - **Install manually** (opens terminal with instructions)
+     - **Select different environment**
+5. **Include sample agent?** (toggle)
 6. **Finish**
-   - `fluxloop init project` runs inside the shared root
-   - Project is registered and activated in VSCode
+   - Wizard runs `fluxloop init project` inside the shared root
+   - Sets `fluxloop.projectRoot` in workspace settings (change anytime under Settings → FluxLoop → Project Root)
+   - Registers the project and makes it active in VSCode
 
 ### Method 2: Custom Flow (Advanced)
 
-Use this when you need to place the FluxLoop project alongside your source repo or manage multiple envs manually.
+Use when you need full control—e.g., mono-repos, remote folders, or keeping configs beside your source tree.
 
-1. **Launch the wizard** (`FluxLoop: Create FluxLoop Project`)
-2. **Choose Custom (Advanced)**
-3. **Pick FluxLoop project folder**
-4. **Enter project name** (created inside the folder you picked)
-5. **Select environment**
-   - Create a `.venv` inside the project or browse to any interpreter
-6. **Include sample agent (optional)**
-7. **Finish**
-   - Same initialization steps as Default flow, but settings (`fluxloop.targetSourceRoot`, `fluxloop.executionMode`) are saved relative to the custom folder
+1. Run `FluxLoop: Create FluxLoop Project`
+2. Choose **Custom (Advanced)**
+3. Pick a destination folder for the FluxLoop project (can be inside the repo)
+4. Enter project name (created inside the folder you picked)
+5. Select environment:
+   - Create/select a `.venv` within your repo, or browse to any interpreter/Conda env
+   - Same package installation dialog appears if dependencies are missing
+6. Include sample agent (optional)
+7. Finish—FluxLoop writes configs exactly where you pointed and saves per-folder settings:
+   - `fluxloop.targetSourceRoot`
+   - `fluxloop.executionMode`
+   - `fluxloop.pythonPath` / `fluxloop.mcpCommandPath` if custom executables were chosen
 
 ## Project Structure
 
-After creation, your project contains:
+After creation, your FluxLoop project (default flow) lives under the shared root:
 
 ```
 ~/FluxLoopProjects/my-chatbot/        # Default flow result (configurable)
@@ -76,6 +82,18 @@ After creation, your project contains:
 ```
 
 > Custom flow places the project wherever you choose, but the directory structure is identical.
+
+FluxLoop also updates `.vscode/settings.json` with:
+
+```json
+{
+  "fluxloop.executionMode": "auto",
+  "fluxloop.targetSourceRoot": "/path/to/your/workspace",
+  "fluxloop.projectRoot": "~/FluxLoopProjects"
+}
+```
+
+Adjust these in Settings UI or directly in the JSON file.
 
 ## Configuring Your Project
 
@@ -243,5 +261,6 @@ Ensure your project has:
 ## Next Steps
 
 - [Managing Inputs](./managing-inputs) - Generate and manage inputs
+- [Managing Inputs](./managing-inputs) - Generate/groom inputs
 - [Running Experiments](./running-experiments) - Execute simulations
 - [Viewing Results](./viewing-results) - Analyze experiment output

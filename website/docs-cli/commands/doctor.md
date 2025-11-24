@@ -101,7 +101,7 @@ MCP Index       ✓       ~/.fluxloop/mcp/index/dev • chunks.jsonl (1.2M bytes
 Project Config  ✓       fluxloop/my-agent/configs/project.yaml
 
 ╭─ fluxloop --version ──────────────╮
-│ FluxLoop CLI v0.2.27              │
+│ FluxLoop CLI v0.2.30              │
 ╰───────────────────────────────────╯
 
 ╭──────────────────╮
@@ -161,7 +161,7 @@ fluxloop doctor --json
   "fluxloop_cli": {
     "success": true,
     "path": "/Users/user/.venv/bin/fluxloop",
-    "output": "FluxLoop CLI v0.2.27",
+    "output": "FluxLoop CLI v0.2.30",
     "error": null
   },
   "fluxloop_mcp": {

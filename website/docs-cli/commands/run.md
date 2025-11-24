@@ -16,10 +16,22 @@ fluxloop run experiment [OPTIONS]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--iterations` | Number of runs per input | From config |
-| `--inputs` | Input file path | `inputs/generated.yaml` |
-| `--output-dir` | Output directory | `experiments/` |
-| `--name` | Experiment name | Auto-generated |
+| `--config`, `-c` | Path to configuration file | `configs/simulation.yaml` |
+| `--project` | Project name under FluxLoop root | Current directory |
+| `--root` | FluxLoop root directory | `./fluxloop` |
+| `--iterations`, `-i` | Number of runs per input | From config |
+| `--personas`, `-p` | Comma-separated list of personas to use | All personas |
+| `--multi-turn/--no-multi-turn` | Enable/disable multi-turn conversations | From config |
+| `--max-turns` | Maximum turns per conversation | From config |
+| `--auto-approve-tools/--manual-approve-tools` | Tool approval behavior | From config |
+| `--persona-override` | Force specific persona ID for multi-turn | None |
+| `--supervisor-provider` | Override supervisor provider (openai, anthropic, mock) | From config |
+| `--supervisor-model` | Override supervisor model | From config |
+| `--supervisor-temperature` | Override supervisor temperature | From config |
+| `--supervisor-api-key` | API key for supervisor calls | From env |
+| `--output-dir` | Output directory for results | `experiments/` |
+| `--experiment-name` | Custom experiment name | Auto-generated |
+| `--yes`, `-y` | Skip confirmation prompt (for CI/automation) | `false` |
 
 ## Examples
 
@@ -44,16 +56,21 @@ fluxloop run experiment --iterations 20
 Give your experiment a name:
 
 ```bash
-fluxloop run experiment --name "baseline-test"
+fluxloop run experiment --experiment-name "baseline-test"
 ```
 
-### Custom Input File
+### Skip Confirmation (CI Mode)
 
-Use different input file:
+Run without interactive prompt for automation:
 
 ```bash
-fluxloop run experiment --inputs my-custom-inputs.yaml
+fluxloop run experiment --yes
+
+# Or short form
+fluxloop run experiment -y
 ```
+
+This is ideal for CI/CD pipelines and pytest integration.
 
 ## How It Works
 
@@ -125,27 +142,115 @@ Aggregate statistics:
 
 ```json
 {
+  "experiment_name": "my_agent_experiment",
   "total_traces": 100,
   "successful": 98,
   "failed": 2,
   "avg_duration_ms": 250.5,
   "started_at": "2024-11-01T14:30:22Z",
-  "completed_at": "2024-11-01T14:35:10Z"
+  "completed_at": "2024-11-01T14:35:10Z",
+  "config_snapshot": {...}
 }
 ```
 
 ### trace_summary.jsonl
 
-One line per trace:
+One line per trace with summary information:
 
 ```jsonl
-{"trace_id": "trace_001", "input": "How do I start?", "output": "...", "duration_ms": 245}
-{"trace_id": "trace_002", "input": "What are options?", "output": "...", "duration_ms": 267}
+{"trace_id": "trace_001", "iteration": 0, "persona": "novice_user", "input": "How do I start?", "output": "...", "duration_ms": 245, "success": true}
+{"trace_id": "trace_002", "iteration": 1, "persona": "expert_user", "input": "What are options?", "output": "...", "duration_ms": 267, "success": true}
 ```
 
-### traces.jsonl
+### observations.jsonl (optional)
 
-Complete trace data with all observations.
+Detailed observation stream with all events:
+
+```jsonl
+{"trace_id": "trace_001", "type": "span_start", "timestamp": "...", "name": "agent_run", ...}
+{"trace_id": "trace_001", "type": "span_end", "timestamp": "...", "name": "agent_run", ...}
+```
+
+## Multi-Turn Conversations
+
+FluxLoop supports extending single inputs into dynamic multi-turn conversations using a supervisor agent.
+
+### Enable Multi-Turn Mode
+
+```bash
+# Enable multi-turn with defaults
+fluxloop run experiment --multi-turn
+
+# Set maximum turns
+fluxloop run experiment --multi-turn --max-turns 12
+
+# Auto-approve tools during conversation
+fluxloop run experiment --multi-turn --auto-approve-tools
+```
+
+### Supervisor Configuration
+
+The supervisor decides when to continue the conversation and generates realistic follow-up questions.
+
+**LLM-Driven Supervisor (Dynamic):**
+
+```bash
+# Use OpenAI for supervisor decisions
+fluxloop run experiment --multi-turn \
+  --supervisor-provider openai \
+  --supervisor-model gpt-4o \
+  --supervisor-temperature 0.7
+```
+
+**Mock Supervisor (Scripted Playback):**
+
+For deterministic testing, use scripted questions:
+
+```yaml
+# configs/simulation.yaml
+multi_turn:
+  enabled: true
+  supervisor:
+    provider: mock
+    metadata:
+      scripted_questions:
+        - "Can you explain more?"
+        - "What about edge cases?"
+        - "How does error handling work?"
+```
+
+```bash
+# Run with scripted questions
+fluxloop run experiment --multi-turn --supervisor-provider mock
+```
+
+The mock supervisor replays questions sequentially and terminates when the script ends.
+
+### Multi-Turn Options
+
+| Option | Description | Use Case |
+|--------|-------------|----------|
+| `--multi-turn` | Enable multi-turn mode | Dynamic conversations |
+| `--max-turns` | Limit conversation depth | Prevent infinite loops |
+| `--auto-approve-tools` | Auto-approve tool calls | Reduce manual intervention |
+| `--persona-override` | Force specific persona | Consistent testing |
+| `--supervisor-provider` | Supervisor LLM provider | openai, anthropic, mock |
+| `--supervisor-model` | Supervisor model name | gpt-4o, claude-3-5-sonnet |
+| `--supervisor-temperature` | Sampling temperature | 0.0-1.0 |
+| `--supervisor-api-key` | API key for supervisor | Override env var |
+
+### Output for Multi-Turn
+
+Multi-turn experiments produce additional fields:
+
+- `conversation_state`: Current state (active, completed, terminated)
+- `termination_reason`: Why conversation ended (max_turns, supervisor_stop, error)
+- `turn_count`: Number of turns executed
+- `conversation_history`: Full dialogue transcript
+
+See [Multi-Turn Workflow](/cli/workflows/multi-turn-workflow) for detailed guide.
+
+---
 
 ## Configuration
 

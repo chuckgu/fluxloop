@@ -69,7 +69,7 @@ fluxloop config validate
 
 Component       Status  Details
 Python          ✓       3.11.5
-FluxLoop CLI    ✓       0.2.27
+FluxLoop CLI    ✓       0.2.30
 FluxLoop SDK    ✓       0.1.6
 FluxLoop MCP    ✓       /path/to/fluxloop-mcp
 MCP Index       ✓       ~/.fluxloop/mcp/index/dev

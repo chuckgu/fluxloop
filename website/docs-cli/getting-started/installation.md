@@ -25,7 +25,7 @@ fluxloop --version
 
 You should see:
 ```
-FluxLoop CLI version 0.2.1
+FluxLoop CLI version 0.2.30
 ```
 
 ## Next Steps

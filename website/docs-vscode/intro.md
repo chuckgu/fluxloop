@@ -26,14 +26,14 @@ Visual Studio Code extension for managing FluxLoop AI agent simulation projects 
 Download VSIX from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases):
 ```bash
 # Via command line
-code --install-extension fluxloop-0.1.1.vsix
+code --install-extension fluxloop-0.1.5.vsix
 ```
 
 Or via Command Palette: **"Extensions: Install from VSIX..."**
 
 ## Version
 
-Current version: **0.1.4**
+Current version: **0.1.5**
 
 ## Features
 

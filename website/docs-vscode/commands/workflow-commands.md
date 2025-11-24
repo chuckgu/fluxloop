@@ -106,6 +106,37 @@ Generates one Markdown file per trace in the specified output directory:
 fluxloop parse experiment experiments/<folder> --output per_trace_analysis [--overwrite]
 ```
 
+---
+
+## FluxLoop: Evaluate Experiment
+
+**Command ID:** `fluxloop.evaluateExperiment`
+
+Run rule-based and LLM-based evaluators defined in `configs/evaluation.yaml`, compute success criteria, and generate Markdown/HTML reports.
+
+### Usage
+
+1. Open Command Palette
+2. Select **FluxLoop: Evaluate Experiment**
+3. Choose the experiment folder (if not triggered from Results view)
+4. Choose evaluation output directory (default: `evaluation`)
+5. Confirm overwrite if the directory already exists
+
+### Output
+
+Produces:
+
+- `evaluation/summary.json` – Aggregate stats, success criteria, persona/outlier/trend/baseline analysis
+- `evaluation/per_trace.jsonl` – Per-trace scores + reasons
+- `evaluation/report.md` – Markdown report
+- `evaluation/report.html` – Interactive report with charts (Phase 2)
+
+### CLI Equivalent
+
+```bash
+fluxloop evaluate experiment experiments/<folder> --output evaluation [--overwrite]
+```
+
 ## FluxLoop: Run Single Execution
 
 **Command ID:** `fluxloop.runSingle`

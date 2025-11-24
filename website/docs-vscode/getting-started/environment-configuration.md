@@ -4,7 +4,11 @@ sidebar_position: 2
 
 # Environment Configuration
 
-FluxLoop automatically detects and uses your project's Python environment to ensure experiments run with the correct dependencies.
+FluxLoop automatically detects and uses your project’s Python environment so experiments, CLI commands, and the Integration Assistant run inside the correct interpreter.
+
+> **Python Requirements**  
+> - FluxLoop CLI: Python **3.8+**  
+> - FluxLoop SDK & MCP: Python **3.11+** (required for Flux Agent)
 
 ## Quick Setup
 
@@ -12,8 +16,8 @@ After installing the FluxLoop VSCode extension:
 
 1. **Create or activate a virtual environment** in your project:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
+   python3.11 -m venv .venv
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
    ```
 
 2. **Install FluxLoop packages:**
@@ -21,17 +25,21 @@ After installing the FluxLoop VSCode extension:
    pip install fluxloop-cli fluxloop fluxloop-mcp
    ```
 
-3. **Verify detection** in VSCode:
-   - Open Command Palette (`Cmd+Shift+P`)
-   - Run `FluxLoop: Show Environment Info`
-   - Confirm paths point to your `.venv/bin/` directory
+3. **Select execution mode:**
+   - Command Palette → `FluxLoop: Select Environment`
+   - Choose **Auto (detect project environment)** (recommended) or **Workspace only**
+   - Accept automatic package install if prompted or open a terminal to install manually
 
-4. **Set target source root** (if needed):
-   - Expand your project in the **Projects** view
-   - Click **Target Source Root…**
-   - Select the directory containing `.venv`
+4. **Verify detection in VSCode:**
+   - `FluxLoop: Show Environment Info` → confirm Python/fluxloop/fluxloop-mcp paths
+   - View → Output → **FluxLoop** for detailed logs
 
-FluxLoop will now use this environment for all commands.
+5. **Set target source root** (optional but recommended):
+   - In **Projects** view click **Target Source Root…**
+   - Select the directory containing your actual agent source
+   - The path is saved to `fluxloop.targetSourceRoot` and `configs/project.yaml → project.source_root`
+
+FluxLoop now uses this environment for CLI commands, experiments, and Integration Assistant runs.
 
 ## Automated Setup Script
 
@@ -44,8 +52,9 @@ bash packages/cli/scripts/setup_fluxloop_env.sh
 
 This automatically:
 - Creates `.venv` if missing
-- Installs FluxLoop packages
-- Generates `.vscode/settings.json` with environment defaults
+- Installs FluxLoop CLI, SDK, MCP
+- Generates `.vscode/settings.json` with execution defaults
+- Updates `configs/project.yaml → source_root`
 - Runs `fluxloop doctor` to verify setup
 
 **With custom Python:**

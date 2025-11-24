@@ -17,18 +17,15 @@ Flux Agent is an AI assistant that:
 
 ## How to Use Flux Agent
 
-### Step 1: Open a File
+### Step 1: Choose Files or Folders
 
-Open the file where you want to integrate FluxLoop (e.g., `src/server.ts`, `app/main.py`).
+Flux Agent no longer requires you to open a file first. When you press **Run Flux Agent** you’ll be prompted to select one or more files/folders:
 
-### Step 2: Select Context (Optional)
+- Pick a directory (e.g., `./src/server`) to analyze the entire tree
+- Pick specific files (e.g., `app/main.py`, `routers/users.py`) for targeted plans
+- The agent still captures your current editor selection (if any) as an additional hint
 
-If you want Flux Agent to focus on a specific code block:
-
-1. Highlight the relevant function, class, or middleware section
-2. The agent will prioritize this selection in its analysis
-
-### Step 3: Run Flux Agent
+### Step 2: Run Flux Agent
 
 **Method 1: Integration View**
 1. Open **FluxLoop** activity bar → **Integration** view
@@ -38,7 +35,7 @@ If you want Flux Agent to focus on a specific code block:
 1. Press `Cmd+Shift+P` (or `Ctrl+Shift+P`)
 2. Type and select: `FluxLoop: Run Flux Agent`
 
-### Step 4: Choose a Mode
+### Step 3: Choose a Mode
 
 After clicking **Run Flux Agent**, the extension prompts you to pick a mode:
 
@@ -49,9 +46,9 @@ After clicking **Run Flux Agent**, the extension prompts you to pick a mode:
 | **Experiment** | Planning `simulation.yaml` or multi-turn scripts | Runner configs + recent experiments |
 | **Insight** | Reviewing evaluation logs / telemetry | `experiments/*/summary.json`, metrics |
 
-Each mode still analyzes your current file/selection, but emphasizes different MCP datasets before calling the LLM.
+Each mode adds extra MCP context on top of the repository analysis before calling the LLM.
 
-### Step 5: Review Suggestions
+### Step 4: Review Suggestions
 
 The agent opens a dedicated panel showing:
 
@@ -61,13 +58,13 @@ The agent opens a dedicated panel showing:
 - **Validation Checklist**: Post-integration verification steps
 - **References**: Citations to source documentation
 
-### Step 6: Apply Changes
+### Step 5: Apply Changes
 
 Review each suggested change and apply manually:
 
-1. **Copy Code Snippets**: Click copy buttons or select and copy
-2. **Navigate to Anchors**: Agent tells you where to insert code
-3. **Verify**: Run suggested validation commands (e.g., `npm run lint`)
+1. **Copy code snippets** – Use built-in copy buttons
+2. **Navigate to anchors** – Each step lists file path + anchor text
+3. **Verify** – Run the provided validation checklist before committing changes
 
 ## Example Workflow
 
@@ -75,13 +72,9 @@ Review each suggested change and apply manually:
 
 **Scenario**: You want to trace API requests in an Express app.
 
-1. Open `src/server.ts`
-2. Highlight the Express app initialization code:
-   ```typescript
-   const app = express();
-   app.use(express.json());
-   ```
-3. Run Flux Agent
+1. Run Flux Agent from the Integration view
+2. When prompted, select `src/server.ts` (and any related middleware files)
+3. (Optional) Highlight the Express initialization block before running to provide extra context
 
 **Sample Suggestion:**
 
@@ -171,14 +164,14 @@ Source documentation links (citations from MCP server).
 
 ### 1. Provide Clear Context
 
-- Select the exact code block you want to enhance
-- Open the main entry point file (e.g., `server.ts`, `main.py`)
-- Ensure your `configs/` directory exists for better project analysis
+- Select the folders/files that contain the relevant code (router directory, FastAPI app, etc.)
+- Optionally highlight the exact function or middleware in the editor before running to provide an extra hint
+- Keep your `configs/` directory in sync so MCP can detect frameworks accurately
 
 ### 2. Use Specific Selections
 
-❌ **Select entire file** (agent gets overwhelmed)  
-✅ **Select the middleware section or route handler**
+❌ Selecting your entire mono-repo  
+✅ Selecting the specific service folder + key files involved in the change
 
 ### 3. Iterate
 
@@ -189,9 +182,7 @@ If the first suggestion isn't perfect:
 
 ### 4. Combine with Knowledge Search
 
-Before running Flux Agent:
-1. Use **Knowledge Search** to understand concepts
-2. Then use **Flux Agent** for specific integration steps
+Use Knowledge Search to gather requirements (“How do I instrument FastAPI streaming?”) before running Flux Agent for concrete steps.
 
 ## Advanced: Customizing Prompts
 

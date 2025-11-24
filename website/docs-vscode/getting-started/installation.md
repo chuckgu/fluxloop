@@ -4,215 +4,189 @@ sidebar_position: 1
 
 # Installation
 
-Installation guide for the FluxLoop VSCode Extension.
+Set up the FluxLoop VSCode extension and required dependencies.
 
-## Installation Methods
+## 1. Install the Extension
 
-FluxLoop Extension can be **installed directly from the Extension Marketplace**!
+FluxLoop ships on both VS Code Marketplace and Open VSX. We recommend installing from the marketplace inside your editor.
 
-### 🎯 Method 1: Install from Extension Marketplace (Recommended)
+### 🎯 Marketplace (Recommended)
 
-#### Cursor Users
+**Cursor**
 
-1. **Open Extensions tab** (sidebar or `Cmd+Shift+X`)
-2. **Search for "FluxLoop"**
-3. **Click Install**
-4. **Restart Cursor**
+1. Open **Extensions** (`Cmd+Shift+X`)
+2. Search for **“FluxLoop”**
+3. Click **Install**
+4. Restart Cursor
 
-> ✨ Cursor automatically downloads the extension from [Open VSX Registry](https://open-vsx.org/extension/fluxloop/fluxloop)
+> Cursor pulls the package from [Open VSX](https://open-vsx.org/extension/fluxloop/fluxloop) automatically.
 
-#### VS Code Users
+**VS Code**
 
-1. **Open Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
-2. **Search for "FluxLoop"**
-3. **Click Install**
-4. **Restart VS Code**
+1. Open **Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+2. Search for **“FluxLoop”**
+3. Click **Install**
+4. Restart VS Code
 
-> Or install directly from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop)
-
-**Or via Command Palette:**
+Or run from Command Palette:
 ```
 ext install fluxloop.fluxloop
 ```
 
-#### Verify Installation
+### 📦 Install from VSIX (Offline)
 
-After restart:
-- **FluxLoop icon** appears in the left Activity Bar
-- Clicking the icon displays Projects, Inputs, Experiments, Results, and Status panels
+1. Download the latest `fluxloop-0.1.5.vsix` from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases)
+2. Command Palette → **“Extensions: Install from VSIX…”**
+3. Select the downloaded file
+4. Restart the editor
 
-### 📦 Method 2: Manual Installation from VSIX (Alternative)
+> Verify install: the FluxLoop activity bar icon appears with **Projects / Inputs / Experiments / Results / Integration / Status** views.
 
-If you cannot access the Marketplace:
+## 2. Install Required Python Packages
 
-#### 1. Download VSIX File
+FluxLoop extension relies on three Python packages:
 
-Download the latest VSIX file from [GitHub Releases](https://github.com/chuckgu/fluxloop/releases).
+| Package | Purpose | Python Requirement |
+|---------|---------|--------------------|
+| `fluxloop-cli` | CLI used for project scaffolding, input generation, experiments | Python **3.8+** |
+| `fluxloop` | SDK used by your agents | Python **3.11+** (due to type features) |
+| `fluxloop-mcp` | MCP server powering Integration Assistant | Python **3.11+** |
 
-- Example filename: `fluxloop-0.1.4.vsix`
-
-#### 2. Install
-
-1. **Open Command Palette** (`Cmd+Shift+P` or `Ctrl+Shift+P`)
-2. **Type and select "Extensions: Install from VSIX..."**
-3. **Select the downloaded VSIX file**
-4. **Restart**
-
-## Prerequisites
-
-To use FluxLoop Extension, you need FluxLoop CLI, SDK, and MCP server installed.
-
-### Recommended Installation
-
-Install in a project-specific virtual environment (recommended):
+We recommend installing everything inside your project virtual environment.
 
 ```bash
-# Create virtual environment
-python -m venv .venv
+# Create venv (recommended)
+python3.11 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install FluxLoop packages
+# Install FluxLoop toolchain
+pip install --upgrade pip
 pip install fluxloop-cli fluxloop fluxloop-mcp
 ```
 
-### Alternative Installation Methods
+### Alternative Install Options
 
-#### Using uv
+- **uv**
+  ```bash
+  uv venv
+  source .venv/bin/activate
+  uv pip install fluxloop-cli fluxloop fluxloop-mcp
+  ```
+
+- **pipx (global CLI)**
+  ```bash
+  pipx install fluxloop-cli
+  pipx install fluxloop-mcp
+  # still install fluxloop SDK inside project venv
+  pip install fluxloop
+  ```
+
+## 3. Build the MCP Knowledge Index
+
+Flux Agent requires a local documentation index.
 
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install fluxloop-cli fluxloop fluxloop-mcp
+# From repo root
+packages/mcp/scripts/rebuild_index.sh
 ```
 
-#### Using pipx (Global Installation)
+Defaults to `~/.fluxloop/mcp/index/dev`. The extension warns in the Integration view if the index is missing.
+
+## 4. Verify Installation
+
+### From VS Code / Cursor
+
+Open Command Palette and run:
+
+- `FluxLoop: Show Environment Info` – quick summary of detected Python, CLI, SDK, MCP paths
+- `FluxLoop: Run Doctor` – full diagnostics (Python, CLI, SDK, MCP, index, configs)
+
+### From Terminal
 
 ```bash
-pipx install fluxloop-cli
-pipx install fluxloop-mcp
-pip install fluxloop  # SDK recommended in project venv
-```
-
-### Verify Installation
-
-Automatic diagnostics from extension:
-```
-FluxLoop: Run Doctor
-```
-
-Or from terminal:
-```bash
-# Check CLI version
+# CLI version
 fluxloop --version
 
-# Verify SDK
+# SDK version
 python -c "import fluxloop; print(fluxloop.__version__)"
 
-# Check MCP server
+# MCP server health
 fluxloop-mcp --help
 
-# Full environment diagnostics
+# Comprehensive check
 fluxloop doctor
 ```
 
+Doctor output includes JSON guidance when run with `--json`.
+
+## 5. Configure Project Environment
+
+Once the extension is installed:
+
+1. Create/activate your environment (`.venv`, Poetry, Conda, uv, etc.)
+2. Install FluxLoop packages (step 2)
+3. Run `FluxLoop: Select Environment` to choose one of the four modes:
+
+| Mode | Description | Use When |
+|------|-------------|----------|
+| `auto` (default) | Detect `.venv`, Poetry, Conda, pyenv in workspace; fall back to PATH | Most projects |
+| `workspace` | Require project-local env | Teams enforcing per-project venv |
+| `global` | Always use global PATH executables (e.g., pipx) | Quick prototyping |
+| `custom` | Manually specify Python + fluxloop-mcp paths | Complex Conda/pyenv setups |
+
+4. (Optional) Set `Target Source Root…` from the Projects view so the Integration Assistant analyzes the correct codebase.
+
 ## System Requirements
 
-- **Cursor**: Latest version (based on VSCode 1.74.0+)
-- **VS Code**: 1.74.0 or higher
-- **Python**: 3.8 or higher (3.11+ recommended for SDK/MCP)
-- **Operating System**: macOS, Linux, Windows
+- **Editor**: Cursor (latest) or VS Code ≥ 1.74.0
+- **Python**:
+  - CLI: 3.8+
+  - SDK & MCP: 3.11+
+- **OS**: macOS, Linux, Windows
+- **OpenAI API key** for Flux Agent (prompted on first run, stored securely if approved)
 
 ## Troubleshooting
 
 ### Extension Not Activating
 
-**Symptom**: FluxLoop icon not visible, or panels are empty
+- Ensure FluxLoop icon appears after restart
+- Open **View → Output → FluxLoop** for logs
+- Check Developer Tools console for missing dependency errors
+- Install required Python packages (step 2)
 
-**Solution**:
-1. Restart Cursor/VS Code
-2. Open Developer Tools (View → Toggle Developer Tools)
-3. Check Console for errors
-4. Usually caused by missing FluxLoop CLI:
-   ```bash
-   pip install fluxloop-cli fluxloop
-   ```
+### CLI / SDK / MCP Not Found
 
-### "Cannot find module 'yaml'" Error
+1. Run `FluxLoop: Show Environment Info` to see detected paths
+2. Confirm packages are installed inside the active environment
+3. If using pipx/global installs, switch execution mode to **global** or set `fluxloop.executionWrapper`
+4. Re-run `FluxLoop: Run Doctor`
 
-**Symptom**: Error when activating extension
+### Missing MCP Index
 
-**Solution**:
-- Download and reinstall latest VSIX file
-- Older VSIX versions may have missing runtime dependencies
+- Build index: `packages/mcp/scripts/rebuild_index.sh`
+- Verify location in **Integration → System Status**
+- Set custom index path via `MCP_INDEX_PATH` if needed
 
-### CLI Not Recognized
+### Extension Not Discoverable in Cursor
 
-**Symptom**: "FluxLoop CLI is not installed" message
+- Ensure you are online and Extensions tab fully loaded
+- Search for **FluxLoop** (no spaces/case sensitive)
+- Update Cursor to latest build
+- Fallback: download VSIX from Open VSX and install manually
 
-**Solution**:
-1. **Check environment:**
-   ```
-   FluxLoop: Show Environment Info
-   ```
+## Updating the Extension
 
-2. **Install in project venv:**
-```bash
-   source .venv/bin/activate
-   pip install fluxloop-cli fluxloop fluxloop-mcp
-   ```
+| Source | Update Method |
+|--------|---------------|
+| Marketplace install | Auto-updates; check Extensions tab for pending updates |
+| VSIX install | Download new VSIX → uninstall old → reinstall via “Install from VSIX…” |
 
-3. **Or install globally:**
-   ```bash
-pipx install fluxloop-cli
-   pipx install fluxloop-mcp
-   ```
-
-4. **Configure environment mode:**
-   ```
-   FluxLoop: Select Environment
-   ```
-
-5. **Verify PATH:**
-   ```bash
-   which fluxloop
-   fluxloop doctor
-```
-
-### Extension Not Found in Cursor
-
-**Symptom**: Searching for "FluxLoop" in Cursor Extensions returns no results
-
-**Solution**:
-1. Verify Extensions tab loaded properly
-2. Search exactly for **"FluxLoop"**
-3. Update Cursor to latest version
-4. If still not visible, download VSIX directly from [Open VSX page](https://open-vsx.org/extension/fluxloop/fluxloop) and install manually
-
-## Updates
-
-### Automatic Updates (Cursor & VS Code)
-
-**Auto-update is supported when installed from Marketplace:**
-
-- **Cursor**: Auto-updates or shows notification when new version detected on Open VSX
-- **VS Code**: Auto-updates or shows notification when new version detected on Marketplace
-
-Check Extensions tab for FluxLoop and click **Update** button if available.
-
-### Manual Update
-
-If installed from VSIX:
-
-1. Download latest VSIX from GitHub Releases
-2. Uninstall existing extension: Extensions tab → FluxLoop → Uninstall
-3. Restart
-4. Command Palette (`Cmd+Shift+P`) → **"Extensions: Install from VSIX..."**
-5. Select new VSIX file and restart
+After updating, re-run `FluxLoop: Run Doctor` to ensure dependencies are still detected.
 
 ## Next Steps
 
-After installing the extension:
-
-- [Creating Your First Project](creating-first-project)
+- [Create Your First Project](creating-first-project)
+- [Environment Configuration](environment-configuration)
 - [Running Experiments](running-experiments)
-- [User Guide](../user-guide/creating-projects)
+- [Integration Assistant Setup](/vscode/integration-assistant/setup)
+*** End Patch
