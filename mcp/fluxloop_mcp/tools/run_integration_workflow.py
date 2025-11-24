@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from .analyze_repository import AnalyzeRepositoryTool
 from .detect_frameworks import DetectFrameworksTool
 from .generate_integration_steps import GenerateIntegrationStepsTool
@@ -53,9 +53,13 @@ class RunIntegrationWorkflowTool:
         integration_context = self._collect_context(root, context_payload)
 
         if not frameworks:
-            empty_steps = {"steps": [], "framework": None}
-            empty_plan = {"summary": "", "edits": [], "warnings": []}
-            empty_validation = {"valid": False, "issues": ["No frameworks detected"], "warnings": []}
+            empty_steps: Dict[str, object] = {"steps": [], "framework": None}
+            empty_plan: Dict[str, object] = {"summary": "", "edits": [], "warnings": []}
+            empty_validation: Dict[str, object] = {
+                "valid": False,
+                "issues": ["No frameworks detected"],
+                "warnings": [],
+            }
             llm_inputs = self.llm_builder.build(
                 repo_profile=repo_profile_v2,
                 detection=detection_result,

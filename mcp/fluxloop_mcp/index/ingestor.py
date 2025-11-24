@@ -43,7 +43,7 @@ def chunk_markdown(text: str, chunk_size: int) -> List[str]:
         return [text]
 
     chunks: List[str] = []
-    current = []
+    current: List[str] = []
     token_count = 0
 
     for line in text.splitlines():

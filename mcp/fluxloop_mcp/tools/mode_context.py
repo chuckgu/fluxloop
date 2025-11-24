@@ -183,9 +183,10 @@ class ExperimentContextTool:
                 preview, error = self.helper.read_text_preview(summary_path, limit=4000)
                 if error:
                     warnings.append(error)
-                else:
+                elif preview is not None:
+                    sanitized = preview.replace("...[truncated]", "")
                     try:
-                        summary = json.loads(preview.replace("...[truncated]", ""))
+                        summary = json.loads(sanitized)
                     except json.JSONDecodeError:
                         summary = {"preview": preview}
 
@@ -300,8 +301,12 @@ class InsightContextTool:
             if error:
                 warnings.append(error)
                 continue
+            if preview is None:
+                warnings.append(f"Unable to preview summary for {child}")
+                continue
+            sanitized = preview.replace("...[truncated]", "")
             try:
-                data = json.loads(preview.replace("...[truncated]", ""))
+                data = json.loads(sanitized)
             except json.JSONDecodeError:
                 data = {"preview": preview}
 

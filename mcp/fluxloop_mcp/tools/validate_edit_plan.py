@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Mapping, Optional, Sequence
 
 
 REQUIRED_PLAN_FIELDS = {"summary", "edits"}
@@ -42,10 +42,12 @@ class ValidateEditPlanTool:
                     )
 
                 filepath = edit.get("filepath")
-                anchors = edit.get("anchors", [])
-                payload_content = edit.get("payload", {})
+                anchors = edit.get("anchors")
+                payload_content = edit.get("payload")
                 warnings.extend(
-                    self._validate_file_and_anchors(root, filepath, anchors, payload_content, idx)
+                    self._validate_file_and_anchors(
+                        root, filepath, anchors, payload_content, idx
+                    )
                 )
 
         post_checks = plan.get("postChecks", [])
@@ -67,9 +69,9 @@ class ValidateEditPlanTool:
     def _validate_file_and_anchors(
         self,
         root: Path,
-        filepath: str,
-        anchors: List[Dict],
-        payload: Dict,
+        filepath: Optional[str],
+        anchors: Optional[Sequence[Mapping[str, str]]],
+        payload: Optional[Mapping[str, object]],
         index: int,
     ) -> List[str]:
         warnings: List[str] = []
@@ -88,22 +90,26 @@ class ValidateEditPlanTool:
             warnings.append(f"Edit #{index}: unable to read '{filepath}'.")
             return warnings
 
-        if not anchors:
+        anchor_list = list(anchors or [])
+        if not anchor_list:
             warnings.append(f"Edit #{index}: no anchors specified; manual placement required.")
         else:
-            for anchor in anchors:
-                pattern = anchor.get("pattern")
+            for anchor in anchor_list:
+                pattern = anchor.get("pattern") if isinstance(anchor, Mapping) else None
                 if pattern and pattern not in text:
                     warnings.append(
                         f"Edit #{index}: anchor pattern '{pattern}' not found in '{filepath}'."
                     )
 
-        import_snippet = payload.get("import")
-        if import_snippet and import_snippet in text:
-            warnings.append(f"Edit #{index}: import snippet already present in '{filepath}'.")
+        payload_data = dict(payload or {})
+        import_snippet = payload_data.get("import")
+        if isinstance(import_snippet, str) and import_snippet in text:
+            warnings.append(
+                f"Edit #{index}: import snippet already present in '{filepath}'."
+            )
 
-        code_snippet = payload.get("code")
-        if code_snippet and code_snippet in text:
+        code_snippet = payload_data.get("code")
+        if isinstance(code_snippet, str) and code_snippet in text:
             warnings.append(f"Edit #{index}: code snippet already present in '{filepath}'.")
 
         return warnings

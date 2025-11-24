@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import textwrap
-from typing import Iterable, List, Optional, Sequence, Set
+from typing import Iterable, List, Optional, Set
 
 from fluxloop_mcp.index.embedder import StubEmbedder
 from fluxloop_mcp.index.retriever import Retriever

@@ -1,10 +1,8 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from fluxloop_mcp.index.store import ChunkRecord, IndexStore
-from fluxloop_mcp.index.validator import ValidationIssue, validate_chunks
+from fluxloop_mcp.index.validator import validate_chunks
 
 
 def _create_store_with_chunk(tmp_path: Path) -> Path:

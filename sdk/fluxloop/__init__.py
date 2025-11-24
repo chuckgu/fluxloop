@@ -26,7 +26,7 @@ from .recording import (
     set_recording_options,
 )
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 __all__ = [
     # Decorators

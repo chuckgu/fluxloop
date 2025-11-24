@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fluxloop-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fluxloop MCP server providing repository analysis and documentation tools."
 authors = [
     {name = "Fluxloop Team", email = "team@fluxloop.dev"}

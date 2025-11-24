@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
@@ -70,8 +70,6 @@ class AnalyzeRepositoryTool:
         if not root_path.exists():
             return {"error": f"root path does not exist: {root_path}"}
 
-        globs = payload.get("globs")  # Currently unused; placeholder for future filtering
-
         languages_counter: Counter[str] = Counter()
         package_managers: Set[str] = set()
         entrypoints: Set[str] = set()
@@ -84,8 +82,6 @@ class AnalyzeRepositoryTool:
 
         for dirpath, dirnames, filenames in os.walk(root_path):
             self._filter_excluded(dirpath, dirnames)
-            rel_dir = Path(dirpath).relative_to(root_path)
-
             for filename in filenames:
                 file_path = Path(dirpath) / filename
                 rel_path = file_path.relative_to(root_path)

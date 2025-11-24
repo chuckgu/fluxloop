@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:  # Optional dependency; fall back to heuristic parsing if unavailable.
     import yaml  # type: ignore
@@ -121,7 +121,7 @@ class CollectRepoProfileTool:
         signals.sort(key=lambda item: item["confidence"], reverse=True)
         return signals
 
-    def _scan_agent_signals(self, root_path: Path) -> (List[Dict], List[Dict]):
+    def _scan_agent_signals(self, root_path: Path) -> Tuple[List[Dict], List[Dict]]:
         signals: List[Dict] = []
         errors: List[Dict] = []
         scanned = 0
@@ -171,7 +171,7 @@ class CollectRepoProfileTool:
         signals.sort(key=lambda entry: entry["module"])
         return signals, errors
 
-    def _collect_runner_configs(self, root_path: Path) -> (List[Dict], List[Dict]):
+    def _collect_runner_configs(self, root_path: Path) -> Tuple[List[Dict], List[Dict]]:
         configs: List[Dict] = []
         errors: List[Dict] = []
 
@@ -255,7 +255,7 @@ class CollectRepoProfileTool:
         return "ambiguous"
 
     @staticmethod
-    def _find_line(text: str, needle: str) -> (int, str):
+    def _find_line(text: str, needle: str) -> Tuple[int, str]:
         for idx, line in enumerate(text.splitlines(), start=1):
             if needle in line:
                 return idx, line.strip()
