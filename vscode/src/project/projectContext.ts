@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ProjectManager, ProjectEntry } from './projectManager';
 
 export class ProjectContext {
@@ -37,7 +38,19 @@ export class ProjectContext {
     }
 
     static getActiveWorkspacePath(): string | undefined {
-        return this.getActiveProject()?.path;
+        const project = this.getActiveProject();
+        if (!project) {
+            return undefined;
+        }
+
+        if (project.sourceRoot) {
+            if (path.isAbsolute(project.sourceRoot)) {
+                return project.sourceRoot;
+            }
+            return path.resolve(project.path, project.sourceRoot);
+        }
+
+        return project.path;
     }
 
     static ensureActiveProject(): ProjectEntry | undefined {

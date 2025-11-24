@@ -37,6 +37,28 @@ DEFAULT_STRATEGIES: Sequence[VariationStrategy] = (
     VariationStrategy.CONCISE,
 )
 
+DEFAULT_USER_PROMPT_TEMPLATE = """You are an expert in creating high-quality datasets for testing AI agents.
+Your task is to generate a single, realistic user message that a person would type into a support chat or search box. This message will be used as an input in an automated simulation to test an AI agent's performance.
+
+**Instructions:**
+1.  Read the Base Input, Strategy, and Persona details carefully.
+2.  Generate a new user message that modifies the Base Input according to the given Strategy and reflects the Persona.
+3.  **Keep the message concise and natural.** Even when the strategy is "verbose," it should still be a realistic user query, not a lengthy technical specification. A verbose user might ask multiple related questions in one message, but they would not write an essay.
+4.  **Your output must ONLY be the generated user message text.** Do not include any prefixes, quotation marks, explanations, or formatting like bullet points. It should be a single block of text.
+
+---
+**Base Input:**
+{input}
+
+**Strategy to Apply (how the user words their request):**
+{strategy}
+
+**User Persona Profile:**
+{persona}
+---
+
+Generated User Message:"""
+
 
 class LLMGenerationError(RuntimeError):
     """Raised when LLM-backed generation fails."""
@@ -225,29 +247,7 @@ def _format_prompt(
     llm_config: LLMGeneratorConfig,
     context: LLMGenerationContext,
 ) -> Tuple[str, Dict[str, Any]]:
-    template = llm_config.user_prompt_template or (
-        """You are an expert in creating high-quality datasets for testing AI agents.
-Your task is to generate a single, realistic user message that a person would type into a support chat or search box. This message will be used as an input in an automated simulation to test an AI agent's performance.
-
-**Instructions:**
-1.  Read the Base Input, Strategy, and Persona details carefully.
-2.  Generate a new user message that modifies the Base Input according to the given Strategy and reflects the Persona.
-3.  **Keep the message concise and natural.** Even when the strategy is "verbose," it should still be a realistic user query, not a lengthy technical specification. A verbose user might ask multiple related questions in one message, but they would not write an essay.
-4.  **Your output must ONLY be the generated user message text.** Do not include any prefixes, quotation marks, explanations, or formatting like bullet points. It should be a single block of text.
-
----
-**Base Input:**
-{input}
-
-**Strategy to Apply (how the user words their request):**
-{strategy}
-
-**User Persona Profile:**
-{persona}
----
-
-Generated User Message:"""
-    )
+    template = llm_config.user_prompt_template or DEFAULT_USER_PROMPT_TEMPLATE
 
     optional_persona = (
         context.persona.to_prompt() if context.persona else "Generic user"

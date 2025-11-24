@@ -185,29 +185,16 @@ export class IntegrationService {
                         throw new Error('Open a FluxLoop project workspace before running Flux Agent.');
                     }
 
-                    const editor = vscode.window.activeTextEditor;
-                    if (!editor) {
-                        throw new Error('Open a file and place the cursor where you need guidance.');
-                    }
-
-                    const document = editor.document;
-                    const selection = editor.selection;
-                    const selectedText = selection && !selection.isEmpty ? document.getText(selection) : '';
-                    const truncatedSelection = selectedText ? this.truncate(selectedText, 4000) : '';
-
                     this.output.show();
                     this.output.appendLine('');
                     this.output.appendLine('='.repeat(60));
                     this.output.appendLine('[Flux Agent] Running Flux Agent MCP pipeline...');
 
-                    const integrationContext = await this.promptIntegrationContext(
-                        workspacePath,
-                        document,
-                        selection,
-                        truncatedSelection,
-                    );
-                    const mode = await this.promptAgentMode();
+                    const integrationContext = await this.promptIntegrationContext(workspacePath);
+                    const mode: FluxAgentMode = 'integration';
                     const modeLabel = this.getModeLabel(mode);
+                    const primaryTarget = integrationContext.targets[0] ?? integrationContext.workspacePath;
+
                     this.output.appendLine(`[Flux Agent] Context Scope Selected:`);
                     this.output.appendLine(integrationContext.summary);
                     this.output.appendLine(`[Flux Agent] Mode Selected: ${modeLabel}`);
@@ -215,9 +202,9 @@ export class IntegrationService {
                     const apiKey = await this.ensureOpenAIApiKey();
                     const config = vscode.workspace.getConfiguration('fluxloop');
                     const structureModel =
-                        config.get<string>('fluxAgent.structureModel')?.trim() || 'gpt-5-turbo';
+                        config.get<string>('fluxAgent.structureModel')?.trim() || 'gpt-5-mini';
                     const suggestionModel =
-                        config.get<string>('fluxAgent.suggestionModel')?.trim() || 'gpt-5.1-mini';
+                        config.get<string>('fluxAgent.suggestionModel')?.trim() || 'gpt-5.1';
 
                     progress.report({ message: `Running ${modeLabel} planning flow...` });
                     const orchestrator = this.createPlannerOrchestrator(apiKey, workspacePath);
@@ -229,6 +216,11 @@ export class IntegrationService {
                         suggestionModel,
                     });
                     this.output.appendLine('[Flux Agent] Suggestion received.');
+
+                    const suggestionContent =
+                        runResult.mode === 'integration'
+                            ? this.appendIntegrationCaution(runResult.suggestion)
+                            : runResult.suggestion;
 
                     const workflowPayload = runResult.workflow
                         ? {
@@ -243,10 +235,10 @@ export class IntegrationService {
                         : undefined;
 
                     IntegrationPanel.render(this.context.extensionUri, {
-                        filePath: document.uri.fsPath,
-                        selection: truncatedSelection,
+                        filePath: primaryTarget,
+                        selection: '',
                         workflow: workflowPayload,
-                        suggestion: runResult.suggestion,
+                        suggestion: suggestionContent,
                         contextSummary: integrationContext.summary,
                         mode,
                         modeContext: runResult.modeContext,
@@ -254,10 +246,10 @@ export class IntegrationService {
                     });
 
                     await this.integrationProvider.addSuggestion({
-                        query: `${modeLabel} suggestion for ${path.basename(document.uri.fsPath)}`,
-                        answer: runResult.suggestion,
-                        filePath: document.uri.fsPath,
-                        selection: truncatedSelection,
+                        query: `${modeLabel} suggestion for ${path.basename(primaryTarget)}`,
+                        answer: suggestionContent,
+                        filePath: primaryTarget,
+                        selection: '',
                         workflow: workflowPayload,
                         mode,
                         modeContext: runResult.modeContext,
@@ -404,20 +396,35 @@ export class IntegrationService {
         apiKey: string,
         model: string,
         messages: ChatMessage[],
-        temperature = 0.3,
+        _temperature?: number,
     ): Promise<string> {
-        const requestBody = JSON.stringify({
+        const usesGptFiveFamily = /^gpt-5(\.|$)/.test(model);
+        const requestPayload: Record<string, unknown> = {
             model,
-            messages,
-            temperature,
-        });
+        };
+
+        let path = '/v1/chat/completions';
+
+        if (usesGptFiveFamily) {
+            // GPT-5 family requires the Responses API and supports reasoning controls.
+            path = '/v1/responses';
+            requestPayload['input'] = messages.map((message) => ({
+                role: message.role,
+                content: message.content,
+            }));
+            requestPayload['reasoning'] = { effort: 'medium' };
+        } else {
+            requestPayload['messages'] = messages;
+        }
+
+        const requestBody = JSON.stringify(requestPayload);
 
         return new Promise<string>((resolve, reject) => {
             const request = https.request(
                 {
                     method: 'POST',
                     hostname: 'api.openai.com',
-                    path: '/v1/chat/completions',
+                    path,
                     headers: {
                         'Content-Type': 'application/json',
                         'Content-Length': Buffer.byteLength(requestBody),
@@ -433,11 +440,19 @@ export class IntegrationService {
                         if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
                             try {
                                 const parsed = JSON.parse(data);
-                                const content =
-                                    parsed.choices?.[0]?.message?.content ||
-                                    parsed.choices?.[0]?.text ||
-                                    'OpenAI response did not include content.';
-                                resolve(content);
+                                if (usesGptFiveFamily) {
+                                    const textOutput =
+                                        typeof parsed.output_text === 'string' && parsed.output_text.trim()
+                                            ? parsed.output_text.trim()
+                                            : this.extractResponseOutput(parsed);
+                                    resolve(textOutput || 'OpenAI response did not include content.');
+                                } else {
+                                    const content =
+                                        parsed.choices?.[0]?.message?.content ||
+                                        parsed.choices?.[0]?.text ||
+                                        'OpenAI response did not include content.';
+                                    resolve(content);
+                                }
                             } catch (error) {
                                 reject(new Error(`Failed to parse OpenAI response: ${String(error)}`));
                             }
@@ -457,36 +472,29 @@ export class IntegrationService {
         });
     }
 
-    private async promptAgentMode(): Promise<FluxAgentMode> {
-        const pick = await vscode.window.showQuickPick(
-            FLUX_AGENT_MODES.map((mode) => ({
-                label: mode.label,
-                description: mode.description,
-                mode: mode.id,
-            })),
-            {
-                title: 'Select Flux Agent Mode',
-                placeHolder: 'Choose the objective for this Flux Agent run',
-            },
-        );
-
-        if (!pick) {
-            throw new Error('Flux Agent cancelled by user.');
+    private extractResponseOutput(parsed: Record<string, unknown>): string | undefined {
+        const output = parsed['output'];
+        if (Array.isArray(output)) {
+            for (const entry of output) {
+                const content = (entry as Record<string, unknown>)?.['content'];
+                if (Array.isArray(content)) {
+                    for (const item of content) {
+                        const text = (item as Record<string, unknown>)?.['text'];
+                        if (typeof text === 'string' && text.trim()) {
+                            return text.trim();
+                        }
+                    }
+                }
+            }
         }
-
-        return pick.mode;
+        return undefined;
     }
 
     private getModeLabel(mode: FluxAgentMode): string {
         return FLUX_AGENT_MODES.find((entry) => entry.id === mode)?.label ?? mode;
     }
 
-    private async promptIntegrationContext(
-        workspacePath: string,
-        document: vscode.TextDocument,
-        selection: vscode.Selection,
-        truncatedSelection: string,
-    ): Promise<IntegrationContextSelection> {
+    private async promptIntegrationContext(workspacePath: string): Promise<IntegrationContextSelection> {
         const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
         let selectedWorkspace = workspacePath;
 
@@ -509,53 +517,31 @@ export class IntegrationService {
             selectedWorkspace = workspacePick.description ?? workspacePath;
         }
 
-        const editorPath = document.uri.fsPath;
-        const relativeFilePath = path.relative(selectedWorkspace, editorPath) || path.basename(editorPath);
-        const hasSelection = selection && !selection.isEmpty;
-
-        const scopeChoices: vscode.QuickPickItem[] = [
+        const scopePick = await vscode.window.showQuickPick(
+            [
+                {
+                    label: '$(folder-opened) Pick folder…',
+                    description: 'Choose one or more folders to emphasize',
+                },
+                {
+                    label: '$(files) Pick files…',
+                    description: 'Choose one or more files to emphasize',
+                },
+            ],
             {
-                label: '$(file-code) Active file',
-                description: relativeFilePath,
-                detail: 'Use the entire active file as context',
-                picked: true,
-            },
-        ];
-
-        if (hasSelection) {
-            scopeChoices.push({
-                label: '$(selection) Selection only',
-                description: relativeFilePath,
-                detail: 'Use only the highlighted text as context',
-            });
-        }
-
-        scopeChoices.push(
-            {
-                label: '$(folder-opened) Pick folder…',
-                description: 'Choose one or more folders to emphasize',
-            },
-            {
-                label: '$(files) Pick files…',
-                description: 'Choose one or more files to emphasize',
+                title: 'Flux Agent context scope',
+                placeHolder: 'Select folders or files for MCP analysis',
             },
         );
-
-        const scopePick = await vscode.window.showQuickPick(scopeChoices, {
-            title: 'Flux Agent context scope',
-            placeHolder: 'Control which paths are prioritized for MCP analysis',
-        });
 
         if (!scopePick) {
             throw new Error('Flux Agent cancelled by user.');
         }
 
-        let scope: IntegrationContextSelection['scope'] = 'activeFile';
-        let targets: string[] = [editorPath];
+        let scope: IntegrationContextSelection['scope'] = 'folder';
+        let targets: string[] = [];
 
-        if (scopePick.label.includes('Selection') && hasSelection) {
-            scope = 'selection';
-        } else if (scopePick.label.includes('folder')) {
+        if (scopePick.label.includes('folder')) {
             scope = 'folder';
             const folders = await vscode.window.showOpenDialog({
                 canSelectFiles: false,
@@ -576,7 +562,7 @@ export class IntegrationService {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: true,
-                defaultUri: document.uri,
+                defaultUri: vscode.Uri.file(selectedWorkspace),
                 openLabel: 'Select files',
             });
 
@@ -585,6 +571,8 @@ export class IntegrationService {
             }
 
             targets = files.map((uri) => uri.fsPath);
+        } else {
+            throw new Error('Flux Agent scope selection failed.');
         }
 
         const summaryLines = [
@@ -603,7 +591,6 @@ export class IntegrationService {
             scope,
             targets,
             summary: summaryLines.join('\n'),
-            selectionSnippet: scope === 'selection' ? truncatedSelection : undefined,
         };
     }
 
@@ -692,14 +679,16 @@ from fluxloop_mcp.tools import ${toolName}
 payload = ${JSON.stringify(payload)}
 payload["root"] = pathlib.Path(payload["root"]).expanduser().resolve().as_posix()
 ctx = payload.get("context") or {}
-    targets = ctx.get("targets") or []
-    resolved_targets = []
-    for target in targets:
-        target_path = pathlib.Path(target)
-        if not target_path.is_absolute():
+targets = ctx.get("targets") or []
+
+resolved_targets = []
+for target in targets:
+    target_path = pathlib.Path(target)
+    if not target_path.is_absolute():
         target_path = pathlib.Path(payload["root"]) / target_path
-        resolved_targets.append(target_path.resolve().as_posix())
-    ctx["targets"] = resolved_targets
+    resolved_targets.append(target_path.resolve().as_posix())
+
+ctx["targets"] = resolved_targets
 
 tool = ${toolName}()
 result = tool.fetch(payload)
@@ -771,13 +760,19 @@ json.dump(docs, sys.stdout)
         }
     }
 
-
-    private truncate(text: string, maxLength: number): string {
-        if (text.length <= maxLength) {
-            return text;
+    private appendIntegrationCaution(content: string): string {
+        const base = (content ?? '').trimEnd();
+        const caution =
+            '⚠️ Caution: Keep the original source as intact as possible when applying this plan, and always get explicit confirmation from the requesting user before making changes.';
+        if (!base) {
+            return caution;
         }
-        return `${text.slice(0, maxLength)}\n... [truncated]`;
+        if (base.includes(caution)) {
+            return base;
+        }
+        return `${base}\n\n---\n\n${caution}`;
     }
+
 
     private async runCommand(command: string, args: string[], cwd?: string): Promise<CommandResult> {
         const resolved = await this.environmentManager.resolveCommand(command);

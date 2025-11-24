@@ -46,11 +46,52 @@ def create_input_config() -> str:
     """Create default input configuration content."""
 
     return dedent(
-        f"""
-        # FluxLoop Input Configuration
-        # ------------------------------------------------------------
-        # Defines personas, base inputs, and generation modes.
-        # Adjust personas/goals/strategies based on your target scenarios.
+        """
+        # ===================================================================
+        # Quick Configuration
+        # - Define What would you ask to your agent? -
+        # ===================================================================
+        # Quick start: Fill in 1. BASE USER INPUT (required)
+        # Optional fields use defaults if not specified
+        # ===================================================================
+
+
+        # -------------------------------------------------------------------
+        # 1. BASE USER INPUT (REQUIRED)
+        # -------------------------------------------------------------------
+        # Start here: Write the main questions your users would ask.
+        # This is your baseline - variations will be generated from this.
+        # Example: "How do I get started?" or "Reset my password"
+
+        base_inputs:
+          - input: "How do I get started?"
+            expected_intent: help
+
+
+        # -------------------------------------------------------------------
+        # 2. INPUT VARIATION STRATEGIES (OPTIONAL)
+        # -------------------------------------------------------------------
+        # How should the base input be transformed?
+        # - rephrase: Same intent, different wording
+        # - verbose: More detailed, longer questions
+        # - typo: Common spelling mistakes
+        # - concise: Shorter, more direct
+        # Tip: Mix strategies to cover realistic user behavior patterns.
+
+        variation_strategies:
+          - rephrase
+          - verbose
+          - error_prone
+
+        variation_count: 2           # How many variations per strategy
+        variation_temperature: 0.7   # 0.0 = consistent, 1.0 = creative
+
+
+        # -------------------------------------------------------------------
+        # 3. PERSONA SETTING (OPTIONAL)
+        # -------------------------------------------------------------------
+        # 
+
         personas:
           - name: novice_user
             description: A user new to the system
@@ -78,23 +119,9 @@ def create_input_config() -> str:
               - Access advanced features
             # Tip: Include any tone/style expectations in characteristics.
 
-        base_inputs:
-          - input: "How do I get started?"
-            expected_intent: help
-            # Provide optional 'metadata' or 'expected' fields to guide evaluation.
-
         # ------------------------------------------------------------
         # Input generation settings
-        # - variation_strategies: transformations applied when synthesizing inputs.
-        # - variation_count / temperature: tune diversity of generated samples.
-        # - inputs_file: location where generated inputs will be saved/loaded.
-        variation_strategies:
-          - rephrase
-          - verbose
-          - error_prone
-
-        variation_count: 2
-        variation_temperature: 0.7
+        # ------------------------------------------------------------
 
         inputs_file: inputs/generated.yaml
 
