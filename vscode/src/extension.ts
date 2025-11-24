@@ -46,6 +46,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const allOnboardingCards: OnboardingCard[] = [
         {
+            id: 'quick-start',
+            title: 'Quick Start Guide',
+            description: 'Step 1. Workspace: Set up your workspace\n\nStep 2. Playground: Run your experiments\n\nStep 3. Insights: View your analysis'
+        },
+        {
             id: 'layout-tip',
             title: 'Adjust tree layout',
             description: 'Drag the header grab line above each tree view to reposition or collapse it.'

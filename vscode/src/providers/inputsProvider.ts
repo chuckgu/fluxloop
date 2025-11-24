@@ -28,8 +28,8 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
         if (!element) {
             return [
                 new CommandItem('Configure Inputs…', 'fluxloop.openInputConfig', 'Open configs/input.yaml', 'gear'),
-                new CommandItem('Generate New Inputs…', 'fluxloop.generateInputs', 'Start generation wizard', 'debug-start'),
                 new CategoryItem('Base Inputs', 'base'),
+                new CommandItem('Generate New Inputs…', 'fluxloop.generateInputs', 'Start generation wizard', 'debug-start'),
                 new CategoryItem('Generated Inputs', 'generated')
             ];
         }

@@ -275,6 +275,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             font-size: 11px;
             color: color-mix(in srgb, var(--vscode-button-foreground) 82%, var(--vscode-editorWidget-background));
             margin: 0;
+            white-space: pre-line;
         }
 
         .onboarding-actions {
