@@ -298,6 +298,10 @@ def _run_via_cli(
     env.update({k: v for k, v in request.extra_env.items()})
     _update_pythonpath(env, request.project_root)
 
+    existing_dirs = {
+        entry.name for entry in outputs_base.iterdir() if entry.is_dir()
+    }
+
     try:
         run_args = [
             "run",
@@ -321,7 +325,15 @@ def _run_via_cli(
                 f"fluxloop run experiment failed (see {stderr_log})"
             )
 
-        experiment_dir = _latest_experiment_dir(outputs_base)
+        created_dirs = [
+            entry
+            for entry in outputs_base.iterdir()
+            if entry.is_dir() and entry.name not in existing_dirs
+        ]
+        if created_dirs:
+            experiment_dir = max(created_dirs, key=lambda p: p.stat().st_mtime)
+        else:
+            experiment_dir = _latest_experiment_dir(outputs_base)
 
         parse_args = [
             "parse",
