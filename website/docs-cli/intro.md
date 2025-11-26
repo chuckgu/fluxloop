@@ -44,7 +44,7 @@ fluxloop run experiment
 # Parse results
 fluxloop parse experiment experiments/my_agent_experiment_*/
 
-# Evaluate results
+# Evaluate results (writes evaluation_report/report.html by default)
 fluxloop evaluate experiment experiments/my_agent_experiment_*/
 
 # Check environment

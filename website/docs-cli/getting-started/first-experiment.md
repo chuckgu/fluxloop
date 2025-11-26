@@ -228,38 +228,18 @@ cat experiments/my_first_agent_*/per_trace_analysis/00_*.md
 
 ## Step 9: Evaluate Results (Optional)
 
-Score your agent's performance:
+Score your agent's performance and generate the interactive dashboard:
 
 ```bash
 fluxloop evaluate experiment experiments/my_first_agent_experiment_*/
 ```
 
-**Output:**
+The command runs the built-in 5단계 파이프라인(Per-Trace LLM 평가 → 통계 집계 → LLM 해석 → 데이터 준비 → HTML 렌더링) and writes `evaluation_report/report.html` under the experiment directory (override with `--output`). Open that file in your browser to explore:
 
-```
-╭─ Evaluation: my_first_agent_experiment ───────────╮
-│ Traces: 10                                        │
-│ Evaluators: 2                                     │
-╰───────────────────────────────────────────────────╯
-
-Running evaluations...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 10/10 [00:03]
-
-✓ Evaluation completed!
-
-╭─ Results Summary ─────────────────────────────────╮
-│ Overall Score: 1.00 / 1.00 (100%)                │
-│ Pass/Fail: PASS (threshold: 0.70)                │
-│                                                   │
-│ By Evaluator:                                     │
-│   - output_not_empty: 1.00 (10/10 passed)        │
-│   - success: 1.00 (10/10 passed)                 │
-╰───────────────────────────────────────────────────╯
-
-Reports saved to: experiments/.../evaluation/
-  - report.md
-  - report.html
-```
+- Executive summary + pass-rate 게이지
+- Trace × Metric 매트릭스
+- 실패/리뷰 케이스 타임라인
+- 성능 카드(토큰/턴/지연시간)와 페르소나 비교
 
 ## Congratulations! 🎉
 

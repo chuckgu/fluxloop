@@ -26,7 +26,7 @@ The legacy `setting.yaml` is still supported, but new projects created with
 - `fluxloop generate inputs` – produce input variations for the active project
 - `fluxloop run experiment` – execute an experiment using `configs/simulation.yaml`
 - `fluxloop parse experiment` – convert experiment outputs into readable artifacts and emit structured per-trace JSON at `per_trace_analysis/per_trace.jsonl`
-- `fluxloop evaluate experiment` – score experiment outputs using rule-based and LLM evaluators (requires `fluxloop parse` output or `--per-trace`), generate reports with success criteria, analysis, and customizable templates
+- `fluxloop evaluate experiment` – run the LLM-driven evaluation pipeline (LLM-PT → rule aggregation → LLM-OV → HTML render). Requires the parsed per-trace file (or `--per-trace`) and writes an interactive report to `evaluation_report/report.html` by default.
 - `fluxloop config set-llm` – update LLM provider/model in `configs/input.yaml`
 - `fluxloop record enable|disable|status` – toggle recording mode across `.env` and simulation config
 - `fluxloop doctor` – summarize Python, FluxLoop CLI/MCP, and MCP index state for the active environment
@@ -64,7 +64,7 @@ Evaluation now follows a two-step process so that multi-turn context is preserve
 
 1. `fluxloop run experiment` – produce `trace_summary.jsonl` (and optionally `observations.jsonl`).
 2. `fluxloop parse experiment <experiment_dir>` – generate markdown summaries and a structured artifact at `per_trace_analysis/per_trace.jsonl`.
-3. `fluxloop evaluate experiment <experiment_dir>` – consume the structured file to calculate scores and reports.
+3. `fluxloop evaluate experiment <experiment_dir>` – consume that structured file, run LLM-based per-trace + overall analysis, and emit an interactive dashboard at `<experiment_dir>/evaluation_report/report.html` (override with `--output`).
 
 `fluxloop evaluate` exits early with guidance when the per-trace artifact is missing. If you relocate the file, supply an explicit path with `--per-trace /path/to/per_trace.jsonl`.
 

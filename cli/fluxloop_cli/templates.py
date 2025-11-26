@@ -4,7 +4,7 @@ Templates for generating configuration and code files.
 
 from textwrap import dedent, indent
 
-from fluxloop_cli.evaluation.prompts import get_prompt_bundle
+
 
 
 def create_project_config(project_name: str) -> str:
@@ -197,261 +197,183 @@ def create_simulation_config(project_name: str) -> str:
 def create_evaluation_config() -> str:
     """Create default evaluation configuration content."""
 
-    intent_prompt = indent(get_prompt_bundle("intent_recognition").with_header(), "              ")
-    consistency_prompt = indent(get_prompt_bundle("response_consistency").with_header(), "              ")
-    clarity_prompt = indent(get_prompt_bundle("response_clarity").with_header(), "              ")
-    completeness_prompt = indent(get_prompt_bundle("information_completeness").with_header(), "              ")
-
-    intent_sample = get_prompt_bundle("intent_recognition").sample_response
-    consistency_sample = get_prompt_bundle("response_consistency").sample_response
-    clarity_sample = get_prompt_bundle("response_clarity").sample_response
-    completeness_sample = get_prompt_bundle("information_completeness").sample_response
-
-    sample_indent = "                "
-    intent_sample_block = indent(intent_sample.strip(), sample_indent)
-    consistency_sample_block = indent(consistency_sample.strip(), sample_indent)
-    clarity_sample_block = indent(clarity_sample.strip(), sample_indent)
-    completeness_sample_block = indent(completeness_sample.strip(), sample_indent)
-
     return dedent(
-        f"""
-        # FluxLoop Evaluation Configuration
-        # ------------------------------------------------------------
-        # Controls how experiment results are evaluated.
-        # - evaluators: rule-based or LLM judges that score each trace
-        # - aggregate: how scores combine into a final pass/fail decision
-        # - limits: cost-control knobs for LLM-based evaluators
-        # - success_criteria / additional_analysis / report / advanced: Phase 2 features
-        # Fill in or adjust the notes below to match your project.
+        """
+        # ===================================================================
+        # Evaluation Configuration
+        # - Define how to evaluate your agent's performance -
+        # ===================================================================
+        # Quick start: Fill in sections marked (REQUIRED)
+        # Optional sections use defaults if not specified
+        # ===================================================================
 
-        # ------------------------------------------------------------
-        # Evaluation Goal (Phase 2)
-        # Appears in reports / dashboards; describe desired outcome.
+
+        # -------------------------------------------------------------------
+        # 1. EVALUATION GOAL (REQUIRED)
+        # -------------------------------------------------------------------
+        # What are you trying to evaluate? Write a clear, concise goal.
+        # This helps the LLM judge understand the context of your evaluation.
+        # Example: "Check if the agent provides accurate flight information"
+
         evaluation_goal:
-          text: |
-            Verify that the agent provides clear, persona-aware responses
-            while meeting latency and accuracy targets.
+          "Verify that the agent provides clear, persona-aware responses while meeting latency and accuracy targets."
 
-        # ------------------------------------------------------------
-        # Evaluators (Phase 1 compatible)
-        # Add/remove evaluators as needed. Rule-based examples below.
-        evaluators:
-          - name: not_empty
-            type: rule_based
+
+        # -------------------------------------------------------------------
+        # 2. METRICS TO EVALUATE (OPTIONAL)
+        # -------------------------------------------------------------------
+        # All metrics enabled by default with thresholds shown below.
+        # Only specify if you want to disable or customize thresholds.
+
+        metrics:
+
+          # Task Completion Rate
+          # Formula: (PASS count / total traces) × 100%
+          # Default: ✅ ≥80% Good | ⚠️ 60-80% Fair | ❌ <60% Poor
+          task_completion:
             enabled: true
-            weight: 0.2
-            rules:
-              - check: output_not_empty
+            thresholds:
+              good: 80       # ≥80%
+              fair: 60       # ≥60%
 
-          - name: token_budget
-            type: rule_based
+          # Hallucination Rate
+          # Formula: (grounding failure traces / total traces) × 100%
+          # Default: ✅ ≤5% Good | ⚠️ 5-15% Fair | ❌ >15% Critical (ship blocker)
+          hallucination:
             enabled: true
-            weight: 0.2
-            rules:
-              - check: token_usage_under
-                max_total_tokens: 4000
+            thresholds:
+              good: 5        # ≤5%
+              fair: 15       # ≤15%
 
-          - name: keyword_quality
-            type: rule_based
+          # Relevance Rate
+          # Formula: (PASS count / total traces) × 100%
+          # Default: ✅ ≥90% Good | ⚠️ 80-90% Fair | ❌ <80% Poor
+          relevance:
             enabled: true
-            weight: 0.1
-            rules:
-              - check: contains
-                target: output
-                keywords: ["help", "assist"]
-              - check: not_contains
-                target: output
-                keywords: ["error", "sorry"]
+            thresholds:
+              good: 90       # ≥90%
+              fair: 80       # ≥80%
 
-          - name: similarity_to_expected
-            type: rule_based
+          # Tool Usage Appropriateness
+          # Formula: (APPROPRIATE count / total traces) × 100%
+          # Default: ✅ ≥90% Good | ⚠️ 80-90% Fair | ❌ <80% Poor
+          tool_usage_appropriateness:
             enabled: true
-            weight: 0.1
-            rules:
-              - check: similarity
-                target: output
-                expected_path: metadata.expected
-                method: difflib
+            thresholds:
+              good: 90       # ≥90%
+              fair: 80       # ≥80%
 
-          - name: intent_recognition
-            type: llm_judge
+          # User Satisfaction
+          # Formula: (GOOD count / total traces) × 100%
+          # Default: ✅ ≥70% Good | ⚠️ 50-70% Fair | ❌ <50% Poor
+          user_satisfaction:
             enabled: true
-            weight: 0.25
-            model: gpt-5-mini
-            model_parameters:
-              reasoning:
-                effort: medium
-              text:
-                verbosity: medium
-            prompt_template: |
-{intent_prompt}
-            max_score: 10
-            parser: first_number_1_10
-            metadata:
-              sample_response: |
-{intent_sample_block}
+            thresholds:
+              good: 70       # ≥70%
+              fair: 50       # ≥50%
 
-          - name: response_consistency
-            type: llm_judge
+          # Response Clarity
+          # Formula: (PASS count / total traces) × 100%
+          # Default: ✅ ≥90% Good | ⚠️ 80-90% Fair | ❌ <80% Poor
+          clarity:
             enabled: true
-            weight: 0.25
-            model: gpt-5-mini
-            model_parameters:
-              reasoning:
-                effort: medium
-              text:
-                verbosity: medium
-            prompt_template: |
-{consistency_prompt}
-            max_score: 10
-            parser: first_number_1_10
-            metadata:
-              sample_response: |
-{consistency_sample_block}
+            thresholds:
+              good: 90       # ≥90%
+              fair: 80       # ≥80%
 
-          - name: response_clarity
-            type: llm_judge
+          # Persona Consistency
+          # Formula: (PASS count / total traces) × 100%
+          # Default: ✅ ≥85% Good | ⚠️ 70-85% Fair | ❌ <70% Poor
+          persona_consistency:
             enabled: true
-            weight: 0.2
-            model: gpt-5-mini
-            model_parameters:
-              reasoning:
-                effort: medium
-              text:
-                verbosity: medium
-            prompt_template: |
-{clarity_prompt}
-            max_score: 10
-            parser: first_number_1_10
-            metadata:
-              sample_response: |
-{clarity_sample_block}
+            thresholds:
+              good: 85       # ≥85%
+              fair: 70       # ≥70%
 
-          - name: information_completeness
-            type: llm_judge
-            enabled: false
-            weight: 0.1
-            model: gpt-5-mini
-            model_parameters:
-              reasoning:
-                effort: medium
-              text:
-                verbosity: medium
-            prompt_template: |
-{completeness_prompt}
-            max_score: 10
-            parser: first_number_1_10
-            metadata:
-              sample_response: |
-{completeness_sample_block}
 
-        # ------------------------------------------------------------
-        # Aggregation Settings
-        aggregate:
-          method: weighted_sum      # or "average"
-          threshold: 0.7            # pass/fail threshold
-          by_persona: true          # group stats per persona
+        # -------------------------------------------------------------------
+        # EFFICIENCY METRICS (OPTIONAL)
+        # -------------------------------------------------------------------
+        # Statistical metrics - auto-computed from trace data.
+        # Choose outlier detection mode: "statistical" or "absolute"
 
-        # ------------------------------------------------------------
-        # Limits (LLM cost controls)
-        limits:
-          sample_rate: 1.0          # evaluate 100% of traces with LLM
-          max_llm_calls: 50         # cap total LLM API calls
-          timeout_seconds: 60
-          cache: evaluation_cache.jsonl
+        efficiency:
 
-        # ------------------------------------------------------------
-        # Success Criteria (Phase 2)
-        # Leave disabled fields as false/None if you do not need them.
-        success_criteria:
-          performance:
-            all_traces_successful: true
-            avg_response_time:
-              enabled: false
-              threshold_ms: 2000
-            max_response_time:
-              enabled: false
-              threshold_ms: 5000
-            error_rate:
-              enabled: false
-              threshold_percent: 5
+          # Average Output Tokens
+          # Outlier: statistical (Mean + n×Std exceeded) or absolute (>threshold)
+          output_tokens:
+            enabled: true
+            outlier_mode: statistical    # "statistical" (default) or "absolute"
+            std_multiplier: 2            # 1, 2, 3... (used if mode = statistical)
+            # absolute_threshold: 2000   # tokens (used if mode = absolute)
 
-          quality:
-            intent_recognition: true
-            response_consistency: true
-            response_clarity: true
-            information_completeness: false
+          # Conversation Depth
+          # Outlier: statistical (Mean + n×Std exceeded) or absolute (>threshold)
+          conversation_depth:
+            enabled: true
+            outlier_mode: statistical    # "statistical" (default) or "absolute"
+            std_multiplier: 2            # 1, 2, 3... (used if mode = statistical)
+            # absolute_threshold: 6      # turns (used if mode = absolute)
 
-          functionality:
-            tool_calling:
-              enabled: false
-              all_calls_successful: false
-              appropriate_selection: false
-              correct_parameters: false
-              proper_timing: false
-              handles_failures: false
+          # Average Latency
+          # Outlier: statistical (Mean + n×Std exceeded) or absolute (>threshold)
+          latency:
+            enabled: true
+            outlier_mode: statistical    # "statistical" (default) or "absolute"
+            std_multiplier: 2            # 1, 2, 3... (used if mode = statistical)
+            # absolute_threshold: 60     # seconds (used if mode = absolute)
 
-        # ------------------------------------------------------------
-        # Additional Analysis (Phase 2)
-        additional_analysis:
-          persona:
-            enabled: false
-            focus_personas: []      # e.g., ["expert_user", "novice_user"]
+          # Persona Performance Gap
+          # Compares efficiency metrics across different personas
+          persona_gap:
+            enabled: true
 
-          performance:
-            detect_outliers: false
-            trend_analysis: false
 
-          failures:
-            enabled: false
-            categorize_causes: false
+        # ===================================================================
+        #                     OPTIONAL CONFIGURATION
+        # ===================================================================
+        # Everything below is optional. Defaults work for most use cases.
+        # Only modify if you need custom behavior.
+        # ===================================================================
 
-          comparison:
-            enabled: false
-            baseline_path: ""      # path to baseline summary.json
 
-        # ------------------------------------------------------------
-        # Report Configuration (Phase 2)
-        report:
-          style: standard           # quick | standard | detailed
+        # -------------------------------------------------------------------
+        # 3. OUTPUT SETTINGS (OPTIONAL)
+        # -------------------------------------------------------------------
+        # Configure where and how reports are generated.
 
-          sections:
-            executive_summary: true
-            key_metrics: true
-            detailed_results: true
-            statistical_analysis: false
-            failure_cases: true
-            success_examples: false
-            recommendations: true
-            action_items: true
+        output:
+          language: "en"                 # Report language: "en" (default), "ko", etc.
+          summary_file: "summary.md"
+          deep_analysis_file: "deep_analysis.md"
+          templates:
+            summary: "template.txt"
+            deep_analysis: "template.txt"
 
-          visualizations:
-            charts_and_graphs: true
-            tables: true
-            interactive: true       # generate HTML with charts
 
-          tone: balanced            # technical | executive | balanced
-          output: both              # md | html | both
-          template_path: null       # override with custom HTML template
+        # -------------------------------------------------------------------
+        # 4. ADVANCED SETTINGS (OPTIONAL)
+        # -------------------------------------------------------------------
+        # Fine-tune evaluation behavior. Most users can skip this section.
+        # Tip: Only modify if you have specific requirements.
 
-        # ------------------------------------------------------------
-        # Advanced Settings (Phase 2+)
         advanced:
-          statistical_tests:
-            enabled: false
-            significance_level: 0.05
-            confidence_interval: 0.95
+          # LLM judge configuration
+          llm_judge:
+            model: "gpt-5.1"
+            temperature: 0.0
+            # max_tokens: 1024
 
-          outliers:
-            detection: true
-            handling: analyze_separately   # remove | analyze_separately | include
+          # Filter which traces to evaluate
+          filters:
+            personas: []                   # Empty = all personas
+            include_trace_ids: []          # Empty = all traces
+            exclude_trace_ids: []
 
-          alerts:
-            enabled: false
-            conditions:
-              - metric: "error_rate"
-                threshold: 10
-                operator: ">"
+          # Overall success calculation rules
+          overall_success:
+            use_default_rules: true
+            # custom_rules: []             # Only for custom logic
         """
     ).strip() + "\n"
 

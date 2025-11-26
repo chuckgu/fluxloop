@@ -188,7 +188,7 @@ def project(
     console.print("4. Generate inputs: [green]fluxloop generate inputs[/green]")
     console.print("5. Run the experiment: [green]fluxloop run experiment[/green]")
     console.print("6. Parse outputs: [green]fluxloop parse experiment[/green]")
-    console.print("7. Evaluate results (optional): [green]fluxloop evaluate experiment[/green]")
+    console.print("7. Generate the interactive report (optional): [green]fluxloop evaluate experiment[/green]")
     console.print("8. Diagnose environment anytime: [green]fluxloop doctor[/green]")
 
 

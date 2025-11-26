@@ -1,19 +1,65 @@
-"""Evaluate command for scoring experiment outputs."""
+"""Evaluate command for generating interactive reports."""
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
+import shutil
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
 import typer
+import yaml
 from rich.console import Console
 
 from ..environment import load_env_chain
-from ..evaluation import EvaluationOptions, load_evaluation_config, run_evaluation
+from ..evaluation import load_evaluation_config
+from ..evaluation.artifacts import load_per_trace_records
+from ..evaluation.report.pipeline import ReportPipeline
 
 console = Console()
-app = typer.Typer(help="Evaluate experiment outputs and generate reports.")
+app = typer.Typer(help="Evaluate experiment outputs and generate interactive reports.")
+
+
+def _load_yaml_file(path: Optional[Path]) -> dict:
+    if not path or not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+    if isinstance(data, dict):
+        return data
+    return {}
+
+
+def _resolve_project_root(config_path: Path) -> Path:
+    config_dir = config_path.parent
+    return config_dir.parent if config_dir.name == "configs" else config_dir
+
+
+def _find_config_file(config_path: Path, filename: str) -> Optional[Path]:
+    config_dir = config_path.parent
+    project_root = _resolve_project_root(config_path)
+    candidates = [
+        config_dir / filename,
+        project_root / "configs" / filename,
+        project_root / filename,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _prepare_output_directory(path: Path, overwrite: bool) -> None:
+    if path.exists():
+        if not overwrite:
+            raise typer.BadParameter(
+                f"Output directory already exists: {path}. Use --overwrite to replace it."
+            )
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
 @app.command()
@@ -33,7 +79,7 @@ def experiment(
         help="Path to evaluation configuration file",
     ),
     output: Path = typer.Option(
-        Path("evaluation"),
+        Path("evaluation_report"),
         "--output",
         "-o",
         help="Output directory name (relative to the experiment directory)",
@@ -46,40 +92,8 @@ def experiment(
     llm_api_key: Optional[str] = typer.Option(
         None,
         "--llm-api-key",
-        help="LLM API key for judge evaluators (optional)",
+        help="LLM API key for report generation (optional)",
         envvar="FLUXLOOP_LLM_API_KEY",
-    ),
-    sample_rate: Optional[float] = typer.Option(
-        None,
-        "--sample-rate",
-        help="Override LLM evaluation sample rate (0.0-1.0)",
-    ),
-    max_llm_calls: Optional[int] = typer.Option(
-        None,
-        "--max-llm",
-        help="Maximum number of LLM evaluations to run",
-    ),
-    report: Optional[str] = typer.Option(
-        None,
-        "--report",
-        help="Report output format to generate (md, html, both)",
-        metavar="FORMAT",
-    ),
-    report_template: Optional[Path] = typer.Option(
-        None,
-        "--report-template",
-        help="Path to custom HTML report template",
-        exists=False,
-        file_okay=True,
-        dir_okay=False,
-    ),
-    baseline: Optional[Path] = typer.Option(
-        None,
-        "--baseline",
-        help="Path to baseline summary.json file for comparisons",
-        exists=False,
-        file_okay=True,
-        dir_okay=False,
     ),
     per_trace: Optional[Path] = typer.Option(
         None,
@@ -93,59 +107,29 @@ def experiment(
     ),
 ):
     """
-    Evaluate experiment outputs and generate aggregate reports.
+    Evaluate experiment outputs and generate an interactive HTML report.
     """
+
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(message)s",
+    )
 
     resolved_experiment_dir = experiment_dir.resolve()
     if not resolved_experiment_dir.is_dir():
         raise typer.BadParameter(f"Experiment directory not found: {resolved_experiment_dir}")
 
-    if not config.is_absolute():
-        config_path = (Path.cwd() / config).resolve()
-    else:
-        config_path = config
-
-    if sample_rate is not None and not 0.0 <= sample_rate <= 1.0:
-        raise typer.BadParameter("--sample-rate must be between 0.0 and 1.0")
-
-    if max_llm_calls is not None and max_llm_calls < 0:
-        raise typer.BadParameter("--max-llm must be a non-negative integer")
-
-    report_format: Optional[str] = None
-    if report is not None:
-        candidate = report.lower()
-        if candidate not in {"md", "html", "both"}:
-            raise typer.BadParameter("--report must be one of: md, html, both")
-        report_format = candidate
-
-    report_template_path: Optional[Path] = None
-    if report_template is not None:
-        resolved_template = report_template
-        if not resolved_template.is_absolute():
-            resolved_template = (Path.cwd() / resolved_template).resolve()
-        if not resolved_template.exists():
-            raise typer.BadParameter(f"Report template not found: {resolved_template}")
-        report_template_path = resolved_template
-
-    baseline_path: Optional[Path] = None
-    if baseline is not None:
-        resolved_baseline = baseline
-        if not resolved_baseline.is_absolute():
-            resolved_baseline = (Path.cwd() / resolved_baseline).resolve()
-        baseline_path = resolved_baseline
+    config_path = config.resolve() if config.is_absolute() else (Path.cwd() / config).resolve()
 
     if per_trace is not None:
-        per_trace_path = per_trace
-        if not per_trace_path.is_absolute():
-            per_trace_path = (Path.cwd() / per_trace_path).resolve()
+        per_trace_path = per_trace.resolve() if per_trace.is_absolute() else (Path.cwd() / per_trace).resolve()
     else:
         per_trace_path = resolved_experiment_dir / "per_trace_analysis" / "per_trace.jsonl"
 
-    if not per_trace_path.exists():
-        raise typer.BadParameter(
-            f"Structured per-trace artifacts not found at {per_trace_path}. "
-            "Run `fluxloop parse` before evaluating or provide --per-trace."
-        )
+    per_trace_records = load_per_trace_records(resolved_experiment_dir, per_trace_path)
+    trace_summaries = [record.trace for record in per_trace_records]
+    if not trace_summaries:
+        raise typer.BadParameter("No traces found in per-trace artifacts.")
 
     try:
         evaluation_config = load_evaluation_config(config_path)
@@ -168,52 +152,37 @@ def experiment(
     if llm_api_key is None:
         llm_api_key = os.getenv("FLUXLOOP_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-    output_dir = output
-    if not output_dir.is_absolute():
-        output_dir = resolved_experiment_dir / output_dir
+    output_dir = output if output.is_absolute() else (resolved_experiment_dir / output)
+    _prepare_output_directory(output_dir, overwrite)
 
-    options = EvaluationOptions(
+    input_config_path = _find_config_file(config_path, "input.yaml")
+    project_config_path = _find_config_file(config_path, "project.yaml")
+
+    input_config = _load_yaml_file(input_config_path)
+    project_config = _load_yaml_file(project_config_path)
+
+    config_bundle = {
+        "name": project_config.get("name") or resolved_experiment_dir.name,
+        "evaluation": asdict(evaluation_config),
+        "input": input_config,
+    }
+
+    pipeline = ReportPipeline(
+        config=config_bundle,
         output_dir=output_dir,
-        overwrite=overwrite,
-        llm_api_key=llm_api_key,
-        sample_rate=sample_rate,
-        max_llm_calls=max_llm_calls,
-        verbose=verbose,
-        report_format=report_format,  # type: ignore[arg-type]
-        report_template=report_template_path,
-        baseline_path=baseline_path,
-        per_trace_path=per_trace_path,
-    )
-
-    effective_report_format = report_format or evaluation_config.report.output
-    template_display = (
-        str(report_template_path)
-        if report_template_path is not None
-        else evaluation_config.report.template_path or "default"
-    )
-    baseline_display = (
-        str(baseline_path)
-        if baseline_path is not None
-        else evaluation_config.additional_analysis.comparison.baseline_path
+        api_key=llm_api_key,
     )
 
     message_lines = [
         f"📊 Evaluating experiment at [cyan]{resolved_experiment_dir}[/cyan]",
         f"⚙️  Config: [magenta]{config_path}[/magenta]",
-        f"📁 Output: [green]{output_dir}[/green]",
-        f"📝 Report: [yellow]{effective_report_format.upper()}[/yellow] (template: [cyan]{template_display}[/cyan])",
         f"🧵 Per-trace data: [blue]{per_trace_path}[/blue]",
+        f"📁 Output: [green]{output_dir}[/green]",
     ]
-    if baseline_display:
-        message_lines.append(f"📈 Baseline: [cyan]{baseline_display}[/cyan]")
-
     console.print("\n".join(message_lines))
 
-    summary = run_evaluation(resolved_experiment_dir, evaluation_config, options)
+    report_path = asyncio.run(pipeline.run(trace_summaries))
+    console.print(f"\n✅ Report ready: [bold cyan]{report_path}[/bold cyan]")
 
-    if verbose:
-        console.print("\n[bold]Summary[/bold]")
-        for key, value in summary.items():
-            console.print(f"• {key}: {value}")
 
 
