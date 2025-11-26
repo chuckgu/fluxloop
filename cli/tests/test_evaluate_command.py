@@ -2,11 +2,37 @@ import json
 import textwrap
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from fluxloop_cli import main as cli_main
+from fluxloop_cli.evaluation.report.pipeline import ReportArtifacts
 
 runner = CliRunner()
+
+
+@pytest.fixture
+def pipeline_stub(monkeypatch):
+    instances = []
+
+    class StubPipeline:
+        def __init__(self, config, output_dir, api_key):
+            self.config = config
+            self.output_dir = output_dir
+            self.api_key = api_key
+            instances.append(self)
+
+        async def run(self, trace_summaries):
+            self.trace_summaries = trace_summaries
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            html_path = self.output_dir / "report.html"
+            html_path.write_text("<html>stub</html>", encoding="utf-8")
+            pdf_path = self.output_dir / "report.pdf"
+            pdf_path.write_bytes(b"%PDF-1.4\n%Stub\n")
+            return ReportArtifacts(html_path=html_path, pdf_path=pdf_path)
+
+    monkeypatch.setattr("fluxloop_cli.commands.evaluate.ReportPipeline", StubPipeline)
+    return instances
 
 
 def _write_trace_summary(path: Path) -> None:
@@ -240,7 +266,7 @@ def _write_baseline_summary(path: Path) -> None:
     path.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
 
 
-def test_evaluate_generates_outputs(tmp_path: Path) -> None:
+def test_evaluate_generates_outputs(tmp_path: Path, pipeline_stub) -> None:
     experiment_dir = tmp_path / "experiments" / "demo"
     experiment_dir.mkdir(parents=True)
     _write_trace_summary(experiment_dir / "trace_summary.jsonl")
@@ -282,30 +308,17 @@ def test_evaluate_generates_outputs(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
 
-    output_dir = experiment_dir / "evaluation"
-    summary_path = output_dir / "summary.json"
-    per_trace_path = output_dir / "per_trace.jsonl"
-    report_path = output_dir / "report.md"
+    output_dir = experiment_dir / "evaluation_report"
+    html_report = output_dir / "report.html"
+    assert html_report.exists()
+    assert (output_dir / "report.pdf").exists()
 
-    assert summary_path.exists()
-    assert per_trace_path.exists()
-    assert report_path.exists()
-
-    summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    assert summary["total_traces"] == 2
-    assert summary["passed_traces"] >= 1
-    assert "completeness" in summary["evaluator_stats"]
-
-    per_trace_lines = per_trace_path.read_text(encoding="utf-8").strip().splitlines()
-    assert len(per_trace_lines) == 2
-    first_trace = json.loads(per_trace_lines[0])
-    assert "completeness" in first_trace["scores"]
-    assert "final_score" in first_trace
-    assert "conversation" in first_trace
-    assert isinstance(first_trace["conversation"], list)
+    assert len(pipeline_stub) == 1
+    stub_instance = pipeline_stub[0]
+    assert len(stub_instance.trace_summaries) == 2
 
 
-def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path) -> None:
+def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path, pipeline_stub) -> None:
     experiment_dir = tmp_path / "experiments" / "demo_llm"
     experiment_dir.mkdir(parents=True, exist_ok=True)
     _write_trace_summary(experiment_dir / "trace_summary.jsonl")
@@ -337,19 +350,15 @@ def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
 
-    output_dir = experiment_dir / "evaluation"
-    summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
-    assert summary["llm_calls"] == 0
+    output_dir = experiment_dir / "evaluation_report"
+    assert (output_dir / "report.html").exists()
+    assert (output_dir / "report.pdf").exists()
 
-    per_trace_lines = (output_dir / "per_trace.jsonl").read_text(encoding="utf-8").strip().splitlines()
-    assert per_trace_lines
-    trace_entry = json.loads(per_trace_lines[0])
-    reasons = trace_entry["reasons"]
-    assert "llm_quality" in reasons
-    assert "API key" in reasons["llm_quality"]
+    assert len(pipeline_stub) == 1
+    assert pipeline_stub[0].api_key is None
 
 
-def test_evaluate_phase2_extended_outputs(tmp_path: Path) -> None:
+def test_evaluate_phase2_extended_outputs(tmp_path: Path, pipeline_stub) -> None:
     experiment_dir = tmp_path / "experiments" / "phase2"
     experiment_dir.mkdir(parents=True)
     _write_phase2_trace_summary(experiment_dir / "trace_summary.jsonl")
@@ -382,34 +391,21 @@ def test_evaluate_phase2_extended_outputs(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
 
-    output_dir = experiment_dir / "evaluation"
-    summary_path = output_dir / "summary.json"
-    html_report_path = output_dir / "report.html"
+    output_dir = experiment_dir / "evaluation_report"
+    assert (output_dir / "report.html").exists()
+    assert (output_dir / "report.pdf").exists()
 
-    assert summary_path.exists()
-    assert html_report_path.exists()
-    assert not (output_dir / "report.md").exists()
-
-    summary = json.loads(summary_path.read_text(encoding="utf-8"))
-
-    assert summary["evaluation_goal"].startswith("Validate extended Phase 2")
-    assert summary["report"]["format"] == "html"
-
-    criteria_results = summary["success_criteria_results"]
-    assert "performance" in criteria_results
-    assert "avg_response_time" in criteria_results["performance"]
-    assert "quality" in criteria_results
-    assert "intent_recognition" in criteria_results["quality"]
-
-    analysis = summary["analysis"]
-    assert "persona" in analysis and analysis["persona"]["breakdown"]
-    performance_analysis = analysis["performance"]
-    assert "outliers" in performance_analysis and "trends" in performance_analysis
-    comparison = analysis["comparison"]
-    assert "baseline_path" in comparison and comparison["baseline_path"].endswith("baseline_summary.json")
+    assert len(pipeline_stub) == 1
+    stub_instance = pipeline_stub[0]
+    assert stub_instance.config["evaluation"]["evaluation_goal"]["text"].startswith(
+        "Validate extended Phase 2"
+    )
+    assert stub_instance.config["evaluation"]["aggregate"]["by_persona"] is True
+    assert stub_instance.config["input"] == {}
+    assert len(stub_instance.trace_summaries) == 4
 
 
-def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch) -> None:
+def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch, pipeline_stub) -> None:
     project_dir = tmp_path
     configs_dir = project_dir / "configs"
     configs_dir.mkdir()
@@ -453,18 +449,8 @@ def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch) -> None:
         encoding="utf-8",
     )
 
-    captured: dict[str, object] = {}
-
-    def fake_run_evaluation(exp_dir, config, options):
-        captured["llm_api_key"] = options.llm_api_key
-        captured["sample_rate"] = options.sample_rate
-        return {}
-
     monkeypatch.delenv("FLUXLOOP_LLM_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setattr(
-        "fluxloop_cli.commands.evaluate.run_evaluation", fake_run_evaluation
-    )
 
     result = runner.invoke(
         cli_main.app,
@@ -483,4 +469,5 @@ def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     assert result.exit_code == 0, result.output
-    assert captured["llm_api_key"] == "sk-test-key"
+    assert len(pipeline_stub) == 1
+    assert pipeline_stub[0].api_key == "sk-test-key"

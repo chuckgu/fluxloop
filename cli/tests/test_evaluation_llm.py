@@ -86,7 +86,8 @@ def test_non_gpt5_does_not_set_reasoning(manager: LLMEvaluationManager) -> None:
 
 def test_phase2_template_includes_prompt_bundles() -> None:
     config_text = create_evaluation_config()
-    assert "Intent Recognition Quality Review" in config_text
-    assert "Response Consistency Review" in config_text
-    assert "Response Clarity Review" in config_text
-    assert "Information Completeness Review" in config_text
+    assert "evaluation_goal" in config_text
+    assert "task_completion" in config_text
+    assert "hallucination" in config_text
+    assert "user_satisfaction" in config_text
+    assert "advanced:" in config_text

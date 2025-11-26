@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, RunnerConfig, PersonaConfig
+from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, PersonaConfig
 from fluxloop_cli.arg_binder import ArgBinder
 
 

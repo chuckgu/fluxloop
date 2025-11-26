@@ -113,7 +113,7 @@ export class CommandManager {
 
         const experimentsDir = path.join(project.path, 'experiments');
         if (!fs.existsSync(experimentsDir)) {
-            void vscode.window.showWarningMessage('실험 결과 폴더가 없습니다. 먼저 실험을 실행해 주세요.');
+            void vscode.window.showWarningMessage('Experiment results folder not found. Run an experiment first.');
             return;
         }
 
@@ -133,7 +133,7 @@ export class CommandManager {
                 .sort((a, b) => b.localeCompare(a));
 
             if (directories.length === 0) {
-                void vscode.window.showWarningMessage('파싱할 실험 결과가 없습니다.');
+                void vscode.window.showWarningMessage('No experiment results available to parse.');
                 return;
             }
 
@@ -143,8 +143,8 @@ export class CommandManager {
                     description: path.join('experiments', name)
                 })),
                 {
-                    title: '실험 결과 선택',
-                    placeHolder: '파싱할 실험 결과 폴더를 선택하세요.'
+                    title: 'Select experiment results',
+                    placeHolder: 'Choose the experiment folder to parse.'
                 }
             );
 
@@ -156,7 +156,7 @@ export class CommandManager {
         }
 
         if (!targetPath || !fs.existsSync(targetPath)) {
-            void vscode.window.showErrorMessage('선택한 실험 결과 폴더를 찾을 수 없습니다.');
+            void vscode.window.showErrorMessage('Unable to find the selected experiment folder.');
             return;
         }
 
@@ -164,8 +164,8 @@ export class CommandManager {
         const experimentArg = relativePath && !relativePath.startsWith('..') ? relativePath : targetPath;
 
         const outputDir = await vscode.window.showInputBox({
-            prompt: '결과를 저장할 출력 디렉터리 (옵션)',
-            placeHolder: '예: parsed_results (비워두면 기본값 사용)',
+            prompt: 'Output directory for parsed results (optional)',
+            placeHolder: 'Example: parsed_results (leave empty for default)',
             ignoreFocusOut: true
         });
 
@@ -184,12 +184,12 @@ export class CommandManager {
         if (fs.existsSync(resolvedOutputPath)) {
             const overwriteChoice = await vscode.window.showQuickPick<{ label: string; value: 'overwrite' | 'cancel'; description?: string }>(
                 [
-                    { label: '예, 덮어쓰겠습니다', value: 'overwrite' },
-                    { label: '아니요', value: 'cancel' }
+                    { label: 'Yes, overwrite', value: 'overwrite' },
+                    { label: 'No', value: 'cancel' }
                 ],
                 {
-                    title: `${finalOutputDir} 디렉터리가 이미 존재합니다. 덮어쓸까요?`,
-                    placeHolder: '덮어쓰기를 원하지 않으면 "아니요"를 선택하세요.'
+                    title: `${finalOutputDir} already exists. Overwrite?`,
+                    placeHolder: 'Choose "No" to keep the existing files.'
                 }
             );
 
@@ -217,7 +217,7 @@ export class CommandManager {
 
         const experimentsDir = path.join(project.path, 'experiments');
         if (!fs.existsSync(experimentsDir)) {
-            void vscode.window.showWarningMessage('실험 결과 폴더가 없습니다. 먼저 실험을 실행해 주세요.');
+            void vscode.window.showWarningMessage('Experiment results folder not found. Run an experiment first.');
             return;
         }
 
@@ -237,7 +237,7 @@ export class CommandManager {
                 .sort((a, b) => b.localeCompare(a));
 
             if (directories.length === 0) {
-                void vscode.window.showWarningMessage('평가할 실험 결과가 없습니다.');
+                void vscode.window.showWarningMessage('No experiment results available to evaluate.');
                 return;
             }
 
@@ -247,8 +247,8 @@ export class CommandManager {
                     description: path.join('experiments', name)
                 })),
                 {
-                    title: '평가할 실험 결과 선택',
-                    placeHolder: '평가를 실행할 실험 결과 폴더를 선택하세요.'
+                    title: 'Select experiment results to evaluate',
+                    placeHolder: 'Choose the experiment folder you want to evaluate.'
                 }
             );
 
@@ -260,7 +260,7 @@ export class CommandManager {
         }
 
         if (!targetPath || !fs.existsSync(targetPath)) {
-            void vscode.window.showErrorMessage('선택한 실험 결과 폴더를 찾을 수 없습니다.');
+            void vscode.window.showErrorMessage('Unable to find the selected experiment folder.');
             return;
         }
 
@@ -271,15 +271,15 @@ export class CommandManager {
         const configAbsolute = path.join(project.path, configRelative);
         let configArg = configRelative;
         if (!fs.existsSync(configAbsolute)) {
-            void vscode.window.showWarningMessage('configs/evaluation.yaml 파일을 찾을 수 없습니다. CLI 설정을 확인해 주세요.');
+            void vscode.window.showWarningMessage('configs/evaluation.yaml is missing. Check your CLI configuration.');
         } else {
             const relativeConfig = path.relative(project.path, configAbsolute);
             configArg = relativeConfig && !relativeConfig.startsWith('..') ? relativeConfig : configAbsolute;
         }
 
         const outputDir = await vscode.window.showInputBox({
-            prompt: '평가 결과를 저장할 출력 디렉터리 (옵션)',
-            placeHolder: '예: evaluation (비워두면 기본값 사용)',
+            prompt: 'Output directory for evaluation results (optional)',
+            placeHolder: 'Example: evaluation (leave empty for default)',
             ignoreFocusOut: true
         });
 
@@ -298,12 +298,12 @@ export class CommandManager {
         if (fs.existsSync(resolvedOutputPath)) {
             const overwriteChoice = await vscode.window.showQuickPick<{ label: string; value: 'overwrite' | 'cancel'; description?: string }>(
                 [
-                    { label: '예, 덮어쓰겠습니다', value: 'overwrite' },
-                    { label: '아니요', value: 'cancel' }
+                    { label: 'Yes, overwrite', value: 'overwrite' },
+                    { label: 'No', value: 'cancel' }
                 ],
                 {
-                    title: `${finalOutputDir} 디렉터리가 이미 존재합니다. 덮어쓸까요?`,
-                    placeHolder: '덮어쓰기를 원하지 않으면 "아니요"를 선택하세요.'
+                    title: `${finalOutputDir} already exists. Overwrite?`,
+                    placeHolder: 'Choose "No" to keep the existing files.'
                 }
             );
 
@@ -407,29 +407,14 @@ export class CommandManager {
             return;
         }
 
-        const limit = await vscode.window.showInputBox({
-            prompt: 'Limit generated inputs (optional)',
-            placeHolder: 'Leave blank to use configuration default',
-            validateInput: (value) => {
-                if (value && !/^[0-9]+$/.test(value)) {
-                    return 'Limit must be a positive integer';
-                }
-                return null;
-            }
-        });
-        if (limit === undefined) {
-            return;
-        }
+        const limit: string | undefined = undefined;
 
         const overwrite = await this.promptForBoolean('Overwrite existing outputs?', 'Only needed if the destination file already exists.');
         if (overwrite === null) {
             return;
         }
 
-        const dryRun = await this.promptForBoolean('Dry run?', 'Preview the generation without writing files.');
-        if (dryRun === null) {
-            return;
-        }
+        const dryRun = false;
 
         const effectiveMode = mode ?? defaultMode;
         const llmApiKey = await this.resolveLlmApiKey(config, project.path, effectiveMode);
@@ -457,10 +442,6 @@ export class CommandManager {
             args.push('--overwrite');
         }
 
-        if (dryRun) {
-            args.push('--dry-run');
-        }
-
         if (configInfo?.path) {
             args.push('--config', path.basename(configInfo.path));
         }
@@ -471,13 +452,11 @@ export class CommandManager {
 
         await this.cliManager.runCommand(args, project.path);
 
-        if (!dryRun) {
             this.inputsProvider?.refresh();
             const outputFile = this.resolveOutputFile(project.path, config);
             if (outputFile && fs.existsSync(outputFile)) {
                 const document = await vscode.workspace.openTextDocument(outputFile);
                 await vscode.window.showTextDocument(document, { preview: false });
-            }
         }
     }
 
@@ -499,7 +478,7 @@ export class CommandManager {
         const project = projectId ? ProjectManager.getInstance().getProjectById(projectId) : ProjectContext.ensureActiveProject();
         if (!project) {
             if (projectId) {
-                void vscode.window.showWarningMessage('선택한 프로젝트를 찾을 수 없어 .env 파일을 열 수 없습니다.');
+                void vscode.window.showWarningMessage('Unable to find the selected project, so .env cannot be opened.');
             }
             return;
         }
@@ -515,11 +494,7 @@ export class CommandManager {
         }
 
         if (!exists) {
-            const choice = await vscode.window.showInformationMessage(
-                `.env 파일이 없습니다. 기본 템플릿으로 생성할까요?`,
-                'Create',
-                'Cancel'
-            );
+            const choice = await vscode.window.showInformationMessage('No .env file found. Create one from the default template?', 'Create', 'Cancel');
 
             if (choice !== 'Create') {
                 return;
@@ -529,7 +504,7 @@ export class CommandManager {
                 await fs.promises.mkdir(path.dirname(envPath), { recursive: true });
                 await fs.promises.writeFile(envPath, this.getDefaultEnvTemplate(), 'utf8');
             } catch (error) {
-                void vscode.window.showErrorMessage('.env 파일을 생성하지 못했습니다. 출력 창을 확인하세요.');
+                void vscode.window.showErrorMessage('Failed to create the .env file. Check the output channel.');
                 console.error('Failed to create .env file', error);
                 return;
             }
@@ -539,7 +514,7 @@ export class CommandManager {
             const document = await vscode.workspace.openTextDocument(envUri);
             await vscode.window.showTextDocument(document, { preview: false });
         } catch (error) {
-            void vscode.window.showErrorMessage('.env 파일을 열 수 없습니다. 출력 창을 확인하세요.');
+            void vscode.window.showErrorMessage('Unable to open the .env file. Check the output channel.');
             console.error('Failed to open .env file', error);
         }
     }
@@ -808,7 +783,7 @@ export class CommandManager {
             {
                 label: 'Docker',
                 description: 'Run in Docker container (coming soon)',
-                detail: '현재는 지원되지 않습니다',
+                detail: 'Not supported yet',
                 picked: defaultEnv === 'Docker'
             },
             {
@@ -825,7 +800,7 @@ export class CommandManager {
         });
 
         if (selected?.label === 'Docker') {
-            void vscode.window.showInformationMessage('Docker 실행은 향후 지원 예정입니다. Local Python 또는 Dev Container를 선택해 주세요.');
+            void vscode.window.showInformationMessage('Docker execution will be supported later. Please choose Local Python or Dev Container.');
             return undefined;
         }
 
@@ -844,7 +819,7 @@ export class CommandManager {
 
         const configPath = path.join(project.path, 'configs', 'project.yaml');
         if (!fs.existsSync(configPath)) {
-            void vscode.window.showWarningMessage('configs/project.yaml 파일을 찾을 수 없어 대상 소스 루트를 설정할 수 없습니다.');
+            void vscode.window.showWarningMessage('configs/project.yaml not found, so the target source root cannot be set.');
             return;
         }
 
@@ -1008,11 +983,11 @@ export class CommandManager {
         const currentWrapper = config.get<string>('executionWrapper') ?? '';
 
         const input = await vscode.window.showInputBox({
-            title: 'Execution Wrapper 설정',
-            prompt: 'FluxLoop CLI 실행 전에 붙일 명령을 입력하세요 (예: uv run). 비워두면 해제됩니다.',
+            title: 'Configure Execution Wrapper',
+            prompt: 'Enter a command to prepend before running the FluxLoop CLI (e.g., uv run). Leave blank to disable.',
             value: currentWrapper,
             ignoreFocusOut: true,
-            placeHolder: '예: uv run'
+            placeHolder: 'Example: uv run'
         });
 
         if (input === undefined) {
@@ -1022,13 +997,11 @@ export class CommandManager {
         const trimmed = input.trim();
         try {
             await config.update('executionWrapper', trimmed, vscode.ConfigurationTarget.Workspace);
-            const message = trimmed
-                ? `Execution Wrapper를 "${trimmed}"로 설정했습니다.`
-                : 'Execution Wrapper를 빈 값으로 설정했습니다.';
+            const message = trimmed ? `Execution wrapper set to "${trimmed}".` : 'Execution wrapper cleared.';
             void vscode.window.showInformationMessage(message);
         } catch (error) {
             console.error('Failed to update execution wrapper', error);
-            void vscode.window.showErrorMessage('Execution Wrapper 설정에 실패했습니다.');
+            void vscode.window.showErrorMessage('Failed to configure execution wrapper.');
         }
     }
 
@@ -1117,7 +1090,7 @@ export class CommandManager {
             '# Argument Recording (global toggle)',
             'FLUXLOOP_RECORD_ARGS=false',
             'FLUXLOOP_RECORDING_FILE=',
-            '# 예: recordings/args_recording.jsonl (프로젝트 상대 경로) 또는 절대 경로',
+            '# Example: recordings/args_recording.jsonl (project-relative or absolute path)',
             '',
             '# Service Configuration',
             'FLUXLOOP_SERVICE_NAME=my-agent',
@@ -1288,7 +1261,7 @@ export class CommandManager {
         }
 
         const input = await vscode.window.showInputBox({
-            prompt: 'LLM API Key를 입력하세요 (예: OpenAI Key)',
+            prompt: 'Enter the LLM API key (e.g., OpenAI key)',
             placeHolder: 'sk-...',
             password: true,
             ignoreFocusOut: true
@@ -1300,16 +1273,19 @@ export class CommandManager {
 
         const trimmed = input.trim();
         if (!trimmed) {
-            vscode.window.showWarningMessage('LLM API Key가 비어 있어 LLM 모드를 사용할 수 없습니다.');
+            vscode.window.showWarningMessage('LLM API key is empty, so LLM mode cannot be used.');
             return null;
         }
 
-        const saveChoice = await vscode.window.showQuickPick([
-            { label: '저장', description: 'VS Code 시크릿과 프로젝트 .env에 저장합니다.', value: 'persist' },
-            { label: '이번만 사용', description: '이번 실행에만 사용합니다.', value: 'ephemeral' }
-        ], {
-            title: 'LLM API Key 저장 여부'
-        });
+        const saveChoice = await vscode.window.showQuickPick(
+            [
+                { label: 'Save', description: 'Store in VS Code secrets and the project .env.', value: 'persist' },
+                { label: 'Use once', description: 'Use only for this run.', value: 'ephemeral' }
+            ],
+            {
+                title: 'LLM API key persistence'
+            }
+        );
 
         if (!saveChoice) {
             return null;
@@ -1389,7 +1365,7 @@ export class CommandManager {
             await fs.promises.writeFile(envPath, output.endsWith('\n') ? output : `${output}\n`, 'utf8');
         } catch (error) {
             console.error('Failed to write LLM API key to .env file', error);
-            vscode.window.showWarningMessage('.env 파일에 LLM API Key를 쓰는 데 실패했습니다. 수동으로 추가해 주세요.');
+            vscode.window.showWarningMessage('Failed to write the LLM API key to .env. Please add it manually.');
         }
     }
 }

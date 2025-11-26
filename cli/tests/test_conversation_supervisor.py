@@ -1,5 +1,3 @@
-import json
-
 from fluxloop_cli.conversation_supervisor import format_transcript
 
 

@@ -348,7 +348,7 @@ export class IntegrationService {
             await fs.access(defaultPath);
             return {
                 id: 'mcp-index',
-                label: 'MCP 인덱스',
+                label: 'MCP Index',
                 state: 'ok',
                 description: 'Default index located.',
             };

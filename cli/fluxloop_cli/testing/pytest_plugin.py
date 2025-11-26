@@ -22,7 +22,6 @@ from fluxloop_cli.runner import ExperimentRunner
 
 from .types import (
     FluxLoopRunnerRequest,
-    FluxLoopRunnerOverrides,
     FluxLoopTestResult,
 )
 

@@ -15,7 +15,6 @@ from ..config_schema import CONFIG_SECTION_FILENAMES, CONFIG_REQUIRED_KEYS
 from ..project_paths import (
     resolve_config_path,
     resolve_config_directory,
-    resolve_root_dir,
     resolve_project_relative,
 )
 
@@ -79,7 +78,7 @@ def check(
         from fluxloop.client import FluxLoopClient
         
         config = get_config()
-        client = FluxLoopClient()
+        _client = FluxLoopClient()  # noqa: F841 - instantiated for potential future use
         
         # Try to connect (this would need a health endpoint)
         status_table.add_row(

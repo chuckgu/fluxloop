@@ -2,8 +2,6 @@
 Main CLI application entry point.
 """
 
-import sys
-from pathlib import Path
 from typing import Optional
 
 import typer

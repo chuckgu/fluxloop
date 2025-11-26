@@ -229,6 +229,8 @@ class EvaluationConfig:
     additional_analysis: AdditionalAnalysisConfig = field(default_factory=AdditionalAnalysisConfig)
     report: ReportConfig = field(default_factory=ReportConfig)
     advanced: AdvancedConfig = field(default_factory=AdvancedConfig)
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    efficiency: Dict[str, Any] = field(default_factory=dict)
 
     def set_source_dir(self, source_dir: Path) -> None:
         """Remember the directory where this config file was loaded from."""
@@ -383,12 +385,45 @@ def _parse_limits(raw: Any) -> LimitsConfig:
     )
 
 
+def _parse_metrics(raw: Any) -> Dict[str, Any]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("metrics must be a mapping")
+    normalized: Dict[str, Any] = {}
+    for key, value in raw.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"metrics.{key} must be a mapping")
+        normalized[key] = dict(value)
+    return normalized
+
+
+def _parse_efficiency(raw: Any) -> Dict[str, Any]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("efficiency must be a mapping")
+    normalized: Dict[str, Any] = {}
+    for key, value in raw.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"efficiency.{key} must be a mapping")
+        normalized[key] = dict(value)
+    return normalized
+
+
 def _parse_evaluation_goal(raw: Any) -> EvaluationGoalConfig:
     if raw is None:
         return EvaluationGoalConfig()
+
+    if isinstance(raw, str):
+        # Backwards compatibility for older templates that used a bare string.
+        return EvaluationGoalConfig(text=raw.strip())
+
     if not isinstance(raw, dict):
-        raise ValueError("evaluation_goal must be a mapping")
-    text = str(raw.get("text", "")) if raw.get("text") is not None else ""
+        raise ValueError("evaluation_goal must be a mapping or string")
+
+    text_value = raw.get("text")
+    text = str(text_value) if text_value is not None else ""
     return EvaluationGoalConfig(text=text)
 
 
@@ -711,6 +746,8 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
     additional_analysis = _parse_additional_analysis(data.get("additional_analysis"))
     report = _parse_report(data.get("report"))
     advanced = _parse_advanced(data.get("advanced"))
+    metrics = _parse_metrics(data.get("metrics"))
+    efficiency = _parse_efficiency(data.get("efficiency"))
 
     config_dir = path.parent.resolve()
 
@@ -723,6 +760,8 @@ def load_evaluation_config(path: Path) -> EvaluationConfig:
         additional_analysis=additional_analysis,
         report=report,
         advanced=advanced,
+        metrics=metrics,
+        efficiency=efficiency,
     )
 
     config.set_source_dir(config_dir)

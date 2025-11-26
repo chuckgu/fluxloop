@@ -2,7 +2,6 @@
 Data preparation and HTML rendering for evaluation reports.
 """
 
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -65,7 +64,6 @@ class ReportRenderer:
                       traces_data: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
         
         eval_config = config.get("evaluation", {})
-        input_config = config.get("input", {})
         
         # Transform each section
         meta = self._transform_meta(config)
@@ -185,7 +183,8 @@ class ReportRenderer:
         for t in traces:
             if t.get("overall_eval") in ["FAIL", "PARTIAL", "REVIEW"]:
                 status = t.get("overall_eval").lower()
-                if status == "partial": status = "marginal" # map to css class
+                if status == "partial":
+                    status = "marginal"  # map to css class
                 
                 icon_map = {"fail": "✗", "marginal": "!", "review": "?"}
                 attention.append({
@@ -283,7 +282,8 @@ class ReportRenderer:
         }
 
     def _transform_recommendations(self, llm_ov: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        if not llm_ov: return {}
+        if not llm_ov:
+            return {}
         
         recs = llm_ov.get("recommendations", {})
         # Ensure default structure and badges
@@ -342,7 +342,8 @@ class ReportRenderer:
         convs = {}
         for t in traces:
             tid = t.get("trace_id")
-            if not tid: continue
+            if not tid:
+                continue
             
             # Extract turns
             turns = []
@@ -355,8 +356,10 @@ class ReportRenderer:
                      })
             else:
                 # Single turn fallback
-                if t.get("input"): turns.append({"role": "user", "content": t["input"], "turn_index": 0})
-                if t.get("output"): turns.append({"role": "assistant", "content": str(t["output"]), "turn_index": 1})
+                if t.get("input"):
+                    turns.append({"role": "user", "content": t["input"], "turn_index": 0})
+                if t.get("output"):
+                    turns.append({"role": "assistant", "content": str(t["output"]), "turn_index": 1})
             
             convs[tid] = {
                 "trace_id": tid,

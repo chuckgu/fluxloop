@@ -2,7 +2,7 @@
 Templates for generating configuration and code files.
 """
 
-from textwrap import dedent, indent
+from textwrap import dedent
 
 
 
@@ -216,7 +216,7 @@ def create_evaluation_config() -> str:
         # Example: "Check if the agent provides accurate flight information"
 
         evaluation_goal:
-          "Verify that the agent provides clear, persona-aware responses while meeting latency and accuracy targets."
+          text: "Verify that the agent provides clear, persona-aware responses while meeting latency and accuracy targets."
 
 
         # -------------------------------------------------------------------

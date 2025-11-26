@@ -12,7 +12,6 @@ from pydantic import ValidationError
 from .project_paths import resolve_config_path
 from .config_schema import (
     CONFIG_SECTION_FILENAMES,
-    CONFIG_SECTION_ORDER,
     CONFIG_REQUIRED_KEYS,
     iter_section_paths,
     is_legacy_config,
@@ -52,7 +51,6 @@ def load_experiment_config(
 
         for section_path in iter_section_paths(project_root):
             if not section_path.exists():
-                key = section_path.name
                 logical_key = _section_key_from_filename(section_path.name)
                 if logical_key in CONFIG_REQUIRED_KEYS:
                     missing_required.append(section_path.name)

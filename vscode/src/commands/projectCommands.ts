@@ -86,10 +86,7 @@ export class ProjectCommands {
             return;
         }
 
-        const includeExample = await this.promptIncludeExample();
-        if (includeExample === undefined) {
-            return;
-        }
+        const includeExample: 'Include example agent' = 'Include example agent';
 
         const projectRoot = path.join(defaultProjectRoot, projectName);
         const environmentSelector = async () =>
@@ -143,10 +140,7 @@ export class ProjectCommands {
             return;
         }
 
-        const includeExample = await this.promptIncludeExample();
-        if (includeExample === undefined) {
-            return;
-        }
+        const includeExample: 'Include example agent' = 'Include example agent';
 
         const { rootDir, projectRoot } = this.resolvePathsForNewProject(selectedPath, projectName);
         const environmentChoice = await this.prepareProjectEnvironment(projectRoot, projectName);
@@ -240,26 +234,6 @@ export class ProjectCommands {
         }
 
         return undefined;
-    }
-
-    private async promptIncludeExample(): Promise<'Include example agent' | 'Skip example agent' | undefined> {
-        return await vscode.window.showQuickPick(
-            [
-                {
-                    label: 'Include example agent',
-                    detail: 'Adds sample agent files and configurations (recommended).',
-                    picked: true
-                },
-                {
-                    label: 'Skip example agent',
-                    detail: 'Create an empty FluxLoop project structure.'
-                }
-            ],
-            {
-                placeHolder: 'Would you like to include the example agent?',
-                canPickMany: false
-            }
-        ).then(pick => pick?.label as 'Include example agent' | 'Skip example agent' | undefined);
     }
 
     private async promptDefaultEnvironmentChoice(searchRoots: readonly string[]): Promise<PreparedEnvironment | undefined> {
@@ -376,20 +350,6 @@ export class ProjectCommands {
         const manager = ProjectManager.getInstance();
         manager.addProject({ name: projectName, path: projectRoot, setActive: true });
         await this.environmentManager.refreshActiveEnvironment();
-
-        const openAction = await vscode.window.showQuickPick(
-            ['Open in current window', 'Open in new window', 'Stay in current workspace'],
-            {
-                placeHolder: 'How would you like to work with this project?'
-            }
-        );
-
-        const projectRootUri = vscode.Uri.file(projectRoot);
-        if (openAction === 'Open in current window') {
-            await vscode.commands.executeCommand('vscode.openFolder', projectRootUri, false);
-        } else if (openAction === 'Open in new window') {
-            await vscode.commands.executeCommand('vscode.openFolder', projectRootUri, true);
-        }
 
         ProjectContext.ensureActiveProject();
     }

@@ -809,13 +809,94 @@
 
         /* Print Styles */
         @media print {
-            .header, .sidebar, .filters, .btn {
-                display: none;
+            /* Hide interactive elements */
+            .header, .sidebar, .filters, .btn, .modal, .nav-item, .theme-toggle {
+                display: none !important;
             }
 
+            /* Reset layout for print */
             .main-content {
-                margin-left: 0;
-                max-width: 100%;
+                margin-left: 0 !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .container {
+                display: block !important;
+            }
+
+            /* Show ALL content sections (tabs) for print */
+            .content-section {
+                display: block !important;
+                page-break-inside: avoid;
+                margin-bottom: 2rem;
+            }
+
+            .content-section.hidden {
+                display: block !important;
+            }
+
+            /* Add section titles for print clarity */
+            .content-section::before {
+                content: attr(id);
+                display: block;
+                font-size: 1.5rem;
+                font-weight: bold;
+                text-transform: capitalize;
+                border-bottom: 2px solid #333;
+                padding-bottom: 0.5rem;
+                margin-bottom: 1rem;
+            }
+
+            /* Cards should not break across pages */
+            .card {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 1rem;
+            }
+
+            /* Ensure tables fit on page */
+            table {
+                font-size: 0.85rem;
+            }
+
+            /* Charts may not render well in print - show placeholder */
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+
+            /* Ensure proper page breaks between major sections */
+            #executive-summary,
+            #evaluation-config,
+            #eval-criteria,
+            #trace-matrix,
+            #response-quality,
+            #insights,
+            #performance,
+            #recommendations {
+                page-break-before: auto;
+            }
+
+            /* Hide elements that don't make sense in print */
+            .chart-container {
+                page-break-inside: avoid;
+            }
+
+            /* Ensure text is readable */
+            body {
+                font-size: 12pt;
+                line-height: 1.4;
+                color: #000 !important;
+                background: #fff !important;
+            }
+
+            /* Reset dark mode for print */
+            .dark-mode {
+                --text-color: #000;
+                --bg-color: #fff;
+                --card-bg: #fff;
+                --border-color: #ccc;
             }
         }
 
@@ -3115,12 +3196,16 @@
             color: white;
         }
 
-        .comparison-bar-fill.novice {
+        .comparison-bar-fill.persona-a {
             background: #3b82f6;
         }
 
-        .comparison-bar-fill.expert {
+        .comparison-bar-fill.persona-b {
             background: #8b5cf6;
+        }
+
+        .comparison-bar-fill.persona-c {
+            background: #10b981;
         }
 
         .comparison-gap {
@@ -5738,20 +5823,19 @@
                             <div class="comparison-row">
                                 <div class="comparison-label">{{ comp.label }}</div>
                                 <div class="comparison-bars">
+                                    {% for persona_value in comp.bars %}
                                     <div class="comparison-bar-row">
-                                        <span class="comparison-persona">novice</span>
+                                        <span class="comparison-persona">{{ persona_value.label }}</span>
                                         <div class="comparison-bar-container">
-                                            <div class="comparison-bar-fill novice" style="width: {{ comp.novice.width }}%">{{ comp.novice.value }}</div>
+                                            <div class="comparison-bar-fill {{ persona_value.class }}" style="width: {{ persona_value.width }}%">{{ persona_value.value }}</div>
                                         </div>
-                                        <span class="comparison-gap"></span>
-                                    </div>
-                                    <div class="comparison-bar-row">
-                                        <span class="comparison-persona">expert</span>
-                                        <div class="comparison-bar-container">
-                                            <div class="comparison-bar-fill expert" style="width: {{ comp.expert.width }}%">{{ comp.expert.value }}</div>
-                                        </div>
+                                        {% if loop.last %}
                                         <span class="comparison-gap">{{ comp.gap }}</span>
+                                        {% else %}
+                                        <span class="comparison-gap"></span>
+                                        {% endif %}
                                     </div>
+                                    {% endfor %}
                                 </div>
                             </div>
                             {% endfor %}

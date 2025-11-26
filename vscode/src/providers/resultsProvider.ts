@@ -193,7 +193,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
                 return Promise.resolve([
                     new ResultItem(
                         'Failed to load analysis outputs',
-                        '디렉터리 접근에 실패했습니다.',
+                        'Unable to access directory contents.',
                         vscode.TreeItemCollapsibleState.None,
                         'info'
                     )

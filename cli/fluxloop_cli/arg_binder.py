@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Sequence
 
+from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, PersonaConfig
+
 
 class _AttrDict(dict):
     """Dictionary that also supports attribute access for keys."""
@@ -25,8 +27,6 @@ class _AttrDict(dict):
             del self[item]
         except KeyError as exc:  # pragma: no cover
             raise AttributeError(item) from exc
-
-from fluxloop.schemas import ExperimentConfig, ReplayArgsConfig, PersonaConfig
 
 
 class _AwaitableNone:
@@ -278,7 +278,6 @@ class ArgBinder:
 
             def _record(args: Any, kwargs: Any) -> None:
                 messages.append((args, kwargs))
-                pretty = args[0] if len(args) == 1 and not kwargs else {"args": args, "kwargs": kwargs}
 
             def send(*args: Any, **kwargs: Any) -> _AwaitableNone:
                 _record(args, kwargs)

@@ -16,7 +16,6 @@ from ..project_paths import (
     resolve_project_dir,
     resolve_config_section_path,
 )
-from ..config_schema import CONFIG_SECTION_FILENAMES
 
 
 app = typer.Typer()

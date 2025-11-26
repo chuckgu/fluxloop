@@ -335,9 +335,12 @@ class StatsAggregator:
             
             # Overall icon
             overall_icon = "?"
-            if overall == "PASS": overall_icon = "✓"
-            elif overall == "PARTIAL": overall_icon = "!"
-            elif overall == "FAIL": overall_icon = "✗"
+            if overall == "PASS":
+                overall_icon = "✓"
+            elif overall == "PARTIAL":
+                overall_icon = "!"
+            elif overall == "FAIL":
+                overall_icon = "✗"
             
             cells = [{"status": overall.lower(), "icon": overall_icon}]
             
@@ -370,7 +373,8 @@ class StatsAggregator:
         
         # Helper for stats
         def get_stats(values, name, cfg):
-            if not values: return {}
+            if not values:
+                return {}
             stats = self._calculate_percentiles(values)
             outliers = self._detect_outliers(traces, values, cfg)
             return {
@@ -401,12 +405,14 @@ class StatsAggregator:
         }
 
     def _calculate_percentiles(self, values: List[float]) -> Dict[str, float]:
-        if not values: return {}
+        if not values:
+            return {}
         sorted_vals = sorted(values)
         n = len(sorted_vals)
         
         def pct(p):
-            if n == 1: return sorted_vals[0]
+            if n == 1:
+                return sorted_vals[0]
             k = (n - 1) * p / 100
             f = int(k)
             c = min(f + 1, n - 1)
@@ -423,7 +429,8 @@ class StatsAggregator:
         }
 
     def _detect_outliers(self, traces: List[Dict[str, Any]], values: List[float], config: Dict[str, Any]) -> List[Dict[str, Any]]:
-        if len(values) < 2: return []
+        if len(values) < 2:
+            return []
         
         mean_val = statistics.mean(values)
         std_dev = statistics.stdev(values)
@@ -468,23 +475,59 @@ class StatsAggregator:
                 "avg_turns": statistics.mean(d["turns"]) if d["turns"] else 0
             }
             
+        def _slug(text: str) -> str:
+            return (
+                text.lower()
+                .replace(" ", "_")
+                .replace("-", "_")
+                .replace(".", "")
+            )
+
+        def _label(text: str) -> str:
+            return text.replace("_", " ").title()
+
         # Comparison (first 2 personas)
         p1, p2 = persona_names[0], persona_names[1]
         comparisons = []
         
-        for metric, label in [("avg_tokens", "Output Tokens"), ("avg_latency", "Latency"), ("avg_turns", "Conversation Depth")]:
+        class_cycle = ["persona-a", "persona-b", "persona-c"]
+
+        for metric, label in [
+            ("avg_tokens", "Output Tokens"),
+            ("avg_latency", "Latency"),
+            ("avg_turns", "Conversation Depth"),
+        ]:
             v1 = avgs[p1][metric]
             v2 = avgs[p2][metric]
             
             gap = ((v1 - v2) / v2 * 100) if v2 > 0 else 0
             max_val = max(v1, v2) if max(v1, v2) > 0 else 1
             
-            comparisons.append({
-                "label": label,
-                p1: {"value": str(round(v1, 1)), "width": int(v1/max_val*100)},
-                p2: {"value": str(round(v2, 1)), "width": int(v2/max_val*100)},
-                "gap": f"{gap:+.1f}%"
-            })
+            bars = []
+            for idx, (persona_name, value) in enumerate(
+                [
+                    (p1, v1),
+                    (p2, v2),
+                ]
+            ):
+                css_class = class_cycle[idx] if idx < len(class_cycle) else f"persona-{idx}"
+                bars.append(
+                    {
+                        "persona": persona_name,
+                        "label": _label(persona_name),
+                        "class": css_class,
+                        "value": str(round(value, 1)),
+                        "width": int(value / max_val * 100),
+                    }
+                )
+
+            comparisons.append(
+                {
+                    "label": label,
+                    "bars": bars,
+                    "gap": f"{gap:+.1f}%",
+                }
+            )
             
         return {"comparisons": comparisons, "persona_averages": avgs}
 

@@ -14,7 +14,6 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 from ..config_loader import load_experiment_config
-from ..templates import create_env_file, create_gitignore, create_sample_agent
 from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
 from ..config_schema import CONFIG_SECTION_FILENAMES
 from ..project_paths import (

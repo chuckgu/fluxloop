@@ -85,7 +85,7 @@ evaluation_goal: "안전하게 취소/환불을 완료하는지 검증"
 
 metrics:
   task_completion:
-    enabled: true
+      enabled: true
     thresholds: {good: 80, fair: 60}
   hallucination:
     enabled: true

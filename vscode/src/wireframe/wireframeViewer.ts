@@ -217,7 +217,7 @@ export class WireframeViewer {
                     <div class="tree-item">├── Variation Strategies</div>
                     <div class="tree-item">└── Run Experiment</div>
                     <div class="section-divider"></div>
-                    <div class="tree-item expandable">Results (완료된 실험들)</div>
+                    <div class="tree-item expandable">Results (Completed experiments)</div>
                     <div class="tree-item">├── experiment_20241201_143022</div>
                     <div class="tree-item">│   ├── summary.json</div>
                     <div class="tree-item">│   ├── traces.jsonl</div>

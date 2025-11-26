@@ -2,13 +2,9 @@
 LLM-based evaluators for report generation (Per-Trace and Overall).
 """
 
-import asyncio
 import json
 import logging
-import re
-from typing import Any, Dict, List, Optional, Tuple
-
-from ...config import EvaluationConfig
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -624,9 +620,7 @@ class TraceEvaluator:
         if isinstance(goal, dict):
             goal = goal.get("text", str(goal))
 
-        output_lang = self.eval_config.get("report", {}).get("output", {}).get("language", "en")
-        if not isinstance(output_lang, str): # Handle if output is complex dict
-             output_lang = "en"
+        output_lang = self._resolve_output_language(persona.get("language"))
 
         return PT_SYSTEM_PROMPT.format(
             evaluation_goal=goal,
@@ -635,6 +629,33 @@ class TraceEvaluator:
             persona_characteristics=characteristics,
             output_language=output_lang
         )
+
+    def _resolve_output_language(self, persona_language: Optional[str]) -> str:
+        """
+        Determine the best output language with backwards compatibility.
+
+        Preference order:
+        1. Explicit language inside report.output.language
+        2. Legacy report.language (if added later)
+        3. Persona language metadata
+        4. Default to English
+        """
+        report_cfg = self.eval_config.get("report") or {}
+        output_cfg = report_cfg.get("output")
+
+        if isinstance(output_cfg, dict):
+            lang = output_cfg.get("language")
+            if isinstance(lang, str) and lang.strip():
+                return lang.strip()
+
+        legacy_lang = report_cfg.get("language")
+        if isinstance(legacy_lang, str) and legacy_lang.strip():
+            return legacy_lang.strip()
+
+        if isinstance(persona_language, str) and persona_language.strip():
+            return persona_language.strip()
+
+        return "en"
 
 
 class OverallEvaluator:
@@ -704,9 +725,7 @@ class OverallEvaluator:
         if isinstance(goal, dict):
             goal = goal.get("text", str(goal))
             
-        output_lang = self.eval_config.get("report", {}).get("output", {}).get("language", "en")
-        if not isinstance(output_lang, str):
-             output_lang = "en"
+        output_lang = self._resolve_output_language()
 
         return OV_PROMPT_TEMPLATE.format(
             evaluation_goal=goal,
@@ -717,4 +736,24 @@ class OverallEvaluator:
             review_cases=json.dumps(insights.get("review_cases", []), ensure_ascii=False, indent=2),
             output_language=output_lang
         )
+
+    def _resolve_output_language(self) -> str:
+        """
+        Determine the preferred language for overall evaluation prompts.
+
+        Mirrors TraceEvaluator logic but without persona metadata fallback.
+        """
+        report_cfg = self.eval_config.get("report") or {}
+        output_cfg = report_cfg.get("output")
+
+        if isinstance(output_cfg, dict):
+            lang = output_cfg.get("language")
+            if isinstance(lang, str) and lang.strip():
+                return lang.strip()
+
+        legacy_lang = report_cfg.get("language")
+        if isinstance(legacy_lang, str) and legacy_lang.strip():
+            return legacy_lang.strip()
+
+        return "en"
 

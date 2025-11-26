@@ -4,14 +4,24 @@ Orchestration pipeline for generating evaluation reports.
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .aggregator import StatsAggregator
 from .generator import OverallEvaluator, ReportLLMClient, TraceEvaluator
+from .pdf_exporter import PdfExportError, ReportPdfExporter
 from .renderer import ReportRenderer
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ReportArtifacts:
+    """Artifacts produced by the evaluation report pipeline."""
+
+    html_path: Path
+    pdf_path: Optional[Path] = None
 
 
 class ReportPipeline:
@@ -35,8 +45,9 @@ class ReportPipeline:
         self.aggregator = StatsAggregator(config)
         self.overall_evaluator = OverallEvaluator(self.client, config)
         self.renderer = ReportRenderer(output_dir)
+        self.pdf_exporter = ReportPdfExporter(output_dir)
 
-    async def run(self, trace_summaries: List[Dict[str, Any]]) -> Path:
+    async def run(self, trace_summaries: List[Dict[str, Any]]) -> ReportArtifacts:
         """
         Run the full pipeline.
         
@@ -65,10 +76,21 @@ class ReportPipeline:
         
         # Stage 4 & 5: Render
         logger.info("Stage 4 & 5: Rendering HTML report...")
-        report_path = self.renderer.render(rule_based_data, llm_ov_data, trace_summaries, self.config)
+        report_path = self.renderer.render(
+            rule_based_data, llm_ov_data, trace_summaries, self.config
+        )
         
-        logger.info(f"✅ Pipeline Complete! Report: {report_path}")
-        return report_path
+        pdf_path: Optional[Path] = None
+        try:
+            pdf_path = self.pdf_exporter.export(report_path)
+        except PdfExportError as exc:
+            logger.warning("PDF export failed: %s", exc)
+
+        logger.info("✅ Pipeline Complete! Report: %s", report_path)
+        if pdf_path:
+            logger.info("✅ PDF ready: %s", pdf_path)
+
+        return ReportArtifacts(html_path=report_path, pdf_path=pdf_path)
 
     async def _run_pt_evaluations(self, traces: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Run TraceEvaluator concurrently."""

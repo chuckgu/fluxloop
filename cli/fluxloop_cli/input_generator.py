@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
 import yaml
 
 from fluxloop.schemas import (
     ExperimentConfig,
     InputGenerationMode,
-    PersonaConfig,
     VariationStrategy,
 )
 
@@ -74,7 +72,7 @@ class GenerationResult:
             "strategies": len(strategies),
         }
 
-        persona_summary: "OrderedDict[str, List[str]]" = OrderedDict()
+        persona_summary: Dict[str, List[str]] = {}
         for entry in self.entries:
             persona_key = entry.metadata.get("persona") or "generic_user"
             if persona_key not in persona_summary:
@@ -93,9 +91,9 @@ class GenerationResult:
         ]
         excluded_meta_keys = {"prompt", "model", "provider"}
 
-        full_data: List[OrderedDict[str, Any]] = []
+        full_data: List[Dict[str, Any]] = []
         for entry in self.entries:
-            row: OrderedDict[str, Any] = OrderedDict()
+            row: Dict[str, Any] = {}
             row["input"] = entry.input
             metadata = entry.metadata or {}
 
@@ -113,20 +111,18 @@ class GenerationResult:
 
             full_data.append(row)
 
-        generation_config = OrderedDict(
-            (
-                ("config_name", self.metadata.get("config_name")),
-                ("generation_mode", self.metadata.get("generation_mode")),
-                ("provider", provider),
-                ("model", model),
-                ("strategies", strategies),
-                ("limit", self.metadata.get("limit")),
-                ("prompt", self.metadata.get("llm_prompt_template")),
-            )
-        )
-        generation_config = OrderedDict(
-            (key, value) for key, value in generation_config.items() if value is not None
-        )
+        generation_config = {
+            "config_name": self.metadata.get("config_name"),
+            "generation_mode": self.metadata.get("generation_mode"),
+            "provider": provider,
+            "model": model,
+            "strategies": strategies,
+            "limit": self.metadata.get("limit"),
+            "prompt": self.metadata.get("llm_prompt_template"),
+        }
+        generation_config = {
+            key: value for key, value in generation_config.items() if value is not None
+        }
 
         lines: List[str] = [
             "# ===================================================================",

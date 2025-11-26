@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional
 
 from .constants import (
-    DEFAULT_CONFIG_FILENAME,
     DEFAULT_CONFIG_PATH,
     DEFAULT_ROOT_DIR_NAME,
     CONFIG_DIRECTORY_NAME,
