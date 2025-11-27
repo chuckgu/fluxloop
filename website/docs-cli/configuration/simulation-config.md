@@ -88,7 +88,7 @@ save_aggregated_metrics: true
 **Required:** Yes  
 **Example:** `my_agent_experiment`, `customer_support_test`
 
-Experiment name used in output directories and reports.
+Experiment name stored in experiment metadata and reports (output directories now use `exp_<timestamp>` for brevity).
 
 ```yaml
 name: my_agent_experiment
@@ -96,7 +96,7 @@ name: my_agent_experiment
 
 **Output Directory:**
 ```
-experiments/my_agent_experiment_20250117_143022/
+experiments/exp_20250117_143022/
 ```
 
 ### description
@@ -674,7 +674,7 @@ output_directory: experiments
 **Structure:**
 ```
 experiments/
-└── my_agent_experiment_20250117_143022/
+└── exp_20250117_143022/
     ├── summary.json
     ├── metadata.json
     ├── artifacts/

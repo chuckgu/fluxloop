@@ -83,7 +83,7 @@ class ExperimentRunner:
 
         # Create output directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_dir = output_base / f"{config.name}_{timestamp}"
+        self.output_dir = output_base / f"exp_{timestamp}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Results storage

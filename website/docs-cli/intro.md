@@ -42,10 +42,10 @@ fluxloop generate inputs --limit 50
 fluxloop run experiment
 
 # Parse results
-fluxloop parse experiment experiments/my_agent_experiment_*/
+fluxloop parse experiment experiments/exp_*/
 
 # Evaluate results (writes evaluation_report/report.html by default)
-fluxloop evaluate experiment experiments/my_agent_experiment_*/
+fluxloop evaluate experiment experiments/exp_*/
 
 # Check environment
 fluxloop doctor

@@ -685,7 +685,7 @@ export class WebviewsWireframe {
                                 • Started: 2024-12-01 14:30:22<br>
                                 • Completed: 2024-12-01 14:32:17<br>
                                 • Duration: 1 minute 55 seconds<br>
-                                • Output: experiments/pluto_experiment_20241201_143022
+                                • Output: experiments/exp_20241201_143022
                             </div>
                         </div>
                         
@@ -774,8 +774,8 @@ export class WebviewsWireframe {
                                 <label class="form-label">Compare With</label>
                                 <select class="form-select">
                                     <option value="">Select experiment to compare</option>
-                                    <option value="experiment_20241130">pluto_experiment_20241130</option>
-                                    <option value="experiment_20241129">pluto_experiment_20241129</option>
+                                    <option value="exp_20241130">exp_20241130</option>
+                                    <option value="exp_20241129">exp_20241129</option>
                                 </select>
                             </div>
                             

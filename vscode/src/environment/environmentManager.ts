@@ -10,6 +10,7 @@ import { OutputChannelManager } from '../utils/outputChannel';
 const EXECUTABLE_EXTENSIONS = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : ['', '.sh'];
 
 export type EnvironmentType = 'venv' | 'conda' | 'workspace' | 'global' | 'custom' | 'unknown';
+export type EnvironmentFallbackReason = 'missingLocalEnv';
 
 export interface DetectedEnvironment {
     root: string;
@@ -18,6 +19,7 @@ export interface DetectedEnvironment {
     fluxloopMcpPath?: string;
     environmentType: EnvironmentType;
     notes: string[];
+    fallbackReason?: EnvironmentFallbackReason;
 }
 
 export interface EnvironmentCheckResult {
@@ -290,6 +292,7 @@ export class EnvironmentManager implements vscode.Disposable {
                     environment = this.cloneEnvironment(await this.detectGlobalEnvironment(root));
                     environment.environmentType = 'workspace';
                     environment.notes.push('Execution mode set to workspace but no local environment was found. Using PATH fallback.');
+                    environment.fallbackReason = 'missingLocalEnv';
                 }
                 break;
             }
@@ -311,6 +314,8 @@ export class EnvironmentManager implements vscode.Disposable {
                     environment = this.cloneEnvironment(localEnv);
                 } else {
                     environment = this.cloneEnvironment(await this.detectGlobalEnvironment(root));
+                    environment.fallbackReason = 'missingLocalEnv';
+                    environment.notes.push('No project virtual environment detected; using global PATH.');
                 }
                 break;
             }

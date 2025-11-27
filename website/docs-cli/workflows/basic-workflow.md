@@ -253,7 +253,7 @@ fluxloop run experiment --multi-turn --max-turns 10
    - Calls your agent function
    - Captures traces via FluxLoop SDK
    - Records observations
-4. Saves results to `experiments/<experiment_name>_<timestamp>/`
+4. Saves results to `experiments/exp_<timestamp>/`
 
 **Output:**
 
@@ -269,7 +269,7 @@ Running experiments...
 
 ✓ Experiment completed!
 
-Results saved to: experiments/my_agent_experiment_20250117_143022/
+Results saved to: experiments/exp_20250117_143022/
   - traces.jsonl (50 traces)
   - observations.jsonl (150 observations)
   - summary.json
@@ -280,7 +280,7 @@ Results saved to: experiments/my_agent_experiment_20250117_143022/
 
 ```bash
 # View summary
-cat experiments/my_agent_experiment_*/summary.json | jq
+cat experiments/exp_*/summary.json | jq
 
 # List recent experiments
 fluxloop status experiments
@@ -294,10 +294,10 @@ fluxloop status experiments
 
 ```bash
 # Parse experiment outputs
-fluxloop parse experiment experiments/my_agent_experiment_20250117_143022/
+fluxloop parse experiment experiments/exp_20250117_143022/
 
 # Or use glob pattern for latest
-fluxloop parse experiment experiments/my_agent_experiment_*/
+fluxloop parse experiment experiments/exp_*/
 ```
 
 **What Happens:**
@@ -310,7 +310,7 @@ fluxloop parse experiment experiments/my_agent_experiment_*/
 **Output:**
 
 ```
-Parsing experiment: experiments/my_agent_experiment_20250117_143022/
+Parsing experiment: experiments/exp_20250117_143022/
 
 ✓ Parsed 50 traces
   - Total observations: 150
@@ -326,7 +326,7 @@ Generated Files:
 
 ```bash
 # Open first trace in editor
-code experiments/my_agent_experiment_*/per_trace_analysis/00_*.md
+code experiments/exp_*/per_trace_analysis/00_*.md
 ```
 
 **Example Parsed Trace (Markdown):**
@@ -389,10 +389,10 @@ code experiments/my_agent_experiment_*/per_trace_analysis/00_*.md
 
 ```bash
 # Run evaluation
-fluxloop evaluate experiment experiments/my_agent_experiment_20250117_143022/
+fluxloop evaluate experiment experiments/exp_20250117_143022/
 
 # With custom config
-fluxloop evaluate experiment experiments/my_agent_*/ \
+fluxloop evaluate experiment experiments/exp_*/ \
   --config configs/evaluation.yaml
 ```
 
@@ -409,7 +409,7 @@ fluxloop evaluate experiment experiments/my_agent_*/ \
 **Output:**
 
 ```
-📊 Evaluating experiment at experiments/my_agent_experiment_20250117_143022
+📊 Evaluating experiment at experiments/exp_20250117_143022
 🧵 Per-trace data: experiments/.../per_trace_analysis/per_trace.jsonl
 📁 Output: experiments/.../evaluation_report
 
@@ -425,10 +425,10 @@ Stage 4 & 5: Rendering HTML report...
 
 ```bash
 # Open HTML report in browser
-open experiments/my_agent_experiment_*/evaluation_report/report.html
+open experiments/exp_*/evaluation_report/report.html
 
 # Check the structured traces (input to the pipeline)
-cat experiments/my_agent_experiment_*/per_trace_analysis/per_trace.jsonl | jq
+cat experiments/exp_*/per_trace_analysis/per_trace.jsonl | jq
 ```
 
 ---
@@ -595,8 +595,8 @@ fluxloop generate inputs --limit 10 --mode deterministic
 **Solution:**
 ```bash
 # Must parse before evaluating
-fluxloop parse experiment experiments/my_experiment_*/
-fluxloop evaluate experiment experiments/my_experiment_*/
+fluxloop parse experiment experiments/exp_*/
+fluxloop evaluate experiment experiments/exp_*/
 ```
 
 ---

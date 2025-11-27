@@ -85,8 +85,7 @@ metadata:
 **Example:** `my_agent`, `customer_support_bot`, `production_agent_v2`
 
 Project identifier used throughout FluxLoop:
-- Appears in experiment names: `{name}_experiment_{timestamp}`
-- Used in reports and dashboards
+- Stored in experiment metadata and dashboards
 - Referenced by VSCode extension
 
 **Best Practices:**

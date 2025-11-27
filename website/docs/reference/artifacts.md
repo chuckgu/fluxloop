@@ -9,7 +9,7 @@ Understanding FluxLoop experiment artifacts.
 ## Output Structure
 
 ```
-experiments/my_agent_experiment_20241101_123456/
+experiments/exp_20241101_123456/
 ├── summary.json                # Aggregate statistics
 ├── trace_summary.jsonl         # Per-trace summaries
 ├── traces.jsonl                # Detailed traces

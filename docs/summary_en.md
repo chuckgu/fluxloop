@@ -89,7 +89,7 @@ fluxloop run experiment --config setting.yaml
 **Results:**
 
 ```
-experiments/my_experiment_20241005/
+experiments/exp_20241005/
 ├── summary.json          # 100 runs: 85 success, 15 failed
 ├── trace_summary.jsonl   # Per-input results
 ├── observations.jsonl    # Every LLM call, every step

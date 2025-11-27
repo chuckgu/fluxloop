@@ -598,7 +598,7 @@ export class InteractiveWireframe {
                         
                         <div class="list-item">
                             <div class="list-item-content">
-                                <div class="list-item-title">pluto_experiment_20241201_143022</div>
+                                <div class="list-item-title">exp_20241201_143022</div>
                                 <div class="list-item-description">50 runs, 87% success rate, 2.3s avg duration</div>
                             </div>
                             <div class="list-item-actions">

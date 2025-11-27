@@ -107,9 +107,37 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('fluxloop.integration', integrationProvider)
     );
 
+    const fallbackAlertState = new Map<string, boolean>();
+
     context.subscriptions.push(
         environmentManager.onDidChangeEnvironment(environment => {
             dashboardProvider.updateSnapshot({ environment });
+
+            if (!environment) {
+                return;
+            }
+
+            const rootKey = environment.root || '__unknown__';
+            const fallbackActive = environment.fallbackReason === 'missingLocalEnv';
+
+            if (!fallbackActive) {
+                fallbackAlertState.set(rootKey, false);
+                return;
+            }
+
+            if (fallbackAlertState.get(rootKey)) {
+                return;
+            }
+
+            fallbackAlertState.set(rootKey, true);
+            const warning =
+                'No virtual environment (.venv/venv) was detected for this FluxLoop project, so the global Python interpreter is being used temporarily. Create a virtual environment (e.g. python -m venv .venv) and rerun System Status -> Select Environment to rebind it.';
+
+            void vscode.window.showWarningMessage(warning, 'Select Environment').then(selection => {
+                if (selection === 'Select Environment') {
+                    void vscode.commands.executeCommand('fluxloop.selectEnvironment');
+                }
+            });
         })
     );
 

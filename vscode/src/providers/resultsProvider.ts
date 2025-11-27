@@ -95,7 +95,7 @@ export class ResultsProvider implements vscode.TreeDataProvider<ResultItem> {
         }
 
         if (element.type === 'folder' && element.resourcePath) {
-            const files = ['summary.json', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
+            const files = ['summary.json', 'trace_summary.jsonl', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
             const items: ResultItem[] = [];
 
             items.push(new ResultItem(

@@ -247,7 +247,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             return recordingItems;
         } else if (element.type === 'result' && element.resourcePath) {
             // Show result files
-            const files = ['summary.json', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
+            const files = ['summary.json', 'trace_summary.jsonl', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
             for (const file of files) {
                 const filePath = path.join(element.resourcePath, file);
                 if (fs.existsSync(filePath)) {

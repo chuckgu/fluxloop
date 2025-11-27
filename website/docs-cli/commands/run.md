@@ -123,10 +123,10 @@ Captures:
 
 ### 5. Save Results
 
-Outputs to `experiments/experiment_YYYYMMDD_HHMMSS/`:
+Outputs to `experiments/exp_YYYYMMDD_HHMMSS/`:
 
 ```
-experiments/my_agent_20241101_143022/
+experiments/exp_20241101_143022/
 ├── summary.json           # Aggregate stats
 ├── trace_summary.jsonl    # Per-trace summaries
 ├── traces.jsonl           # Detailed traces

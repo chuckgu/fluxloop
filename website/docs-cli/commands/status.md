@@ -111,7 +111,7 @@ fluxloop status experiments --project production-agent
 ```
 Recent Experiments (showing 3 of 15)
 
-╭─ my_agent_experiment_20250117_143022 ────────────────╮
+╭─ exp_20250117_143022 ───────────────────────────────╮
 │ Name: my_agent_experiment                            │
 │ Date: 2025-01-17 14:30:22                           │
 │ Runs: 50                                            │
@@ -119,7 +119,7 @@ Recent Experiments (showing 3 of 15)
 │ Avg Duration: 234ms                                  │
 ╰──────────────────────────────────────────────────────╯
 
-╭─ my_agent_experiment_20250117_120015 ────────────────╮
+╭─ exp_20250117_120015 ───────────────────────────────╮
 │ Name: my_agent_experiment                            │
 │ Date: 2025-01-17 12:00:15                           │
 │ Runs: 100                                           │
@@ -127,7 +127,7 @@ Recent Experiments (showing 3 of 15)
 │ Avg Duration: 312ms                                  │
 ╰──────────────────────────────────────────────────────╯
 
-📁 baseline_test_20250116_093045 (no summary available)
+📁 exp_20250116_093045 (no summary available)
 ```
 
 **Experiment Information:**
@@ -193,13 +193,13 @@ Until the collector service is running, view traces in experiment directories:
 
 ```bash
 # List trace files
-ls experiments/my_experiment_*/artifacts/
+ls experiments/exp_*/artifacts/
 
 # View trace summary
-cat experiments/my_experiment_*/summary.json | jq
+cat experiments/exp_*/summary.json | jq
 
 # View individual traces
-cat experiments/my_experiment_*/artifacts/traces.jsonl | head -n 5
+cat experiments/exp_*/artifacts/traces.jsonl | head -n 5
 ```
 
 ---

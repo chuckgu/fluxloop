@@ -90,14 +90,14 @@ Execute your agent with all generated inputs:
 fluxloop run experiment
 ```
 
-Results are saved to `experiments/my_agent_experiment_YYYYMMDD_HHMMSS/`.
+Results are saved to `experiments/exp_YYYYMMDD_HHMMSS/`.
 
 ## Step 6: View Results
 
 Parse the results into human-readable format:
 
 ```bash
-fluxloop parse experiment experiments/my_agent_experiment_*/
+fluxloop parse experiment experiments/exp_*/
 ```
 
 This creates Markdown timelines under `per_trace_analysis/`.

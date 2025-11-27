@@ -159,7 +159,7 @@ fluxloop run experiment --iterations 1
 1. Loads 10 inputs from `inputs/generated.yaml`
 2. Calls your agent function for each input
 3. Captures traces and observations
-4. Saves results to `experiments/my_first_agent_experiment_<timestamp>/`
+4. Saves results to `experiments/exp_<timestamp>/`
 
 **Output:**
 
@@ -175,7 +175,7 @@ Running experiments...
 
 ✓ Experiment completed!
 
-Results saved to: experiments/my_first_agent_experiment_20250117_143022/
+Results saved to: experiments/exp_20250117_143022/
   - trace_summary.jsonl (10 traces)
   - observations.jsonl (30 observations)
   - summary.json
@@ -187,7 +187,7 @@ Check the experiment summary:
 
 ```bash
 # View summary JSON
-cat experiments/my_first_agent_*/summary.json | jq
+cat experiments/exp_*/summary.json | jq
 
 # Or use fluxloop status
 fluxloop status experiments
@@ -212,7 +212,7 @@ fluxloop status experiments
 Convert raw outputs into human-readable format:
 
 ```bash
-fluxloop parse experiment experiments/my_first_agent_experiment_*/
+fluxloop parse experiment experiments/exp_*/
 ```
 
 This creates:
@@ -223,7 +223,7 @@ This creates:
 
 ```bash
 # Open first trace
-cat experiments/my_first_agent_*/per_trace_analysis/00_*.md
+cat experiments/exp_*/per_trace_analysis/00_*.md
 ```
 
 ## Step 9: Evaluate Results (Optional)
@@ -231,7 +231,7 @@ cat experiments/my_first_agent_*/per_trace_analysis/00_*.md
 Score your agent's performance and generate the interactive dashboard:
 
 ```bash
-fluxloop evaluate experiment experiments/my_first_agent_experiment_*/
+fluxloop evaluate experiment experiments/exp_*/
 ```
 
 The command runs the built-in 5단계 파이프라인(Per-Trace LLM 평가 → 통계 집계 → LLM 해석 → 데이터 준비 → HTML 렌더링) and writes `evaluation_report/report.html` under the experiment directory (override with `--output`). Open that file in your browser to explore:

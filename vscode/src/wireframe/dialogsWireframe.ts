@@ -472,7 +472,7 @@ export class DialogsWireframe {
                     <div class="dialog-content">
                         <div class="form-group">
                             <label class="form-label">Experiment Directory</label>
-                            <input type="text" class="form-input" value="experiments/pluto_experiment_20241201_143022" readonly>
+                            <input type="text" class="form-input" value="experiments/exp_20241201_143022" readonly>
                             <div class="help-text">Directory containing experiment results</div>
                         </div>
                         
@@ -630,7 +630,7 @@ export class DialogsWireframe {
                         
                         <div class="form-group">
                             <label class="form-label">Output Location</label>
-                            <input type="text" class="form-input" value="experiments/pluto_experiment_20241201_143022" readonly>
+                            <input type="text" class="form-input" value="experiments/exp_20241201_143022" readonly>
                             <div class="help-text">Results saved to this directory</div>
                         </div>
                         
@@ -674,7 +674,7 @@ export class DialogsWireframe {
                     const messages = {
                         'Initialize Project': 'This would execute: fluxloop init project /Users/user/fluxloop-project --name my-fluxloop-project',
                         'Run Experiment': 'This would execute: fluxloop run experiment --iterations 10 --personas all --output experiments/',
-                        'Parse Results': 'This would execute: fluxloop parse experiment experiments/pluto_experiment_20241201_143022 --output per_trace_analysis',
+                        'Parse Results': 'This would execute: fluxloop parse experiment experiments/exp_20241201_143022 --output per_trace_analysis',
                         'Cancel Experiment': 'This would send SIGTERM to the running process',
                         'View Logs': 'This would open the Output Channel with experiment logs',
                         'Fix Configuration': 'This would open configs/input.yaml in the editor',

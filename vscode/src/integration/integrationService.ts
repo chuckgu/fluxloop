@@ -762,15 +762,36 @@ json.dump(docs, sys.stdout)
 
     private appendIntegrationCaution(content: string): string {
         const base = (content ?? '').trimEnd();
-        const caution =
+        const cautionPrompt = 'Copy-and-paste this suggestion to your coding assistant or integrate by yourself.';
+        const cautionBody =
             '⚠️ Caution: Keep the original source as intact as possible when applying this plan, and always get explicit confirmation from the requesting user before making changes.';
+        const cautionBlock = `${cautionPrompt}\n\n${cautionBody}`;
+        const legacySuffix = `\n\n---\n\n${cautionBody}`;
+
         if (!base) {
-            return caution;
+            return cautionBlock;
         }
-        if (base.includes(caution)) {
+
+        if (base.startsWith(cautionBlock)) {
             return base;
         }
-        return `${base}\n\n---\n\n${caution}`;
+
+        if (base.startsWith(cautionBody)) {
+            return `${cautionPrompt}\n\n${base}`;
+        }
+
+        let sanitizedContent = base;
+        if (sanitizedContent.endsWith(legacySuffix)) {
+            sanitizedContent = sanitizedContent.slice(0, -legacySuffix.length).trimEnd();
+        } else if (sanitizedContent === cautionBody) {
+            sanitizedContent = '';
+        }
+
+        if (!sanitizedContent) {
+            return cautionBlock;
+        }
+
+        return `${cautionBlock}\n\n---\n\n${sanitizedContent}`;
     }
 
 
