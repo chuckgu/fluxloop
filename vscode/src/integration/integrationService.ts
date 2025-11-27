@@ -113,6 +113,23 @@ export class IntegrationService {
         }
     }
 
+    async showSystemConsoleGuide(): Promise<void> {
+        const guideUri = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'guides', 'system-console.md');
+        try {
+            await vscode.workspace.fs.stat(guideUri);
+        } catch {
+            vscode.window.showErrorMessage('System console guide is missing from the extension package.');
+            return;
+        }
+
+        try {
+            await vscode.commands.executeCommand('markdown.showPreview', guideUri);
+        } catch (error) {
+            console.error('Failed to open system console guide', error);
+            vscode.window.showErrorMessage('Failed to open the system console guide. Check the developer console for details.');
+        }
+    }
+
     async openKnowledgeSearch(): Promise<void> {
         const query = await vscode.window.showInputBox({
             prompt: 'Ask anything about the FluxLoop documentation.',

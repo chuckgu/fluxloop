@@ -196,6 +196,11 @@
         "category": "FluxLoop Integration"
       },
       {
+        "command": "fluxloop.integration.showSetupGuide",
+        "title": "Show Integration Setup Guide",
+        "category": "FluxLoop Integration"
+      },
+      {
         "command": "fluxloop.integration.runAgent",
         "title": "Prepare Simulation",
         "category": "FluxLoop Integration"

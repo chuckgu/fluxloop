@@ -6,11 +6,13 @@ export type IntegrationNodeType =
     | 'knowledgeSearch'
     | 'fluxAgent'
     | 'systemStatus'
+    | 'systemConsole'
     | 'recentSuggestions'
     | 'refreshStatus'
     | 'selectEnvironment'
     | 'showEnvironment'
     | 'runDoctor'
+    | 'installGuide'
     | 'clearHistory'
     | 'statusItem'
     | 'suggestionPlaceholder'
@@ -219,6 +221,10 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
             return Promise.resolve(this.getSystemStatusItems());
         }
 
+        if (element.nodeType === 'systemConsole') {
+            return Promise.resolve(this.getSystemConsoleItems());
+        }
+
         if (element.nodeType === 'recentSuggestions') {
             return Promise.resolve(this.getRecentSuggestionItems());
         }
@@ -262,6 +268,13 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         );
 
         rootItems.push(
+            new IntegrationItem('System Console', vscode.TreeItemCollapsibleState.Collapsed, 'systemConsole', {
+                iconId: 'tools',
+                tooltip: 'Environment shortcuts and setup guides',
+            }),
+        );
+
+        rootItems.push(
             new IntegrationItem(
                 'Search in Documents…',
                 vscode.TreeItemCollapsibleState.None,
@@ -295,18 +308,6 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         });
 
         items.push(
-            new IntegrationItem('Connect MCP', vscode.TreeItemCollapsibleState.None, 'mcpConnection', {
-                description: this.mcpState.message,
-                command: {
-                    command: 'fluxloop.integration.connectMcp',
-                    title: 'Connect MCP',
-                },
-                iconId: 'plug',
-                tooltip: this.mcpState.message,
-            }),
-        );
-
-        items.push(
             new IntegrationItem('Refresh Status', vscode.TreeItemCollapsibleState.None, 'refreshStatus', {
                 command: {
                     command: 'fluxloop.integration.refresh',
@@ -314,6 +315,23 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
                 },
                 iconId: 'refresh',
                 tooltip: 'Re-run environment diagnostics',
+            }),
+        );
+
+        return items;
+    }
+
+    private getSystemConsoleItems(): IntegrationItem[] {
+        const items: IntegrationItem[] = [];
+
+        items.push(
+            new IntegrationItem('Show Install Guide', vscode.TreeItemCollapsibleState.None, 'installGuide', {
+                command: {
+                    command: 'fluxloop.integration.showSetupGuide',
+                    title: 'Show Install Guide',
+                },
+                iconId: 'book',
+                tooltip: 'Open step-by-step setup and troubleshooting guide.',
             }),
         );
 
@@ -336,6 +354,18 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
                 },
                 iconId: 'info',
                 tooltip: 'Display details about the current FluxLoop environment',
+            }),
+        );
+
+        items.push(
+            new IntegrationItem('Connect MCP', vscode.TreeItemCollapsibleState.None, 'mcpConnection', {
+                description: this.mcpState.message,
+                command: {
+                    command: 'fluxloop.integration.connectMcp',
+                    title: 'Connect MCP',
+                },
+                iconId: 'plug',
+                tooltip: this.mcpState.message,
             }),
         );
 

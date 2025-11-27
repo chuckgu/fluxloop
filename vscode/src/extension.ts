@@ -288,6 +288,9 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('fluxloop.integration.connectMcp', () => {
             void integrationService.handleConnectMcp();
         }),
+        vscode.commands.registerCommand('fluxloop.integration.showSetupGuide', () => {
+            void integrationService.showSystemConsoleGuide();
+        }),
         vscode.commands.registerCommand('fluxloop.integration.runAgent', () => {
             void integrationService.runFluxAgent();
         }),
