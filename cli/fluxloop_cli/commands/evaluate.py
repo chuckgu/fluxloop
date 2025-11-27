@@ -16,7 +16,7 @@ from rich.console import Console
 
 from ..environment import load_env_chain
 from ..evaluation import load_evaluation_config
-from ..evaluation.artifacts import load_per_trace_records
+from ..evaluation.artifacts import load_per_trace_records, load_trace_summary_records
 from ..evaluation.report.pipeline import ReportPipeline
 
 console = Console()
@@ -127,9 +127,14 @@ def experiment(
         per_trace_path = resolved_experiment_dir / "per_trace_analysis" / "per_trace.jsonl"
 
     per_trace_records = load_per_trace_records(resolved_experiment_dir, per_trace_path)
-    trace_summaries = [record.trace for record in per_trace_records]
-    if not trace_summaries:
+    trace_records = [record.trace for record in per_trace_records]
+    if not trace_records:
         raise typer.BadParameter("No traces found in per-trace artifacts.")
+
+    trace_summary_path = resolved_experiment_dir / "trace_summary.jsonl"
+    trace_summaries = load_trace_summary_records(resolved_experiment_dir, trace_summary_path)
+    if not trace_summaries:
+        raise typer.BadParameter("No traces found in trace summary artifacts.")
 
     try:
         evaluation_config = load_evaluation_config(config_path)
@@ -177,11 +182,12 @@ def experiment(
         f"📊 Evaluating experiment at [cyan]{resolved_experiment_dir}[/cyan]",
         f"⚙️  Config: [magenta]{config_path}[/magenta]",
         f"🧵 Per-trace data: [blue]{per_trace_path}[/blue]",
+        f"📄 Trace summary: [blue]{trace_summary_path}[/blue]",
         f"📁 Output: [green]{output_dir}[/green]",
     ]
     console.print("\n".join(message_lines))
 
-    artifacts = asyncio.run(pipeline.run(trace_summaries))
+    artifacts = asyncio.run(pipeline.run(trace_records, trace_summaries))
     console.print(f"\n✅ Report ready: [bold cyan]{artifacts.html_path}[/bold cyan]")
     if artifacts.pdf_path:
         console.print(f"🖨️ PDF ready: [bold green]{artifacts.pdf_path}[/bold green]")

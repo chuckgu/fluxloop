@@ -1,5 +1,5 @@
 """
-Utilities for working with structured per-trace artifacts produced by `fluxloop parse`.
+Utilities for working with structured experiment artifacts (per-trace + summaries).
 """
 
 from __future__ import annotations
@@ -29,6 +29,10 @@ class PerTraceRecord:
 
 def _default_per_trace_path(experiment_dir: Path) -> Path:
     return experiment_dir / "per_trace_analysis" / "per_trace.jsonl"
+
+
+def _default_trace_summary_path(experiment_dir: Path) -> Path:
+    return experiment_dir / "trace_summary.jsonl"
 
 
 def load_per_trace_records(
@@ -70,5 +74,42 @@ def load_per_trace_records(
     return records
 
 
-__all__ = ["PerTraceRecord", "load_per_trace_records"]
+def load_trace_summary_records(
+    experiment_dir: Path,
+    source_path: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Load trace summary entries produced by `fluxloop run`.
 
+    Returns:
+        List of dictionaries mirroring each line inside ``trace_summary.jsonl``.
+    """
+
+    path = source_path or _default_trace_summary_path(experiment_dir)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Trace summary artifacts not found at {path}. "
+            "Ensure `fluxloop run` completed successfully."
+        )
+
+    records: List[Dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line_no, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON in {path} at line {line_no}: {exc}") from exc
+            if not isinstance(payload, dict):
+                raise ValueError(
+                    f"Trace summary entry at line {line_no} must be a JSON object, "
+                    f"but got {type(payload).__name__}"
+                )
+            records.append(payload)
+
+    return records
+
+
+__all__ = ["PerTraceRecord", "load_per_trace_records", "load_trace_summary_records"]

@@ -78,6 +78,7 @@ class TraceSummary:
     conversation: Optional[List[Dict[str, Any]]] = None
     conversation_state: Optional[Dict[str, Any]] = None
     termination_reason: Optional[str] = None
+    token_usage: Optional[Dict[str, Any]] = None
 
     def to_payload(self) -> dict:
         """Return a JSON-serialisable representation of the summary entry."""
@@ -94,6 +95,7 @@ class TraceSummary:
             "conversation": self.conversation,
             "conversation_state": self.conversation_state,
             "termination_reason": self.termination_reason,
+            "token_usage": self.token_usage,
         }
 
 
@@ -173,6 +175,7 @@ def _load_trace_summaries(path: Path) -> Iterable[TraceSummary]:
                 conversation=payload.get("conversation"),
                 conversation_state=payload.get("conversation_state"),
                 termination_reason=payload.get("termination_reason"),
+                token_usage=payload.get("token_usage"),
                 raw=payload,
             )
 
@@ -313,6 +316,8 @@ def _build_structured_record(
         "timeline": timeline,
         "conversation": trace.conversation or summary_payload.get("conversation") or [],
     }
+    if trace.token_usage:
+        record["token_usage"] = trace.token_usage
 
     def _maybe_decode_content(value: Any) -> Any:
         if isinstance(value, str):

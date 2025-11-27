@@ -4,7 +4,7 @@ LLM-based evaluators for report generation (Per-Trace and Overall).
 
 import json
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -592,8 +592,9 @@ class TraceEvaluator:
         persona = self.personas.get(persona_name, {"name": persona_name, "description": "", "characteristics": []})
 
         system_prompt = self._build_system_prompt(persona)
+        prompt_payload = self._build_prompt_payload(trace)
         user_message = PT_USER_MESSAGE_TEMPLATE.format(
-            trace_json=json.dumps(trace, ensure_ascii=False, indent=2)
+            trace_json=json.dumps(prompt_payload, ensure_ascii=False, indent=2)
         )
 
         model = self.eval_config.get("advanced", {}).get("llm_judge", {}).get("model", "gpt-4o")
@@ -656,6 +657,81 @@ class TraceEvaluator:
             return persona_language.strip()
 
         return "en"
+
+    def _build_prompt_payload(self, trace: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a compact payload for prompt construction."""
+
+        allowed_fields = [
+            "trace_id",
+            "iteration",
+            "persona",
+            "input",
+            "output",
+            "final_output",
+            "duration_ms",
+            "success",
+            "token_usage",
+            "observation_count",
+        ]
+
+        payload = {field: trace.get(field) for field in allowed_fields if field in trace}
+
+        conversation = trace.get("conversation")
+        if not conversation and isinstance(trace.get("conversation_state"), dict):
+            conversation = trace["conversation_state"].get("turns")
+        payload["conversation"] = self._sanitize_sequence(conversation)
+
+        timeline = trace.get("timeline")
+        if isinstance(timeline, list):
+            sanitized_timeline = [
+                self._sanitize_mapping(entry)
+                for entry in timeline
+                if isinstance(entry, dict)
+            ]
+            if sanitized_timeline:
+                payload["timeline"] = sanitized_timeline
+
+        metadata = trace.get("metadata")
+        if isinstance(metadata, dict):
+            payload["metadata"] = self._sanitize_mapping(metadata)
+
+        return payload
+
+    def _sanitize_sequence(self, sequence: Optional[List[Any]]) -> Optional[List[Any]]:
+        if not isinstance(sequence, list):
+            return sequence
+        sanitized: List[Any] = []
+        for item in sequence:
+            if isinstance(item, dict):
+                sanitized.append(self._sanitize_mapping(item))
+            elif isinstance(item, list):
+                sanitized.append(self._sanitize_sequence(item))
+            else:
+                sanitized.append(item)
+        return sanitized
+
+    def _sanitize_mapping(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove heavy/raw fields recursively."""
+
+        cleaned: Dict[str, Any] = {}
+        for key, value in data.items():
+            if key == "raw" or value is None:
+                continue
+            cleaned[key] = self._strip_raw_fields(value)
+        return cleaned
+
+    def _strip_raw_fields(self, value: Any, depth: int = 0) -> Any:
+        if depth > 3:
+            return value
+        if isinstance(value, dict):
+            return {
+                k: self._strip_raw_fields(v, depth + 1)
+                for k, v in value.items()
+                if k != "raw" and v is not None
+            }
+        if isinstance(value, list):
+            return [self._strip_raw_fields(item, depth + 1) for item in value]
+        return value
 
 
 class OverallEvaluator:

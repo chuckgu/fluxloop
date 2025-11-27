@@ -22,8 +22,9 @@ def pipeline_stub(monkeypatch):
             self.api_key = api_key
             instances.append(self)
 
-        async def run(self, trace_summaries):
-            self.trace_summaries = trace_summaries
+        async def run(self, trace_records, summary_records=None):
+            self.trace_records = trace_records
+            self.summary_records = summary_records
             self.output_dir.mkdir(parents=True, exist_ok=True)
             html_path = self.output_dir / "report.html"
             html_path.write_text("<html>stub</html>", encoding="utf-8")
@@ -315,7 +316,8 @@ def test_evaluate_generates_outputs(tmp_path: Path, pipeline_stub) -> None:
 
     assert len(pipeline_stub) == 1
     stub_instance = pipeline_stub[0]
-    assert len(stub_instance.trace_summaries) == 2
+    assert len(stub_instance.trace_records) == 2
+    assert len(stub_instance.summary_records) == 2
 
 
 def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path, pipeline_stub) -> None:
@@ -402,7 +404,8 @@ def test_evaluate_phase2_extended_outputs(tmp_path: Path, pipeline_stub) -> None
     )
     assert stub_instance.config["evaluation"]["aggregate"]["by_persona"] is True
     assert stub_instance.config["input"] == {}
-    assert len(stub_instance.trace_summaries) == 4
+    assert len(stub_instance.trace_records) == 4
+    assert len(stub_instance.summary_records) == 4
 
 
 def test_evaluate_loads_env_for_llm(tmp_path: Path, monkeypatch, pipeline_stub) -> None:

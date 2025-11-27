@@ -10,6 +10,7 @@ from difflib import SequenceMatcher
 from typing import Any, Dict, Iterable, List, Optional
 
 from .config import RuleDefinition
+from ..token_usage import extract_token_usage_from_trace
 
 
 @dataclass
@@ -189,116 +190,6 @@ def _evaluate_latency_under(context: RuleContext, definition: RuleDefinition) ->
     return RuleResult(rule=definition, score=score, reason=reason)
 
 
-def _coerce_usage_values(data: Dict[str, Any]) -> Dict[str, float]:
-    usage: Dict[str, float] = {}
-    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
-        value = data.get(key)
-        if isinstance(value, (int, float)):
-            usage[key] = float(value)
-    return usage
-
-
-def _usage_from_candidate(candidate: Any) -> Dict[str, float]:
-    if not isinstance(candidate, dict):
-        return {}
-    direct = _coerce_usage_values(candidate)
-    if direct:
-        return direct
-    token_usage = candidate.get("token_usage")
-    if isinstance(token_usage, dict):
-        values = _coerce_usage_values(token_usage)
-        if values:
-            return values
-    nested = candidate.get("usage")
-    if isinstance(nested, dict):
-        return _coerce_usage_values(nested)
-    return {}
-
-
-def _entry_token_usage(entry: Dict[str, Any]) -> Dict[str, float]:
-    candidates = [entry]
-    output = entry.get("output")
-    if isinstance(output, dict):
-        candidates.append(output)
-        messages = output.get("messages")
-        if isinstance(messages, dict):
-            candidates.append(messages)
-            response_metadata = messages.get("response_metadata")
-            if isinstance(response_metadata, dict):
-                candidates.append(response_metadata)
-    raw = entry.get("raw")
-    if isinstance(raw, dict):
-        candidates.append(raw)
-        raw_output = raw.get("output")
-        if isinstance(raw_output, dict):
-            candidates.append(raw_output)
-            response_metadata = raw_output.get("response_metadata")
-            if isinstance(response_metadata, dict):
-                candidates.append(response_metadata)
-            messages = raw_output.get("messages")
-            if isinstance(messages, dict):
-                candidates.append(messages)
-                response_metadata = messages.get("response_metadata")
-                if isinstance(response_metadata, dict):
-                    candidates.append(response_metadata)
-        metadata = raw.get("metadata")
-        if isinstance(metadata, dict):
-            candidates.append(metadata)
-        response_metadata = raw.get("response_metadata")
-        if isinstance(response_metadata, dict):
-            candidates.append(response_metadata)
-    for candidate in candidates:
-        usage = _usage_from_candidate(candidate)
-        if usage:
-            return usage
-    return {}
-
-
-def _collect_token_usage(trace: Dict[str, Any]) -> Optional[Dict[str, float]]:
-    totals = {"prompt_tokens": 0.0, "completion_tokens": 0.0, "total_tokens": 0.0}
-    found = False
-
-    summary = trace.get("summary")
-    if isinstance(summary, dict):
-        summary_usage = {}
-        if isinstance(summary.get("token_usage"), dict):
-            summary_usage = _usage_from_candidate(summary["token_usage"])
-        if not summary_usage:
-            raw = summary.get("raw")
-            if isinstance(raw, dict) and isinstance(raw.get("token_usage"), dict):
-                summary_usage = _usage_from_candidate(raw["token_usage"])
-        if summary_usage:
-            found = True
-            for key, value in summary_usage.items():
-                totals[key] += value
-
-    timeline = trace.get("timeline")
-    if isinstance(timeline, list):
-        for entry in timeline:
-            if not isinstance(entry, dict):
-                continue
-            usage = _entry_token_usage(entry)
-            if not usage:
-                continue
-            found = True
-            for key, value in usage.items():
-                totals[key] += value
-
-    if not found:
-        return None
-
-    prompt = totals["prompt_tokens"]
-    completion = totals["completion_tokens"]
-    total = totals["total_tokens"]
-    if total <= 0:
-        total = prompt + completion
-    return {
-        "prompt": prompt,
-        "completion": completion,
-        "total": total,
-    }
-
-
 def _coerce_budget_value(value: Any, label: str) -> Optional[float]:
     if value is None:
         return None
@@ -312,7 +203,7 @@ def _coerce_budget_value(value: Any, label: str) -> Optional[float]:
 
 
 def _evaluate_token_usage_under(context: RuleContext, definition: RuleDefinition) -> RuleResult:
-    usage = _collect_token_usage(context.trace)
+    usage = extract_token_usage_from_trace(context.trace)
     if usage is None:
         return RuleResult(
             rule=definition,

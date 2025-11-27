@@ -27,6 +27,7 @@ from .environment import load_env_chain
 from .target_loader import TargetLoader
 from .arg_binder import ArgBinder
 from .conversation_supervisor import ConversationSupervisor, SupervisorDecision
+from .token_usage import extract_token_usage_from_observations
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -375,6 +376,7 @@ class ExperimentRunner:
             observations: List[Dict[str, Any]] = []
             if trace_id:
                 observations = self._load_observations_for_trace(trace_id)
+            token_usage = extract_token_usage_from_observations(observations)
 
             seen_observation_keys: Set[Tuple[Optional[str], Optional[str], Optional[str]]] = set()
 
@@ -415,6 +417,8 @@ class ExperimentRunner:
 
             if observations:
                 trace_entry["observation_count"] = len(observations)
+            if token_usage:
+                trace_entry["token_usage"] = token_usage
 
             # Build normalized conversation transcript
             conversation: List[Dict[str, Any]] = []
@@ -1198,6 +1202,8 @@ class ExperimentRunner:
                     "duration_ms": trace.get("duration_ms"),
                     "success": trace.get("success"),
                 }
+                if trace.get("token_usage") is not None:
+                    summary_payload["token_usage"] = trace.get("token_usage")
                 if trace.get("conversation") is not None:
                     summary_payload["conversation"] = trace.get("conversation")
                 if trace.get("conversation_state") is not None:

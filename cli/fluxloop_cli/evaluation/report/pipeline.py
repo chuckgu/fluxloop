@@ -47,25 +47,32 @@ class ReportPipeline:
         self.renderer = ReportRenderer(output_dir)
         self.pdf_exporter = ReportPdfExporter(output_dir)
 
-    async def run(self, trace_summaries: List[Dict[str, Any]]) -> ReportArtifacts:
+    async def run(
+        self,
+        trace_records: List[Dict[str, Any]],
+        summary_records: Optional[List[Dict[str, Any]]] = None,
+    ) -> ReportArtifacts:
         """
         Run the full pipeline.
         
         Args:
-            trace_summaries: List of raw trace summary objects (from simulation output)
+            trace_records: Detailed trace payloads (per-trace artifacts) used for LLM-PT
+            summary_records: Lightweight trace summaries (from `trace_summary.jsonl`). When omitted,
+                ``trace_records`` are re-used for aggregation.
             
         Returns:
             Path to the generated HTML report
         """
         logger.info("🚀 Starting Evaluation Report Pipeline")
+        traces_for_rules = summary_records or trace_records
         
         # Stage 1: Per-Trace Analysis (Parallel)
-        logger.info(f"Stage 1: Running LLM-PT on {len(trace_summaries)} traces...")
-        pt_results = await self._run_pt_evaluations(trace_summaries)
+        logger.info(f"Stage 1: Running LLM-PT on {len(trace_records)} traces...")
+        pt_results = await self._run_pt_evaluations(trace_records)
         
         # Stage 2: Aggregation
         logger.info("Stage 2: Aggregating statistics...")
-        rule_based_data = self.aggregator.aggregate(pt_results, trace_summaries)
+        rule_based_data = self.aggregator.aggregate(pt_results, traces_for_rules)
         
         # Stage 3: Overall Analysis
         logger.info("Stage 3: Running LLM-OV analysis...")
@@ -77,7 +84,7 @@ class ReportPipeline:
         # Stage 4 & 5: Render
         logger.info("Stage 4 & 5: Rendering HTML report...")
         report_path = self.renderer.render(
-            rule_based_data, llm_ov_data, trace_summaries, self.config
+            rule_based_data, llm_ov_data, traces_for_rules, self.config
         )
         
         pdf_path: Optional[Path] = None
