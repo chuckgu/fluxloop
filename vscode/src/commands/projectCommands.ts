@@ -86,7 +86,7 @@ export class ProjectCommands {
             return;
         }
 
-        const includeExample: 'Include example agent' = 'Include example agent';
+        const includeExample = 'Include example agent' as const;
 
         const projectRoot = path.join(defaultProjectRoot, projectName);
         const environmentSelector = async () =>
@@ -140,7 +140,7 @@ export class ProjectCommands {
             return;
         }
 
-        const includeExample: 'Include example agent' = 'Include example agent';
+        const includeExample = 'Include example agent' as const;
 
         const { rootDir, projectRoot } = this.resolvePathsForNewProject(selectedPath, projectName);
         const environmentChoice = await this.prepareProjectEnvironment(projectRoot, projectName);
