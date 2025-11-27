@@ -2,6 +2,7 @@
 Rule-based aggregation and statistics for evaluation reports.
 """
 
+import json
 import logging
 import statistics
 from datetime import datetime
@@ -115,6 +116,7 @@ class StatsAggregator:
         if not conversation and "conversation_state" in trace_summary:
             conversation = trace_summary.get("conversation_state", {}).get("turns", [])
             
+        raw_output = trace_summary.get("output") or trace_summary.get("final_output")
         return {
             "trace_id": pt_result.get("trace_id"),
             "persona": trace_summary.get("persona", "unknown"),
@@ -124,7 +126,7 @@ class StatsAggregator:
             "overall_eval": self._classify_overall_success(metrics),
             "primary_issue": self._find_primary_issue(metrics),
             "duration_ms": trace_summary.get("duration_ms", 0),
-            "output_tokens": self._count_output_tokens(conversation),
+            "output_tokens": self._estimate_output_tokens(conversation, raw_output),
             "conversation_turns": self._count_conversation_turns(conversation),
         }
 
@@ -174,14 +176,34 @@ class StatsAggregator:
                     return metric
         return None
 
-    def _count_output_tokens(self, conversation: List[Dict[str, Any]]) -> int:
+    def _estimate_output_tokens(
+        self,
+        conversation: List[Dict[str, Any]],
+        raw_output: Optional[Any],
+    ) -> int:
+        """Approximate output tokens from assistant turns, with fallbacks."""
+
         total_chars = 0
         for turn in conversation:
-            if turn.get("role") == "assistant":
-                content = turn.get("content", "")
-                if isinstance(content, str):
-                    total_chars += len(content)
-        return total_chars // 4
+            if turn.get("role") != "assistant":
+                continue
+
+            content = turn.get("content", "")
+            if isinstance(content, dict):
+                content = json.dumps(content, ensure_ascii=False)
+            elif not isinstance(content, str):
+                content = str(content)
+
+            total_chars += len(content)
+
+        if total_chars == 0 and raw_output:
+            fallback = raw_output
+            if isinstance(fallback, dict):
+                fallback = fallback.get("output") or fallback.get("final_output")
+            if isinstance(fallback, str):
+                total_chars = len(fallback)
+
+        return total_chars // 4 if total_chars else 0
 
     def _count_conversation_turns(self, conversation: List[Dict[str, Any]]) -> int:
         return sum(1 for t in conversation if t.get("role") == "user")

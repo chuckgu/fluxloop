@@ -900,6 +900,7 @@
             }
         }
 
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -6688,10 +6689,16 @@
             metaBar.style.display = 'flex';
 
             const statusEl = document.getElementById('traceStatus');
-            statusEl.textContent = conv.success ? '✓ Complete' : '✗ Failed';
-            statusEl.className = 'conv-status-badge ' + (conv.success ? 'success' : 'failed');
+            const isSuccessful = typeof conv.success === 'boolean'
+                ? conv.success
+                : (conv.overall_eval ? conv.overall_eval === 'PASS' : false);
+            statusEl.textContent = isSuccessful ? '✓ Complete' : '✗ Failed';
+            statusEl.className = 'conv-status-badge ' + (isSuccessful ? 'success' : 'failed');
 
-            document.getElementById('traceDuration').textContent = (conv.duration_ms / 1000).toFixed(1) + 's';
+            const durationLabel = typeof conv.duration_ms === 'number'
+                ? (conv.duration_ms / 1000).toFixed(1) + 's'
+                : 'N/A';
+            document.getElementById('traceDuration').textContent = durationLabel;
             document.getElementById('tracePersona').textContent = conv.persona;
             document.getElementById('traceTurnCount').textContent = conv.turn_count;
 

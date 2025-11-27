@@ -110,9 +110,17 @@ class ReportRenderer:
         # Extract variations from traces if possible, otherwise placeholder
         # In fluxloop execution, we might not have 'generated.yaml' equivalent handy here unless passed.
         # We'll approximate from input config.
+        goal_value = eval_cfg.get("evaluation_goal", "Evaluate AI agent performance")
+        if isinstance(goal_value, dict):
+            goal_value = goal_value.get("text") or ""
+        if goal_value is None:
+            goal_value = ""
+        goal_value = str(goal_value).strip()
+        if not goal_value:
+            goal_value = "Evaluate AI agent performance"
         
         return {
-            "goal": eval_cfg.get("evaluation_goal", "Evaluate AI agent performance"),
+            "goal": goal_value,
             "test_design": {
                 "total_traces": rule_based.get("meta", {}).get("total_traces", 0),
                 "personas_count": len(personas),
@@ -360,12 +368,27 @@ class ReportRenderer:
                     turns.append({"role": "user", "content": t["input"], "turn_index": 0})
                 if t.get("output"):
                     turns.append({"role": "assistant", "content": str(t["output"]), "turn_index": 1})
-            
+
+            summary_section = t.get("summary") or {}
+            success_flag = t.get("success")
+            if success_flag is None:
+                success_flag = summary_section.get("success")
+            if isinstance(success_flag, str):
+                success_flag = success_flag.lower() == "true"
+            duration_ms = t.get("duration_ms")
+            if duration_ms is None:
+                duration_ms = summary_section.get("duration_ms")
+                if isinstance(duration_ms, str) and duration_ms.isdigit():
+                    duration_ms = float(duration_ms)
+
             convs[tid] = {
                 "trace_id": tid,
                 "persona": t.get("persona", ""),
                 "turn_count": len([x for x in turns if x["role"] == "user"]),
-                "turns": turns
+                "turns": turns,
+                "duration_ms": duration_ms,
+                "success": success_flag,
+                "overall_eval": t.get("overall_eval") or summary_section.get("overall_eval"),
             }
         return convs
 
