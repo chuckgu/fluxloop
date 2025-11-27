@@ -65,20 +65,12 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         }
 
         items.push(new ExperimentItem(
-            'Recording Mode',
-            'Enable, disable, or check recording status',
-            vscode.TreeItemCollapsibleState.Collapsed,
-            'recordingGroup'
-        ));
-
-        items.push(new ExperimentItem(
             'Experiments',
             'Latest experiment runs',
             vscode.TreeItemCollapsibleState.Collapsed,
             'experimentsGroup',
             workspacePath
         ));
-        items.push(...this.getRecordingItems(workspacePath));
 
         return items;
     }
@@ -162,9 +154,17 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         }
 
         if (element.type === 'experiment') {
+            const workspacePath = ProjectContext.getActiveWorkspacePath();
+            details.push(new ExperimentItem(
+                'Prepare Simulation',
+                'Use Flux Agent to gather run context',
+                vscode.TreeItemCollapsibleState.None,
+                'command',
+                undefined,
+                'fluxloop.integration.runAgent'
+            ));
             // Show config details
             if (element.resourcePath) {
-                const workspacePath = ProjectContext.getActiveWorkspacePath();
                 const configLabel = workspacePath
                     ? path.relative(workspacePath, element.resourcePath)
                     : path.basename(element.resourcePath);
@@ -207,6 +207,44 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                     ));
                 }
             }
+
+            if (workspacePath) {
+                details.push(new ExperimentItem(
+                    'Recording (Advanced)',
+                    'Recording mode controls and files',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'recordingAdvanced',
+                    workspacePath
+                ));
+            }
+        } else if (element.type === 'recordingAdvanced') {
+            const workspacePath = element.resourcePath ?? ProjectContext.getActiveWorkspacePath();
+            const recordingItems: ExperimentItem[] = [
+                new ExperimentItem(
+                    'Recording Mode',
+                    'Enable, disable, or check recording status',
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    'recordingGroup'
+                )
+            ];
+
+            if (workspacePath) {
+                const filesItems = this.getRecordingItems(workspacePath, {
+                    rootLabel: 'Recording files',
+                    emptyLabel: 'No recordings found',
+                    emptyDescription: 'Enable Record Mode to capture inputs'
+                });
+                recordingItems.push(...filesItems);
+            } else {
+                recordingItems.push(new ExperimentItem(
+                    'Recording files unavailable',
+                    'Open a FluxLoop project to view recordings',
+                    vscode.TreeItemCollapsibleState.None,
+                    'info'
+                ));
+            }
+
+            return recordingItems;
         } else if (element.type === 'result' && element.resourcePath) {
             // Show result files
             const files = ['summary.json', 'traces.jsonl', 'observations.jsonl', 'errors.json', 'logs.json'];
@@ -302,8 +340,13 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         return experiments;
     }
 
-    private getRecordingItems(basePath: string): ExperimentItem[] {
+    private getRecordingItems(
+        basePath: string,
+        options?: { rootLabel?: string; emptyLabel?: string; emptyDescription?: string }
+    ): ExperimentItem[] {
         const recordings: ExperimentItem[] = [];
+        const noRecordingsLabel = options?.emptyLabel ?? 'No recordings found';
+        const noRecordingsDescription = options?.emptyDescription ?? 'Enable Record Mode to capture inputs';
 
         const recordingsDir = path.join(basePath, 'recordings');
         if (!fs.existsSync(recordingsDir)) {
@@ -312,8 +355,8 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                 const projectLevelDir = path.join(basePath, 'recordings');
                 if (!fs.existsSync(projectLevelDir)) {
                     recordings.push(new ExperimentItem(
-                        'No recordings found',
-                        'Enable Record Mode to capture inputs',
+                        noRecordingsLabel,
+                        noRecordingsDescription,
                         vscode.TreeItemCollapsibleState.None,
                         'info'
                     ));
@@ -327,8 +370,8 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         const dir = fs.existsSync(recordingsDir) ? recordingsDir : path.join(basePath, 'recordings');
         if (!fs.existsSync(dir)) {
             recordings.push(new ExperimentItem(
-                'No recordings found',
-                'Enable Record Mode to capture inputs',
+                noRecordingsLabel,
+                noRecordingsDescription,
                 vscode.TreeItemCollapsibleState.None,
                 'info'
             ));
@@ -342,8 +385,8 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         if (files.length === 0) {
             recordings.push(new ExperimentItem(
-                'No recordings found',
-                'Enable Record Mode to capture inputs',
+                noRecordingsLabel,
+                noRecordingsDescription,
                 vscode.TreeItemCollapsibleState.None,
                 'info'
             ));
@@ -352,7 +395,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         if (basePath === ProjectContext.getActiveWorkspacePath()) {
             recordings.push(new ExperimentItem(
-                'Recordings',
+                options?.rootLabel ?? 'Recordings',
                 dir,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'recordings',
@@ -478,7 +521,7 @@ class ExperimentItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly description: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup',
+        public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup' | 'recordingAdvanced',
         public readonly resourcePath?: string,
         private readonly commandId?: string
     ) {
@@ -493,6 +536,9 @@ class ExperimentItem extends vscode.TreeItem {
                 this.iconPath = new vscode.ThemeIcon('beaker');
                 break;
             case 'experimentsGroup':
+                this.iconPath = new vscode.ThemeIcon('folder');
+                break;
+            case 'recordingAdvanced':
                 this.iconPath = new vscode.ThemeIcon('folder');
                 break;
             case 'result':

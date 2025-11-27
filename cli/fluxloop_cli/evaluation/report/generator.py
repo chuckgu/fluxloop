@@ -679,17 +679,20 @@ class TraceEvaluator:
         conversation = trace.get("conversation")
         if not conversation and isinstance(trace.get("conversation_state"), dict):
             conversation = trace["conversation_state"].get("turns")
-        payload["conversation"] = self._sanitize_sequence(conversation)
+        simplified_conversation = self._simplify_conversation(conversation)
+        if simplified_conversation:
+            payload["conversation"] = simplified_conversation
 
         timeline = trace.get("timeline")
         if isinstance(timeline, list):
-            sanitized_timeline = [
-                self._sanitize_mapping(entry)
+            simplified_timeline = [
+                self._simplify_timeline_entry(entry)
                 for entry in timeline
                 if isinstance(entry, dict)
             ]
-            if sanitized_timeline:
-                payload["timeline"] = sanitized_timeline
+            simplified_timeline = [entry for entry in simplified_timeline if entry]
+            if simplified_timeline:
+                payload["timeline"] = simplified_timeline
 
         metadata = trace.get("metadata")
         if isinstance(metadata, dict):
@@ -697,18 +700,76 @@ class TraceEvaluator:
 
         return payload
 
-    def _sanitize_sequence(self, sequence: Optional[List[Any]]) -> Optional[List[Any]]:
-        if not isinstance(sequence, list):
-            return sequence
-        sanitized: List[Any] = []
-        for item in sequence:
-            if isinstance(item, dict):
-                sanitized.append(self._sanitize_mapping(item))
-            elif isinstance(item, list):
-                sanitized.append(self._sanitize_sequence(item))
-            else:
-                sanitized.append(item)
-        return sanitized
+    def _simplify_conversation(self, conversation: Optional[List[Any]]) -> Optional[List[Dict[str, str]]]:
+        if not conversation or not isinstance(conversation, list):
+            return None
+
+        simplified: List[Dict[str, str]] = []
+        for entry in conversation:
+            if not isinstance(entry, dict):
+                continue
+            role = entry.get("role") or "assistant"
+            content = self._normalize_content(entry.get("content"))
+            if content:
+                simplified.append({"role": role, "content": content})
+        return simplified or None
+
+    def _normalize_content(self, content: Any) -> Optional[str]:
+        if content is None:
+            return None
+        if isinstance(content, str):
+            text = content.strip()
+            if text.startswith("{") and text.endswith("}"):
+                try:
+                    parsed = json.loads(text)
+                    return self._normalize_content(parsed)
+                except json.JSONDecodeError:
+                    return text
+            return text
+        if isinstance(content, dict):
+            transcript = content.get("transcript")
+            if isinstance(transcript, list):
+                lines: List[str] = []
+                for item in transcript:
+                    if not isinstance(item, dict):
+                        continue
+                    user_text = item.get("user")
+                    assistant_text = item.get("assistant")
+                    if user_text:
+                        lines.append(f"User: {user_text}")
+                    if assistant_text:
+                        lines.append(f"Assistant: {assistant_text}")
+                if lines:
+                    return "\n".join(lines)
+            text_value = content.get("text")
+            if isinstance(text_value, str):
+                return text_value
+            if "content" in content and isinstance(content["content"], str):
+                return content["content"]
+            return json.dumps(content, ensure_ascii=False)
+        if isinstance(content, list):
+            joined = "\n".join(
+                part for part in (self._normalize_content(item) for item in content) if part
+            )
+            return joined or None
+        return str(content)
+
+    def _simplify_timeline_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        simplified = {
+            "type": entry.get("type"),
+            "name": entry.get("name"),
+            "start_time": entry.get("start_time"),
+            "end_time": entry.get("end_time"),
+            "duration_ms": entry.get("duration_ms"),
+            "level": entry.get("level"),
+        }
+        actions = entry.get("actions")
+        if isinstance(actions, (list, str)) and actions:
+            simplified["actions"] = actions
+        status = entry.get("status")
+        if status:
+            simplified["status"] = status
+        return {k: v for k, v in simplified.items() if v is not None}
 
     def _sanitize_mapping(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Remove heavy/raw fields recursively."""

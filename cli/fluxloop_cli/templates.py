@@ -364,6 +364,10 @@ def create_evaluation_config() -> str:
             temperature: 0.0
             # max_tokens: 1024
 
+          # Concurrency & retry controls for LLM evaluations
+          llm_concurrency: 4          # Max concurrent LLM calls (1-16)
+          llm_retries: 3              # Number of retry attempts per trace before failing
+
           # Filter which traces to evaluate
           filters:
             personas: []                   # Empty = all personas
@@ -534,11 +538,9 @@ def create_env_file() -> str:
         FLUXLOOP_SERVICE_NAME=my-agent
         FLUXLOOP_ENVIRONMENT=development
 
-        # LLM API Keys (if needed)
+        # LLM API Keys (required for LLM evaluations)
         OPENAI_API_KEY=
-        # ANTHROPIC_API_KEY=
-
-        # Other Configuration
-        # Add your custom environment variables here
+        ANTHROPIC_API_KEY=
+        GEMINI_API_KEY=
         """
     ).strip() + "\n"

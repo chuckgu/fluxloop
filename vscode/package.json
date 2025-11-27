@@ -197,7 +197,7 @@
       },
       {
         "command": "fluxloop.integration.runAgent",
-        "title": "Run Flux Agent",
+        "title": "Prepare Simulation",
         "category": "FluxLoop Integration"
       },
       {

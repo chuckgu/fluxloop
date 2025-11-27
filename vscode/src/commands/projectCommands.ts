@@ -272,7 +272,7 @@ export class ProjectCommands {
         );
 
         const pick = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select the Python environment to use with FluxLoop.',
+            placeHolder: 'Select the Python environment your agent will use to run simulations.',
             matchOnDetail: true
         });
 
@@ -314,7 +314,7 @@ export class ProjectCommands {
             canSelectFolders: true,
             canSelectFiles: false,
             canSelectMany: false,
-            openLabel: 'Select Python environment root'
+            openLabel: 'Select agent simulation Python environment root'
         });
 
         if (!folder || folder.length === 0) {
@@ -427,7 +427,7 @@ export class ProjectCommands {
         ];
 
         const pick = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select the Python environment that already has FluxLoop packages installed.'
+            placeHolder: 'Select the Python environment where your agent runs simulations (FluxLoop packages installed).'
         });
 
         if (!pick) {

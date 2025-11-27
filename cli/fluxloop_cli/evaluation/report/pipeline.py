@@ -101,12 +101,68 @@ class ReportPipeline:
 
     async def _run_pt_evaluations(self, traces: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Run TraceEvaluator concurrently."""
-        tasks = []
-        for trace in traces:
-            tasks.append(self.trace_evaluator.evaluate_trace(trace))
-            
-        # Use gather to run in parallel
-        # TODO: Add semaphore/rate-limiting if needed (LLMClient handles raw calls, but concurrency limit might be needed)
-        results = await asyncio.gather(*tasks)
-        return list(results)
+        limit = self._resolve_concurrency_limit()
+        semaphore = asyncio.Semaphore(limit)
+
+        async def _evaluate_with_retry(trace: Dict[str, Any], index: int, total: int) -> Dict[str, Any]:
+            attempt = 0
+            max_attempts = self._resolve_retry_limit()
+            while True:
+                attempt += 1
+                async with semaphore:
+                    logger.debug(
+                        "PT[%s/%s] Evaluating trace %s (attempt %s)",
+                        index,
+                        total,
+                        trace.get("trace_id", "unknown")[:8],
+                        attempt,
+                    )
+                    result = await self.trace_evaluator.evaluate_trace(trace)
+                error = result.get("error")
+                if not error:
+                    return result
+                if attempt >= max_attempts:
+                    logger.error(
+                        "PT[%s/%s] Trace %s failed after %s attempts: %s",
+                        index,
+                        total,
+                        trace.get("trace_id", "unknown"),
+                        attempt,
+                        error,
+                    )
+                    return result
+                sleep_seconds = min(5 * attempt, 30)
+                logger.warning(
+                    "PT[%s/%s] Trace %s attempt %s failed: %s — retrying in %.1fs",
+                    index,
+                    total,
+                    trace.get("trace_id", "unknown")[:8],
+                    attempt,
+                    error,
+                    sleep_seconds,
+                )
+                await asyncio.sleep(sleep_seconds)
+
+        tasks = [
+            _evaluate_with_retry(trace, idx + 1, len(traces))
+            for idx, trace in enumerate(traces)
+        ]
+        return list(await asyncio.gather(*tasks))
+
+    def _resolve_concurrency_limit(self) -> int:
+        """Determine max concurrent LLM calls."""
+        eval_cfg = self.config.get("evaluation", {})
+        advanced = eval_cfg.get("advanced", {})
+        limit = advanced.get("llm_concurrency")
+        if isinstance(limit, int) and limit > 0:
+            return max(1, min(limit, 16))
+        return 4
+
+    def _resolve_retry_limit(self) -> int:
+        eval_cfg = self.config.get("evaluation", {})
+        advanced = eval_cfg.get("advanced", {})
+        retries = advanced.get("llm_retries")
+        if isinstance(retries, int) and retries > 0:
+            return min(max(1, retries), 5)
+        return 3
 

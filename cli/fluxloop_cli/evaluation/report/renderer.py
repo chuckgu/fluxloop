@@ -205,15 +205,13 @@ class ReportRenderer:
                     "reason": t.get("analysis", {}).get("issue_summary", "")
                 })
 
-        exec_summary = llm_ov.get("executive_summary", {}) if llm_ov else {}
-        
         return {
             **summary,
             "status_icon": status_icon,
             "attention_required": attention[:6],
-            "status_title": exec_summary.get("status_title", "Evaluation Complete"),
-            "status_subtitle": f"{meta.get('passed_traces')}/{meta.get('total_traces')} traces passed",
-            "executive_subtitle": exec_summary.get("status_subtitle", "")
+            "status_title": "Pass Rate",
+            "status_subtitle": "Percentage of traces that met the evaluation criteria.",
+            "executive_subtitle": f"{meta.get('passed_traces')}/{meta.get('total_traces')} traces passed",
         }
 
     def _transform_trace_matrix(self, rule_based: Dict[str, Any], llm_ov: Optional[Dict[str, Any]]) -> Dict[str, Any]:

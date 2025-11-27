@@ -278,17 +278,6 @@ export class IntegrationProvider implements vscode.TreeDataProvider<IntegrationI
         );
 
         rootItems.push(
-            new IntegrationItem('Run Flux Agent', vscode.TreeItemCollapsibleState.None, 'fluxAgent', {
-                command: {
-                    command: 'fluxloop.integration.runAgent',
-                    title: 'Run Flux Agent',
-                },
-                iconId: 'debug-start',
-                tooltip: 'Generate integration suggestions for the active file',
-            }),
-        );
-
-        rootItems.push(
             new IntegrationItem('Recent Suggestions', vscode.TreeItemCollapsibleState.Collapsed, 'recentSuggestions', {
                 iconId: 'history',
             }),

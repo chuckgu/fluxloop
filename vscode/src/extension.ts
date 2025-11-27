@@ -48,7 +48,7 @@ export async function activate(context: vscode.ExtensionContext) {
         {
             id: 'quick-start',
             title: 'Quick Start Guide',
-            description: 'Step 1. Workspace: Set up your workspace\n\nStep 2. Playground: Run your experiments\n\nStep 3. Insights: View your analysis'
+            description: 'Step 1. Workspace: Set up your workspace\nStep 2. Playground: Run your experiments\nStep 3. Insights: View your analysis'
         },
         {
             id: 'layout-tip',
