@@ -39,18 +39,20 @@ export class ProjectContext {
 
     static getActiveWorkspacePath(): string | undefined {
         const project = this.getActiveProject();
-        if (!project) {
+        return project?.path;
+    }
+
+    static getResolvedSourceRoot(): string | undefined {
+        const project = this.getActiveProject();
+        if (!project || !project.sourceRoot) {
             return undefined;
         }
 
-        if (project.sourceRoot) {
-            if (path.isAbsolute(project.sourceRoot)) {
-                return project.sourceRoot;
-            }
-            return path.resolve(project.path, project.sourceRoot);
+        if (path.isAbsolute(project.sourceRoot)) {
+            return project.sourceRoot;
         }
 
-        return project.path;
+        return path.resolve(project.path, project.sourceRoot);
     }
 
     static ensureActiveProject(): ProjectEntry | undefined {
