@@ -578,7 +578,7 @@ class StatsAggregator:
                     "tag": analysis.get("tag", "Unknown"),
                     "failed_badges": [{"icon": "✗", "label": m} for m in base["failed_metrics"]],
                     "issue_summary": analysis.get("issue_summary", ""),
-                    "conversation_timeline": analysis.get("conversation_timeline", []),
+                    "conversation_timeline": self._format_timeline(analysis.get("conversation_timeline", [])),
                     "root_cause": analysis.get("root_cause", ""),
                     "quick_fixes": analysis.get("quick_fixes", [])
                 })
@@ -623,4 +623,20 @@ class StatsAggregator:
                 else:
                     badges.append({"status": "fail", "icon": "✗", "label": label})
         return badges
+
+    def _format_timeline(self, timeline: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        formatted: List[Dict[str, Any]] = []
+        for entry in timeline:
+            if not isinstance(entry, dict):
+                continue
+            text = entry.get("text") or entry.get("summary") or ""
+            formatted.append(
+                {
+                    "turn": entry.get("turn"),
+                    "role": entry.get("role", "assistant"),
+                    "text": text,
+                    "is_highlight": entry.get("is_highlight", False),
+                }
+            )
+        return formatted
 

@@ -8,7 +8,7 @@ import os
 import shutil
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import typer
 import yaml
@@ -21,6 +21,7 @@ from ..evaluation.report.pipeline import ReportPipeline
 
 console = Console()
 app = typer.Typer(help="Evaluate experiment outputs and generate interactive reports.")
+logger = logging.getLogger(__name__)
 
 
 def _load_yaml_file(path: Optional[Path]) -> dict:
@@ -60,6 +61,72 @@ def _prepare_output_directory(path: Path, overwrite: bool) -> None:
             )
         shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
+
+
+def _load_generated_inputs_data(input_config: Dict[str, any], project_root: Path) -> Dict[str, any]:
+    """
+    Load generated inputs (variations) from the configured inputs file, if available.
+    """
+
+    inputs_file_value = input_config.get("inputs_file") or "inputs/generated.yaml"
+    inputs_path = Path(inputs_file_value)
+    if not inputs_path.is_absolute():
+        inputs_path = (project_root / inputs_path).resolve()
+
+    if not inputs_path.exists():
+        logger.debug("Generated inputs file not found at %s", inputs_path)
+        return {}
+
+    try:
+        with inputs_path.open("r", encoding="utf-8") as handle:
+            payload = yaml.safe_load(handle) or {}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to load generated inputs file %s: %s", inputs_path, exc)
+        return {}
+
+    inputs_list: List[Dict[str, any]] = []
+    generation_cfg: Dict[str, any] = {}
+    if isinstance(payload, dict):
+        inputs_list = payload.get("inputs") or payload.get("variations") or []
+        generation_cfg = payload.get("generation_config") or {}
+    elif isinstance(payload, list):
+        inputs_list = payload
+    else:
+        logger.debug("Generated inputs file %s did not contain a supported structure", inputs_path)
+        return {}
+
+    variations: List[Dict[str, str]] = []
+    for entry in inputs_list:
+        if not isinstance(entry, dict):
+            continue
+        text = entry.get("input")
+        if not text:
+            continue
+        metadata = entry.get("metadata") or {}
+        persona = entry.get("persona") or metadata.get("persona")
+        strategy = entry.get("strategy") or metadata.get("variation_strategy") or metadata.get("strategy")
+
+        variations.append(
+            {
+                "persona": (persona or "unknown").strip(),
+                "strategy": (strategy or "base").strip(),
+                "input": text.strip(),
+            }
+        )
+
+    generator_model = generation_cfg.get("model") or generation_cfg.get("generator_model")
+    provider = generation_cfg.get("provider")
+    if generator_model and provider and "/" not in str(generator_model):
+        generator_model = f"{provider}/{generator_model}"
+
+    return {
+        "path": str(inputs_path),
+        "variations": variations,
+        "generator_model": generator_model or input_config.get("input_generation", {})
+        .get("llm", {})
+        .get("model"),
+        "strategies": generation_cfg.get("strategies") or input_config.get("variation_strategies", []),
+    }
 
 
 @app.command()
@@ -120,6 +187,7 @@ def experiment(
         raise typer.BadParameter(f"Experiment directory not found: {resolved_experiment_dir}")
 
     config_path = config.resolve() if config.is_absolute() else (Path.cwd() / config).resolve()
+    project_root = _resolve_project_root(config_path)
 
     if per_trace is not None:
         per_trace_path = per_trace.resolve() if per_trace.is_absolute() else (Path.cwd() / per_trace).resolve()
@@ -165,11 +233,13 @@ def experiment(
 
     input_config = _load_yaml_file(input_config_path)
     project_config = _load_yaml_file(project_config_path)
+    generated_inputs = _load_generated_inputs_data(input_config, project_root)
 
     config_bundle = {
         "name": project_config.get("name") or resolved_experiment_dir.name,
         "evaluation": asdict(evaluation_config),
         "input": input_config,
+        "generated_inputs": generated_inputs,
     }
 
     pipeline = ReportPipeline(

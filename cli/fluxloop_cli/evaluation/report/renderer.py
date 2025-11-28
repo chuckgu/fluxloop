@@ -2,6 +2,7 @@
 Data preparation and HTML rendering for evaluation reports.
 """
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -103,9 +104,11 @@ class ReportRenderer:
     def _transform_config(self, config: Dict[str, Any], rule_based: Dict[str, Any]) -> Dict[str, Any]:
         input_cfg = config.get("input", {})
         eval_cfg = config.get("evaluation", {})
+        generated_inputs = config.get("generated_inputs", {}) or {}
         
         personas = input_cfg.get("personas", [])
         base_inputs = input_cfg.get("base_inputs", [])
+        variation_entries = generated_inputs.get("variations") or []
         
         # Extract variations from traces if possible, otherwise placeholder
         # In fluxloop execution, we might not have 'generated.yaml' equivalent handy here unless passed.
@@ -119,6 +122,13 @@ class ReportRenderer:
         if not goal_value:
             goal_value = "Evaluate AI agent performance"
         
+        generator_model = (
+            generated_inputs.get("generator_model")
+            or input_cfg.get("input_generation", {}).get("llm", {}).get("model")
+            or "N/A"
+        )
+        variation_strategies = generated_inputs.get("strategies") or input_cfg.get("variation_strategies", [])
+
         return {
             "goal": goal_value,
             "test_design": {
@@ -129,9 +139,9 @@ class ReportRenderer:
             },
             "input_generation": {
                 "base_inputs": len(base_inputs),
-                "generated_count": rule_based.get("meta", {}).get("total_traces", 0), # Approx
-                "generator_model": "N/A", # Not tracked explicitly in config usually
-                "strategies": input_cfg.get("variation_strategies", [])
+                "generated_count": len(variation_entries),
+                "generator_model": generator_model,
+                "strategies": variation_strategies,
             },
             "evaluation": {
                 "judge_model": eval_cfg.get("advanced", {}).get("llm_judge", {}).get("model", "gpt-4o"),
@@ -140,7 +150,7 @@ class ReportRenderer:
             "personas": personas,
             "tested_inputs": {
                 "base_input": base_inputs[0].get("input", "") if base_inputs else "",
-                "variations": [] # Populating full variations list might be too heavy for config section
+                "variations": variation_entries,
             }
         }
 
@@ -355,17 +365,20 @@ class ReportRenderer:
             turns = []
             if "conversation" in t:
                 for msg in t["conversation"]:
-                     turns.append({
-                         "role": msg.get("role"),
-                         "content": str(msg.get("content", "")),
-                         "turn_index": msg.get("turn_index", 0)
-                     })
+                    role = msg.get("role")
+                    content = self._normalize_conversation_content(msg.get("content"))
+                    if role == "assistant":
+                        turns.append({
+                            "role": "assistant",
+                            "content": content,
+                            "turn_index": msg.get("turn_index", 0)
+                        })
             else:
                 # Single turn fallback
                 if t.get("input"):
-                    turns.append({"role": "user", "content": t["input"], "turn_index": 0})
+                    pass  # User input already visible elsewhere
                 if t.get("output"):
-                    turns.append({"role": "assistant", "content": str(t["output"]), "turn_index": 1})
+                    turns.append({"role": "assistant", "content": self._normalize_conversation_content(t["output"]), "turn_index": 1})
 
             summary_section = t.get("summary") or {}
             success_flag = t.get("success")
@@ -389,4 +402,31 @@ class ReportRenderer:
                 "overall_eval": t.get("overall_eval") or summary_section.get("overall_eval"),
             }
         return convs
+
+    def _normalize_conversation_content(self, content: Any) -> str:
+        if content is None:
+            return ""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, dict):
+            transcript = content.get("transcript")
+            if isinstance(transcript, list):
+                lines: List[str] = []
+                for entry in transcript:
+                    if not isinstance(entry, dict):
+                        continue
+                    user_text = entry.get("user")
+                    assistant_text = entry.get("assistant")
+                    if user_text:
+                        lines.append(f"User: {user_text}")
+                    if assistant_text:
+                        lines.append(f"Assistant: {assistant_text}")
+                if lines:
+                    return "\n".join(lines)
+            if "text" in content and isinstance(content["text"], str):
+                return content["text"]
+            return json.dumps(content, ensure_ascii=False)
+        if isinstance(content, list):
+            return "\n".join(self._normalize_conversation_content(item) for item in content if item)
+        return str(content)
 
