@@ -22,26 +22,29 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
         const projectPath = ProjectContext.getActiveWorkspacePath();
 
         if (!projectPath) {
-            return [new InfoItem('No project selected', 'Select a project to view inputs.')];
+            return [new InfoItem('Select a project to view inputs', undefined)];
         }
 
         if (!element) {
             return [
-                new CommandItem('Configure Inputs…', 'fluxloop.openInputConfig', 'Open configs/input.yaml', 'gear'),
-                new CategoryItem('Base Inputs', 'base'),
+                new CategoryItem('Configuration', 'config'),
                 new CommandItem('Generate New Inputs…', 'fluxloop.generateInputs', 'Start generation wizard', 'debug-start'),
                 new CategoryItem('Generated Inputs', 'generated')
             ];
         }
 
         if (element instanceof CategoryItem) {
-            switch (element.category) {
-                case 'base':
+            if (element.category === 'config') {
+                return [
+                    new CommandItem('Open Configuration', 'fluxloop.openInputConfig', 'Open configs/input.yaml', 'gear'),
+                    new CategoryItem('Base Input', 'base')
+                ];
+            }
+            if (element.category === 'base') {
                     return this.getBaseInputs(projectPath);
-                case 'generated':
+            }
+            if (element.category === 'generated') {
                     return this.getGeneratedInputs(projectPath);
-                default:
-                    return [];
             }
         }
 
@@ -51,7 +54,7 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
     private async getBaseInputs(projectPath: string): Promise<InputsTreeItem[]> {
         const configInfo = this.resolveInputConfig(projectPath);
         if (!configInfo) {
-            return [new InfoItem('No input configuration found', 'Create configs/input.yaml to define base inputs.')];
+            return [new InfoItem('No input configuration found', 'Create configs/input.yaml to define the base input.')];
         }
 
         try {
@@ -64,18 +67,20 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
                     : undefined;
 
             if (!Array.isArray(baseInputs) || baseInputs.length === 0) {
-                return [new InfoItem('No base inputs defined', `Add base_inputs to ${configInfo.label}.`)];
+                return [new InfoItem('No base input defined', `Add base_inputs[0] to ${configInfo.label}.`)];
             }
 
+            const primary = baseInputs[0];
             const configUri = vscode.Uri.file(configInfo.path);
-            return baseInputs.map((entry, index) => {
-                const label = entry?.input || `Base Input ${index + 1}`;
-                const description = entry?.expected_intent ? `Intent: ${entry.expected_intent}` : undefined;
-                return new BaseInputItem(label, description, configUri);
-            });
+            const label = primary?.input || 'Base Input';
+            const description = primary?.expected_intent ? `Intent: ${primary.expected_intent}` : 'Primary seed for generation';
+            return [
+                new InfoItem('This base input seeds the generator', `Edit ${configInfo.label} to update it.`),
+                new BaseInputItem(label, description, configUri)
+            ];
         } catch (error) {
             console.error('Failed to parse input configuration', error);
-            return [new InfoItem('Unable to load base inputs', `Check ${configInfo.label} for YAML errors.`)];
+            return [new InfoItem('Unable to load base input', `Check ${configInfo.label} for YAML errors.`)];
         }
     }
 
@@ -155,10 +160,13 @@ export class InputsProvider implements vscode.TreeDataProvider<InputsTreeItem> {
 class CategoryItem extends vscode.TreeItem {
     constructor(
         label: string,
-        public readonly category: 'base' | 'generated'
+        public readonly category: 'config' | 'base' | 'generated'
     ) {
         super(label, vscode.TreeItemCollapsibleState.Collapsed);
         this.contextValue = `inputs.category.${category}`;
+        if (category === 'config') {
+            this.iconPath = new vscode.ThemeIcon('settings-gear');
+        }
     }
 }
 

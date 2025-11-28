@@ -33,7 +33,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         if (!workspacePath) {
             items.push(new ExperimentItem(
                 'Select a project to view experiments',
-                '',
+                undefined,
                 vscode.TreeItemCollapsibleState.None,
                 'info'
             ));
@@ -43,17 +43,19 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
         const configInfo = this.resolveSimulationConfig(workspacePath);
         if (configInfo) {
             items.push(new ExperimentItem(
-                'Current Experiment',
-                configInfo.label,
+                'Configuration',
+                undefined,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'experiment',
                 configInfo.path
             ));
             items.push(new ExperimentItem(
                 'Run Experiment',
-                '',
+                undefined,
                 vscode.TreeItemCollapsibleState.None,
-                'run'
+                'command',
+                undefined,
+                'fluxloop.runExperiment'
             ));
         } else {
             items.push(new ExperimentItem(
@@ -66,7 +68,7 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         items.push(new ExperimentItem(
             'Experiments',
-            'Latest experiment runs',
+            undefined,
             vscode.TreeItemCollapsibleState.Collapsed,
             'experimentsGroup',
             workspacePath
@@ -80,35 +82,6 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         if (element.type === 'experimentsGroup' && element.resourcePath) {
             return this.getExperimentResults(element.resourcePath);
-        }
-
-        if (element.type === 'recordingGroup') {
-            return [
-                new ExperimentItem(
-                    'Enable Recording Mode',
-                    'fluxloop record enable',
-                    vscode.TreeItemCollapsibleState.None,
-                    'command',
-                    undefined,
-                    'fluxloop.enableRecording'
-                ),
-                new ExperimentItem(
-                    'Disable Recording Mode',
-                    'fluxloop record disable',
-                    vscode.TreeItemCollapsibleState.None,
-                    'command',
-                    undefined,
-                    'fluxloop.disableRecording'
-                ),
-                new ExperimentItem(
-                    'Show Recording Status',
-                    'fluxloop record status',
-                    vscode.TreeItemCollapsibleState.None,
-                    'command',
-                    undefined,
-                    'fluxloop.showRecordingStatus'
-                )
-            ];
         }
 
         if (element.type === 'recordings' && element.resourcePath) {
@@ -175,7 +148,8 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                     vscode.TreeItemCollapsibleState.None,
                     'file',
                     element.resourcePath,
-                    element.resourcePath
+                    undefined,
+                    'settings-gear'
                 ));
 
                 const configData = this.readSimulationConfig(element.resourcePath);
@@ -219,14 +193,29 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
             }
         } else if (element.type === 'recordingAdvanced') {
             const workspacePath = element.resourcePath ?? ProjectContext.getActiveWorkspacePath();
-            const recordingItems: ExperimentItem[] = [
+            const recordingItems: ExperimentItem[] = [];
+
+            recordingItems.push(
                 new ExperimentItem(
-                    'Recording Mode',
-                    'Enable, disable, or check recording status',
-                    vscode.TreeItemCollapsibleState.Collapsed,
-                    'recordingGroup'
-                )
-            ];
+                    'Enable Recording',
+                    'fluxloop record enable',
+                    vscode.TreeItemCollapsibleState.None,
+                    'command',
+                    undefined,
+                    'fluxloop.enableRecording'
+                ),
+            );
+
+            recordingItems.push(
+                new ExperimentItem(
+                    'Disable Recording',
+                    'fluxloop record disable',
+                    vscode.TreeItemCollapsibleState.None,
+                    'command',
+                    undefined,
+                    'fluxloop.disableRecording'
+                ),
+            );
 
             if (workspacePath) {
                 const filesItems = this.getRecordingItems(workspacePath, {
@@ -518,22 +507,25 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
 class ExperimentItem extends vscode.TreeItem {
     constructor(
-        public readonly label: string,
-        public readonly description: string,
+        public label: string,
+        description: string | undefined,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'run' | 'info' | 'command' | 'recordings' | 'recordingGroup' | 'recordingAdvanced',
+        public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'info' | 'command' | 'recordings' | 'recordingGroup' | 'recordingAdvanced',
         public readonly resourcePath?: string,
-        private readonly commandId?: string
+        private readonly commandId?: string,
+        private readonly iconId?: string
     ) {
         super(label, collapsibleState);
 
         this.tooltip = this.label;
+        if (description !== undefined) {
         this.description = description;
+        }
 
         // Set icon based on type
         switch (type) {
             case 'experiment':
-                this.iconPath = new vscode.ThemeIcon('beaker');
+                this.iconPath = new vscode.ThemeIcon('settings-gear');
                 break;
             case 'experimentsGroup':
                 this.iconPath = new vscode.ThemeIcon('folder');
@@ -554,13 +546,6 @@ class ExperimentItem extends vscode.TreeItem {
                     };
                 }
                 break;
-            case 'run':
-                this.iconPath = new vscode.ThemeIcon('debug-start');
-                this.command = {
-                    command: 'fluxloop.runExperiment',
-                    title: 'Run Experiment'
-                };
-                break;
             case 'command':
                 this.iconPath = new vscode.ThemeIcon('debug-start');
                 if (commandId) {
@@ -579,6 +564,10 @@ class ExperimentItem extends vscode.TreeItem {
             case 'info':
                 this.iconPath = new vscode.ThemeIcon('info');
                 break;
+        }
+
+        if (this.iconId) {
+            this.iconPath = new vscode.ThemeIcon(this.iconId);
         }
     }
 }

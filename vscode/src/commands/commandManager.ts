@@ -15,6 +15,23 @@ import { InputsProvider } from '../providers/inputsProvider';
 import { ResultsProvider } from '../providers/resultsProvider';
 import { OutputChannelManager } from '../utils/outputChannel';
 
+type BaseInputSeed = {
+    value: string;
+    intent?: string;
+};
+
+const VARIATION_STRATEGIES = [
+    'rephrase',
+    'error_prone',
+    'typo',
+    'verbose',
+    'concise',
+    'persona_based',
+    'adversarial',
+    'multilingual',
+    'custom'
+] as const;
+
 export class CommandManager {
     constructor(
         private context: vscode.ExtensionContext,
@@ -273,6 +290,16 @@ export class CommandManager {
         if (!fs.existsSync(configAbsolute)) {
             void vscode.window.showWarningMessage('configs/evaluation.yaml is missing. Check your CLI configuration.');
         } else {
+            const configInfo = await this.loadEvaluationConfig(project.path);
+            const goal = this.extractEvaluationGoal(configInfo?.data);
+            const goalDecision = await this.confirmEvaluationGoal(goal);
+            if (goalDecision === 'cancel') {
+                return;
+            }
+            if (goalDecision === 'edit') {
+                await vscode.commands.executeCommand('fluxloop.openEvaluationConfig');
+                return;
+            }
             const relativeConfig = path.relative(project.path, configAbsolute);
             configArg = relativeConfig && !relativeConfig.startsWith('..') ? relativeConfig : configAbsolute;
         }
@@ -402,9 +429,33 @@ export class CommandManager {
             return;
         }
 
+        const baseSeed = this.getPrimaryBaseInput(config);
+        const baseDecision = await this.confirmBaseInput(baseSeed);
+        if (baseDecision === 'cancel') {
+            return;
+        }
+        if (baseDecision === 'edit') {
+            await vscode.commands.executeCommand('fluxloop.openInputConfig');
+            return;
+        }
+
         const strategies = await this.promptForStrategies(strategiesFromConfig);
         if (strategies === null) {
             return;
+        }
+
+        if (configInfo?.path) {
+            try {
+                this.writeVariationStrategies(configInfo.path, strategies);
+                if (configInfo.data) {
+                    configInfo.data.variation_strategies = [...strategies];
+                }
+            } catch (error) {
+                console.error('Failed to persist variation strategies', error);
+                void vscode.window.showWarningMessage(
+                    'Selected variation strategies could not be written to configs/input.yaml. Continuing with the chosen values.'
+                );
+            }
         }
 
         const limit: string | undefined = undefined;
@@ -1048,6 +1099,23 @@ export class CommandManager {
         }
     }
 
+    private async loadEvaluationConfig(projectPath: string): Promise<{ data?: Record<string, any>; path?: string } | undefined> {
+        const configPath = path.join(projectPath, 'configs', 'evaluation.yaml');
+        if (!fs.existsSync(configPath)) {
+            return undefined;
+        }
+
+        try {
+            const raw = await fs.promises.readFile(configPath, 'utf8');
+            const parsed = parseYaml(raw) as Record<string, any> | undefined;
+            return { data: parsed, path: configPath };
+        } catch (error) {
+            console.error('Failed to parse evaluation configuration', error);
+            vscode.window.showWarningMessage('Unable to read configs/evaluation.yaml. Evaluation will use defaults.');
+            return { path: configPath };
+        }
+    }
+
     private async openConfigSection(
         section: 'project' | 'input' | 'simulation' | 'evaluation',
         projectId?: string
@@ -1114,21 +1182,145 @@ export class CommandManager {
     }
 
     private getConfigStrategies(config: Record<string, any> | undefined): string[] {
-        const strategies = config?.input_generation?.strategies;
-        if (!Array.isArray(strategies)) {
+        const primary = this.normalizeStrategyList(config?.variation_strategies);
+        if (primary.length) {
+            return primary;
+        }
+        return this.normalizeStrategyList(config?.input_generation?.strategies);
+    }
+
+    private normalizeStrategyList(source: unknown): string[] {
+        if (!Array.isArray(source)) {
             return [];
         }
-        return strategies
-            .map((entry: any) => {
-                if (typeof entry === 'string') {
-                    return entry;
-                }
-                if (entry && typeof entry.type === 'string') {
-                    return entry.type;
-                }
-                return undefined;
-            })
+        return source
+            .map((entry: any) => this.normalizeStrategyValue(typeof entry === 'string' ? entry : entry?.type))
             .filter((value): value is string => Boolean(value));
+                }
+
+    private normalizeStrategyValue(value: unknown): string | undefined {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+        return VARIATION_STRATEGIES.includes(normalized as (typeof VARIATION_STRATEGIES)[number])
+            ? normalized
+            : undefined;
+                }
+
+    private getPrimaryBaseInput(config: Record<string, any> | undefined): BaseInputSeed | undefined {
+        if (!config) {
+                return undefined;
+        }
+        const candidates = Array.isArray(config.base_inputs)
+            ? config.base_inputs
+            : Array.isArray(config.input?.base_inputs)
+                ? config.input.base_inputs
+                : undefined;
+
+        if (!candidates || !candidates.length) {
+            return undefined;
+        }
+
+        const seed = candidates[0] ?? {};
+        const value = typeof seed?.input === 'string' ? seed.input : '';
+        const intent = typeof seed?.expected_intent === 'string' ? seed.expected_intent : undefined;
+
+        if (!value.trim() && !intent) {
+            return undefined;
+        }
+
+        return { value, intent };
+    }
+
+    private async confirmBaseInput(seed: BaseInputSeed | undefined): Promise<'confirm' | 'edit' | 'cancel'> {
+        if (!seed || !seed.value?.trim()) {
+            return 'confirm';
+        }
+
+        const trimmed = seed.value.trim();
+        const preview = trimmed.length > 240 ? `${trimmed.slice(0, 240)}…` : trimmed;
+        const lines = [
+            'Use this base input as the seed for generation?',
+            '',
+            preview
+        ];
+        if (seed.intent) {
+            lines.push('', `Intent: ${seed.intent}`);
+        }
+
+        const selection = await vscode.window.showInformationMessage(
+            lines.join('\n'),
+            { modal: true },
+            'Use Seed',
+            'Edit in configuration'
+        );
+
+        if (!selection) {
+            return 'cancel';
+        }
+
+        return selection === 'Use Seed' ? 'confirm' : 'edit';
+    }
+
+    private extractEvaluationGoal(config: Record<string, any> | undefined): string | undefined {
+        if (!config) {
+            return undefined;
+        }
+        const goal = config.evaluation_goal;
+        if (typeof goal === 'string') {
+            return goal;
+        }
+        if (goal && typeof goal.text === 'string') {
+            return goal.text;
+        }
+        return undefined;
+    }
+
+    private async confirmEvaluationGoal(goal: string | undefined): Promise<'confirm' | 'edit' | 'cancel'> {
+        if (!goal || !goal.trim()) {
+            return 'confirm';
+        }
+
+        const trimmed = goal.trim();
+        const preview = trimmed.length > 320 ? `${trimmed.slice(0, 320)}…` : trimmed;
+        const lines = ['Evaluate experiment with this goal?', '', preview];
+
+        const selection = await vscode.window.showInformationMessage(
+            lines.join('\n'),
+            { modal: true },
+            'Use Goal',
+            'Edit in configuration'
+        );
+
+        if (!selection) {
+            return 'cancel';
+        }
+
+        return selection === 'Use Goal' ? 'confirm' : 'edit';
+    }
+
+    private writeVariationStrategies(configPath: string, strategies: string[]): void {
+        const normalized = strategies
+            .map(strategy => this.normalizeStrategyValue(strategy))
+            .filter((strategy): strategy is string => Boolean(strategy));
+
+        const block = normalized.length
+            ? ['variation_strategies:', ...normalized.map(strategy => `  - ${strategy}`)].join('\n')
+            : 'variation_strategies: []';
+
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const variationBlockPattern = /(^variation_strategies:[^\r\n]*(?:\r?\n(?:[ \t]*-.*|[ \t]*))*)(?=\r?\n\S|$)/m;
+        let updated: string;
+
+        if (variationBlockPattern.test(raw)) {
+            updated = raw.replace(variationBlockPattern, block);
+        } else {
+            const suffix = raw.endsWith('\n') ? '' : '\n';
+            updated = `${raw}${suffix}${block}\n`;
+        }
+
+        fs.writeFileSync(configPath, updated, 'utf8');
     }
 
     private async promptForMode(defaultMode?: string): Promise<string | undefined | null> {
@@ -1166,25 +1358,23 @@ export class CommandManager {
     }
 
     private async promptForStrategies(defaultStrategies: string[]): Promise<string[] | null> {
-        const builtinStrategies = [
-            'rephrase',
-            'error_prone',
-            'typo',
-            'verbose',
-            'concise',
-            'persona_based',
-            'adversarial',
-            'multilingual',
-            'custom'
-        ];
+        const canonicalDefaults = defaultStrategies
+            .map(value => this.normalizeStrategyValue(value))
+            .filter((value): value is string => Boolean(value));
 
-        const available = defaultStrategies.length
-            ? Array.from(new Set([...defaultStrategies, ...builtinStrategies]))
-            : builtinStrategies;
+        const available = canonicalDefaults.length
+            ? Array.from(new Set([...canonicalDefaults, ...VARIATION_STRATEGIES]))
+            : VARIATION_STRATEGIES;
 
-        const items = available.map<vscode.QuickPickItem>(strategy => ({
-            label: strategy,
-            picked: defaultStrategies.includes(strategy)
+        interface StrategyPick extends vscode.QuickPickItem {
+            value: string;
+        }
+
+        const items: StrategyPick[] = available.map(strategy => ({
+            label: strategy.replace(/_/g, ' '),
+            detail: strategy,
+            picked: canonicalDefaults.includes(strategy),
+            value: strategy
         }));
 
         const selected = await vscode.window.showQuickPick(items, {
@@ -1197,7 +1387,7 @@ export class CommandManager {
             return null;
         }
 
-        return selected.map(item => item.label);
+        return selected.map(item => item.value);
     }
 
     private async promptForBoolean(title: string, detail: string): Promise<boolean | null> {
