@@ -18,7 +18,11 @@ Generate input variations from base inputs defined in `configs/input.yaml`.
 2. Type and select **FluxLoop: Generate Inputs**
 3. Follow the wizard prompts:
    - **Mode**: Deterministic or LLM-based generation
-   - **Strategies**: Select variation strategies (rephrase, verbose, error_prone, etc.)
+   - **Base Input Confirmation**: Review the primary base input from `configs/input.yaml`
+     - **Use Input**: Proceed with the displayed base input
+     - **Edit in configuration**: Open `configs/input.yaml` to modify
+   - **Strategies**: Select variation strategies (pre-checked based on config)
+     - Selections are saved back to `variation_strategies` in `configs/input.yaml`
    - **Limit**: Maximum number of inputs to generate (optional)
    - **Overwrite**: Whether to replace existing output file
    - **Dry Run**: Preview generation without writing files
@@ -119,8 +123,22 @@ Run rule-based and LLM-based evaluators defined in `configs/evaluation.yaml`, co
 1. Open Command Palette
 2. Select **FluxLoop: Evaluate Experiment**
 3. Choose the experiment folder (if not triggered from Results view)
-4. Choose evaluation output directory (default: `evaluation`)
-5. Confirm overwrite if the directory already exists
+4. **Goal Confirmation**: Review the evaluation goal from `configs/evaluation.yaml`
+   - **Use Goal**: Proceed with the displayed evaluation goal
+   - **Edit in configuration**: Open `configs/evaluation.yaml` to modify
+5. Choose evaluation output directory (default: `evaluation`)
+6. Confirm overwrite if the directory already exists
+
+### Goal Confirmation
+
+The wizard reads `evaluation_goal.text` from `configs/evaluation.yaml`:
+
+```yaml
+evaluation_goal:
+  text: "Verify that the agent provides clear, persona-aware responses while meeting latency and accuracy targets."
+```
+
+This step ensures you're evaluating against the intended criteria before running.
 
 ### Output
 

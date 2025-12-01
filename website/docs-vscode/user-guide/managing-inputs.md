@@ -10,35 +10,28 @@ FluxLoop manages inputs through the **Inputs** view in the VSCode extension. Inp
 
 Open the **Inputs** view in the FluxLoop activity bar to see everything related to scenarios:
 
-- **Base Inputs** – Personas + prompts from `configs/input.yaml`
+- **Configuration** – Settings and base input from `configs/input.yaml`
 - **Generated Inputs** – Variations created via the wizard, annotated with strategy + persona
-- **Recordings** – Argument captures saved to `recordings/*.jsonl`
 
-Clicking any entry opens the underlying YAML/JSONL. The panel refreshes automatically whenever configuration files change.
+Clicking any entry opens the underlying YAML. The panel refreshes automatically whenever configuration files change.
 
-## Base Inputs
+## Configuration
 
-Base inputs are defined in `configs/input.yaml`:
+The Configuration folder contains:
+
+### Open Configuration
+Click to open `configs/input.yaml` directly in the editor.
+
+### Base Input
+Shows the primary seed input (first entry in `base_inputs`) that drives generation:
 
 ```yaml
 base_inputs:
-  - id: "customer_inquiry"
-    content: "How can I track my order?"
-    metadata:
-      category: "support"
+  - input: "How can I track my order?"
+    expected_intent: "order_tracking"
 ```
 
-### Editing Base Inputs
-
-1. Click any base input in the **Inputs** view
-2. VSCode opens `configs/input.yaml`
-3. Edit inputs directly
-4. Save—the view refreshes automatically
-
-Or use Command Palette:
-```
-FluxLoop: Open Input Configuration
-```
+The base input is the foundation for all variation strategies. Only the first base input is displayed in the tree for simplicity.
 
 ## Generating Input Variations
 
@@ -49,7 +42,12 @@ Generate variations from base inputs using LLM or deterministic strategies.
 1. Click **Generate New Inputs…**
 2. Configure the wizard:
    - **Generation Mode** – Deterministic or LLM
-   - **Strategies** – Pick one or more strategies (rephrase, verbose, concise, error_prone, persona_mix, multilingual, etc.)
+   - **Base Input Confirmation** – Review the primary base input
+     - Select **Use Input** to proceed
+     - Select **Edit in configuration** to open `configs/input.yaml` and modify
+   - **Strategies** – Pick one or more strategies (rephrase, verbose, concise, error_prone, etc.)
+     - Pre-selected based on `variation_strategies` in `configs/input.yaml`
+     - Your selections are saved back to `variation_strategies` for next time
    - **Variation Limit** – Number of outputs per base input
    - **Output File** – Defaults to `inputs/generated.yaml` (auto-populated from config)
    - **Overwrite / Append** – Control whether the existing file should be replaced
@@ -80,17 +78,21 @@ Available variation strategies:
 | `verbose` | Add detail and context | LLM |
 | `concise` | Shorten to essential points | LLM |
 | `error_prone` | Introduce typos or ambiguity | LLM |
-| `edge_case` | Generate boundary scenarios | LLM |
-| `shuffle_words` | Randomly reorder tokens | Deterministic |
-| `remove_words` | Randomly drop tokens | Deterministic |
+| `typo` | Add typos/errors | LLM |
+| `persona_based` | Based on persona characteristics | LLM |
+| `adversarial` | Edge cases and attacks | LLM |
+| `multilingual` | Different languages | LLM |
+| `custom` | Custom variation prompt | LLM |
 
 Configure default strategies in `configs/input.yaml`:
 
 ```yaml
-strategies:
+variation_strategies:
   - rephrase
   - verbose
 ```
+
+These will be pre-selected in the wizard and updated when you make changes.
 
 ## Recordings (Advanced)
 
@@ -98,19 +100,20 @@ Recordings capture actual function arguments during runtime for replay in experi
 
 ### Enable Recording Mode
 
-```
-FluxLoop: Enable Recording Mode
-```
+From the **Experiments** view, expand **Recording (Advanced)** and click:
+- **Enable Recording** to turn on argument capture
+- **Disable Recording** to turn it off
 
-or
+Or from terminal:
 
 ```bash
 fluxloop record enable
+fluxloop record disable
 ```
 
 This updates:
-- `.env`: Sets `FLUXLOOP_RECORD_ARGS=true`
-- `configs/simulation.yaml`: Enables `replay_args.enabled`
+- `.env`: Sets `FLUXLOOP_RECORD_ARGS=true/false`
+- `configs/simulation.yaml`: Enables/disables `replay_args.enabled`
 
 ### Capture Arguments
 
@@ -134,18 +137,6 @@ Now when you run experiments, FluxLoop:
 2. Replaces the field at `override_param_path` with generated input variations
 3. Replays each modified call
 
-### Disable Recording
-
-```
-FluxLoop: Disable Recording Mode
-```
-
-or
-
-```bash
-fluxloop record disable
-```
-
 ## Environment Considerations
 
 Input generation and experiments depend on your Python environment.
@@ -166,4 +157,3 @@ See [Environment Configuration](../getting-started/environment-configuration.md)
 - [Running Experiments](running-experiments)
 - [Viewing Results](viewing-results)
 - [Recording Mode](recording-mode) (Advanced)
-

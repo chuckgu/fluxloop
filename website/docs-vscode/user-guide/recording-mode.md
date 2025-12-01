@@ -19,9 +19,7 @@ Use recording mode when:
 
 ### From VSCode
 
-```
-FluxLoop: Enable Recording Mode
-```
+In the **Experiments** view, expand **Recording (Advanced)** and click **Enable Recording**.
 
 ### From Terminal
 
@@ -32,11 +30,10 @@ fluxloop record enable
 This automatically:
 - Sets `FLUXLOOP_RECORD_ARGS=true` in `.env`
 - Enables `replay_args.enabled` in `configs/simulation.yaml`
-- Updates Status panel to show "Record Mode: Enabled"
 
 ## Capturing Arguments
 
-1. **Ensure recording is enabled** (check Status panel)
+1. **Ensure recording is enabled** (check Experiments view → Recording (Advanced))
 
 2. **Run your application** as you normally would
 
@@ -87,17 +84,11 @@ FluxLoop will:
 
 ## Viewing Recording Status
 
-### From Status Panel
+### From Experiments View
 
-The **Status** view shows:
-- **Record Mode**: Enabled/Disabled
-- **Recording File**: Path to current recording file
-
-### From Command Palette
-
-```
-FluxLoop: Show Recording Status
-```
+The **Recording (Advanced)** section shows:
+- Recording files from `recordings/` directory
+- Click any file to open and inspect
 
 ### From Terminal
 
@@ -109,9 +100,7 @@ fluxloop record status
 
 ### From VSCode
 
-```
-FluxLoop: Disable Recording Mode
-```
+In the **Experiments** view, expand **Recording (Advanced)** and click **Disable Recording**.
 
 ### From Terminal
 
@@ -122,7 +111,6 @@ fluxloop record disable
 This:
 - Sets `FLUXLOOP_RECORD_ARGS=false` in `.env`
 - Optionally disables `replay_args` in simulation config
-- Updates Status panel
 
 ## Environment Considerations
 
@@ -157,9 +145,7 @@ If you recorded arguments in one environment but want to replay in another:
 ## Example Workflow
 
 1. **Enable recording:**
-   ```bash
-   fluxloop record enable
-   ```
+   In Experiments view → Recording (Advanced) → Enable Recording
 
 2. **Run your app and capture arguments:**
    ```bash
@@ -191,9 +177,7 @@ If you recorded arguments in one environment but want to replay in another:
    ```
 
 7. **Disable recording** when done:
-   ```bash
-   fluxloop record disable
-   ```
+   In Experiments view → Recording (Advanced) → Disable Recording
 
 ## Troubleshooting
 
@@ -207,6 +191,7 @@ If you recorded arguments in one environment but want to replay in another:
 ### Replay Fails During Experiment
 
 1. **Check `override_param_path`** matches your function signature
+
 2. **Verify recording file exists:**
    ```bash
    ls recordings/args_recording.jsonl

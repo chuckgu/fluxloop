@@ -4,27 +4,37 @@ sidebar_position: 2
 
 # Inputs View
 
-The **Inputs** view lets you design experiment scenarios without leaving VS Code. It surfaces base inputs, generated variations, and recordings in a single tree.
+The **Inputs** view lets you design experiment scenarios without leaving VS Code. It surfaces configuration, base input, generated variations, and recordings in a single tree.
 
 ## Layout
 
 ```
 FluxLoop
 └─ Inputs
-   ├─ Base Inputs (configs/input.yaml)
-   │   ├─ persona: novice_user
-   │   └─ input: "How do I create an account?"
-   ├─ Generated Inputs (inputs/generated.yaml)
-   │   └─ rephrase • persona=novice_user • 2025-01-17
-   └─ Recordings (recordings/*.jsonl)
-       └─ args_recording.jsonl
+   ├─ Configuration
+   │   ├─ Open Configuration (configs/input.yaml)
+   │   └─ Base Input
+   │       └─ "How do I create an account?"
+   ├─ Generate New Inputs…
+   └─ Generated Inputs (inputs/generated.yaml)
+       └─ rephrase • persona=novice_user • 2025-01-17
 ```
 
-### Base Inputs
-- Mirrors the structure of `configs/input.yaml`
-- Entries show persona name + snippet of the prompt
-- Double-click opens `configs/input.yaml` and jumps to the entry
-- Use the hover action **Edit configuration** to open the file in one click
+### Configuration
+
+The **Configuration** folder provides quick access to input settings:
+
+- **Open Configuration**: Opens `configs/input.yaml` for editing
+- **Base Input**: Shows the primary seed input used for generation
+  - Displays the first entry from `base_inputs[0]` in `configs/input.yaml`
+  - Click to open the configuration file directly
+
+### Base Input
+
+The base input is the seed that drives input generation:
+- Only the primary (first) base input is displayed in the tree
+- This input is used as the foundation for all variation strategies
+- Edit `configs/input.yaml` to modify or add more base inputs
 
 ### Generated Inputs
 - Populated after running **Generate New Inputs…**
@@ -32,20 +42,18 @@ FluxLoop
 - Clicking a node opens `inputs/generated.yaml` at the corresponding entry
 - Use **Refresh** icon to reload after editing the file manually
 
-### Recordings
-- Lists `.jsonl` files under `recordings/`
-- Shows recording size and last modified time
-- Clicking opens the JSONL file for inspection
-
 ## Generate New Inputs
 
-Use the **Generate New Inputs…** button in the tree header (or `FluxLoop: Generate Inputs` command). The wizard collects:
-- Generation mode (Deterministic / LLM)
-- Variation strategies (rephrase, verbose, concise, error_prone, persona_mix, multilingual, etc.)
-- Variation limit per base input
-- Output path (defaults to `inputs/generated.yaml`)
-- Overwrite/append + dry-run options
-- LLM provider, model, API key (securely stored if you allow it)
+Use the **Generate New Inputs…** button in the tree (or `FluxLoop: Generate Inputs` command). The wizard collects:
+
+1. **Generation Mode** (Deterministic / LLM)
+2. **Base Input Confirmation** – Review the primary base input; edit configuration if needed
+3. **Variation Strategies** – Select strategies (pre-checked based on `configs/input.yaml`)
+   - Selected strategies are saved back to `variation_strategies` in `configs/input.yaml`
+4. **Variation Limit** per base input
+5. **Output Path** (defaults to `inputs/generated.yaml`)
+6. **Overwrite/Append** + dry-run options
+7. **LLM Provider, Model, API Key** (securely stored if you allow it)
 
 Generated entries appear instantly under **Generated Inputs**.
 
@@ -55,23 +63,14 @@ Right-click on items to access common actions:
 
 | Item | Actions |
 |------|---------|
-| Base input | Open configuration / Copy ID |
+| Configuration | Open configuration |
+| Base input | Open configuration / Copy content |
 | Generated input | Open generated file / Remove entry |
-| Recordings | Open file / Reveal in Explorer |
 | Tree header | Generate inputs / Refresh tree |
-
-## When to Use Recordings
-
-Recording nodes remind you when argument capture is enabled. Use them to:
-- Verify that new calls are being appended to `args_recording.jsonl`
-- Manually inspect captured arguments before replay
-- Delete outdated recordings (context menu → Delete)
 
 ## Related Commands
 - `FluxLoop: Generate Inputs`
-- `FluxLoop: Enable Recording Mode`
-- `FluxLoop: Disable Recording Mode`
-- `FluxLoop: Show Recording Status`
+- `FluxLoop: Open Input Configuration`
 
 ## See Also
 - [Managing Inputs](../user-guide/managing-inputs.md)

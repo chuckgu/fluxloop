@@ -4,40 +4,18 @@ sidebar_position: 6
 
 # Integration View
 
-The **Integration** view provides a centralized dashboard for the Integration Assistant feature, combining MCP connection management, system status monitoring, and suggestion history.
+The **Integration** view provides a centralized dashboard for the Integration Assistant feature, combining system monitoring, console tools, MCP connection management, and suggestion history.
 
 ## Overview
 
 The Integration view is located in the FluxLoop activity bar and contains:
 
-- **MCP Connection**: Status and connection controls
-- **Flux Agent**: Launch the AI-powered integration assistant
 - **System Status**: Real-time checks for dependencies and environment
+- **System Console**: Tools for environment management and diagnostics
+- **Search in Documents**: Knowledge search via MCP
 - **Recent Suggestions**: History of knowledge searches and agent runs
 
 ## View Components
-
-### MCP Connection
-
-Shows the current state of the MCP server connection:
-
-- ✅ **Connected**: MCP server is ready
-- ⚠️ **Warning**: Package installed but index missing
-- ❌ **Error**: Package not installed or Python unavailable
-- ❓ **Unknown**: Status check pending
-
-**Actions**:
-- **Click** to connect/reconnect MCP
-- **Tooltip** shows installation path and last error (if any)
-
-### Flux Agent
-
-Launch button for running the integration assistant on selected files/folders.
-
-**Actions**:
-- Click **Run Flux Agent** → pick one or more folders/files from the selection dialog (no need to open them first)
-- Choose the mode (Integration today; Base Input / Experiment / Insight coming soon)
-- Provide OpenAI API key if prompted (securely stored via VS Code secrets when allowed)
 
 ### System Status
 
@@ -49,11 +27,38 @@ Expandable section showing dependency checks:
 | **Python Environment** | Python 3.11+ availability | ✅ Ready / ❌ Missing |
 | **fluxloop-mcp Package** | MCP server package | ✅ Installed / ❌ Not installed |
 | **MCP Index** | Knowledge base status | ✅ Ready / ⚠️ Missing / ❌ Error |
-| **Source Root** | `configs/project.yaml → source_root` | ✅ Set / ⚠️ Not set |
+| **Refresh Status** | Manual refresh button | - |
 
 **Auto-refresh**:
 - Status updates when project changes
-- Manual refresh via **Refresh Integration View** button
+- Manual refresh via **Refresh Status** button
+
+### System Console
+
+Tools for environment configuration and diagnostics:
+
+| Item | Description |
+|------|-------------|
+| **Show Installation Guide** | Opens comprehensive setup documentation |
+| **Select Environment** | Choose Python environment (Auto/Workspace/Global/Custom) |
+| **Show Environment** | Display current environment details |
+| **Connect MCP** | Check MCP status and install if needed |
+| **Run Doctor** | Run diagnostic checks on FluxLoop installation |
+
+#### Show Installation Guide
+
+Opens a detailed guide covering:
+- FluxLoop CLI installation steps
+- Python environment setup
+- MCP server configuration
+- Explanation of System Console tools
+
+### Search in Documents
+
+Launch button for querying documentation via MCP FAQ:
+- Click to open search input
+- Results appear in FluxLoop output channel
+- Recent queries saved to **Recent Suggestions**
 
 ### Recent Suggestions
 
@@ -64,18 +69,6 @@ Lists the 5 most recent knowledge searches and Flux Agent runs.
 **Actions**:
 - **Click** to view full suggestion in output channel or panel
 - **Right-click** → **Clear History** to remove all entries
-
-## Toolbar Actions
-
-The view toolbar (top-right) provides quick actions:
-
-| Button | Command | Description |
-|--------|---------|-------------|
-| 🔌 | Connect MCP | Check MCP status and install if needed |
-| 🤖 | Run Flux Agent | Launch integration assistant |
-| 🔍 | Knowledge Search | Query documentation with MCP FAQ |
-| 🔄 | Refresh | Update all status indicators |
-| 🗑️ | Clear History | Remove all suggestion history |
 
 ## Status Indicators
 
@@ -100,24 +93,21 @@ The view toolbar (top-right) provides quick actions:
 ### First-Time Setup
 
 1. Open **Integration** view
-2. Check **System Status**
+2. Expand **System Status** to check dependencies
 3. If any items show ❌:
-   - Click **MCP Connection** for installation guide
-   - Follow prompts to install missing components
-4. Once all items show ✅, you're ready to use Flux Agent
+   - Click **Show Installation Guide** in System Console
+   - Follow the setup instructions
+4. Once all items show ✅, you're ready to use integration features
 
 ### Daily Workflow
 
-1. Click **Run Flux Agent**
-2. Select the folders/files you want analyzed (e.g., `app/main.py`, `routers/`)
-3. Choose mode (Integration / Base Input / Experiment / Insight)
-4. Review the generated plan in the panel (or reopen it later from **Recent Suggestions**)
-5. Copy/apply the recommended edits manually
-6. Run the validation checklist (tests, linters, doctor) before committing
+1. Check **System Status** for any issues
+2. Use **Search in Documents** for quick documentation lookups
+3. Review **Recent Suggestions** for past queries
 
 ### Knowledge Search
 
-1. Click **Knowledge Search** button
+1. Click **Search in Documents**
 2. Enter your question
 3. Review answer in FluxLoop output channel
 4. Find the entry in **Recent Suggestions** for later reference
@@ -129,7 +119,6 @@ No default keyboard shortcuts are assigned. You can add custom shortcuts via:
 1. Open Keyboard Shortcuts (`Cmd+K Cmd+S` or `Ctrl+K Ctrl+S`)
 2. Search for "FluxLoop Integration"
 3. Assign your preferred shortcuts:
-   - `FluxLoop: Run Flux Agent`
    - `FluxLoop: Open Knowledge Search`
    - `FluxLoop: Connect MCP`
 
@@ -143,22 +132,8 @@ No default keyboard shortcuts are assigned. You can add custom shortcuts via:
 - Flux Agent suggestions can reference experiment results
 - Cross-link between integration plans and test outcomes
 
-### Status View (Merged)
-- System Status section in Integration view replaces standalone Status view
-- All dependency checks now centralized
-
-## Customization
-
-### Hide/Show Sections
-
-Currently all sections are visible by default. Future versions may support:
-- Collapsible root-level sections
-- Customizable status item filters
-- Suggestion history limits
-
 ## Next Steps
 
 - [Integration Assistant Overview](../integration-assistant/overview.md)
 - [Using Flux Agent](../integration-assistant/flux-agent.md)
 - [Knowledge Search](../integration-assistant/knowledge-search.md)
-

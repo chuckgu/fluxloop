@@ -4,13 +4,13 @@ sidebar_position: 3
 
 # Recording Commands
 
-FluxLoop provides dedicated commands for toggling and inspecting recording mode. Recording captures actual function arguments at runtime so you can replay them during experiments with generated variations.
+FluxLoop provides dedicated commands for toggling recording mode. Recording captures actual function arguments at runtime so you can replay them during experiments with generated variations.
 
-> Recording commands affect the `.env` file and `configs/simulation.yaml`. The Status view reflects the current state.
+> Recording commands affect the `.env` file and `configs/simulation.yaml`. The Experiments view reflects the current state in the **Recording (Advanced)** section.
 
 ---
 
-## FluxLoop: Enable Recording Mode
+## FluxLoop: Enable Recording
 
 **Command ID:** `fluxloop.enableRecording`
 
@@ -18,10 +18,10 @@ FluxLoop provides dedicated commands for toggling and inspecting recording mode.
 - Sets `FLUXLOOP_RECORD_ARGS=true` in `.env`
 - Enables `replay_args.enabled` in `configs/simulation.yaml`
 - Creates `recordings/` folder if missing
-- Updates Status view to **Record Mode: Enabled**
 
 ### Usage
-- Command Palette → `FluxLoop: Enable Recording Mode`
+- Experiments view → Recording (Advanced) → **Enable Recording**
+- Command Palette → `FluxLoop: Enable Recording`
 - Equivalent CLI: `fluxloop record enable`
 
 ### When to Use
@@ -30,41 +30,47 @@ FluxLoop provides dedicated commands for toggling and inspecting recording mode.
 
 ---
 
-## FluxLoop: Disable Recording Mode
+## FluxLoop: Disable Recording
 
 **Command ID:** `fluxloop.disableRecording`
 
 ### What It Does
 - Sets `FLUXLOOP_RECORD_ARGS=false` in `.env`
 - Optionally prompts to disable `replay_args` (leave enabled if you still want to replay)
-- Updates Status view to **Record Mode: Disabled**
 
 ### Usage
-- Command Palette → `FluxLoop: Disable Recording Mode`
+- Experiments view → Recording (Advanced) → **Disable Recording**
+- Command Palette → `FluxLoop: Disable Recording`
 - Equivalent CLI: `fluxloop record disable`
 
-Use this after you’ve collected enough recordings or want to prevent further capture in production.
+Use this after you've collected enough recordings or want to prevent further capture in production.
 
 ---
 
-## FluxLoop: Show Recording Status
+## Viewing Recording Status
 
-**Command ID:** `fluxloop.showRecordingStatus`
+Recording status can be checked via:
 
-Displays a modal summary of the current recording configuration:
+### From Experiments View
+Expand **Recording (Advanced)** to see:
+- Recording control buttons (Enable/Disable)
+- List of recording files from `recordings/` directory
+
+### From Terminal
+```bash
+fluxloop record status
+```
+
+This displays:
 - Enabled / disabled state
 - Recording file path (e.g., `recordings/args_recording.jsonl`)
 - Override parameter path configured in `configs/simulation.yaml`
 - Last modified timestamp (if file exists)
-
-### Usage
-- Command Palette → `FluxLoop: Show Recording Status`
-- Equivalent CLI: `fluxloop record status`
 
 ---
 
 ## Related Commands
 
 - `FluxLoop: Run Experiment` – Honors `replay_args` settings when executing
-- `FluxLoop: Manage Inputs` – Generate variations that get injected into recorded traces
+- `FluxLoop: Generate Inputs` – Generate variations that get injected into recorded traces
 - [Recording Mode user guide](../user-guide/recording-mode.md) – End-to-end workflow

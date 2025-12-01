@@ -8,42 +8,39 @@ Manage and run experiments from a centralized view in the FluxLoop Activity Bar.
 
 ## Overview
 
-The **Experiments** view provides quick access to your current experiment configuration, recording mode controls, and recent experiment runs. It serves as the main control panel for experiment execution.
+The **Experiments** view provides quick access to your current experiment configuration, recording controls, and recent experiment runs. It serves as the main control panel for experiment execution.
 
 ## Tree Structure
 
 ```
 Experiments
-├─ Current Experiment (configs/simulation.yaml)
+├─ Configuration (configs/simulation.yaml)
 │  ├─ Open configuration
 │  ├─ Runner: my_module.agent
-│  ├─ Iterations: 10
-│  └─ Record Mode: Disabled
+│  └─ Iterations: 10
 ├─ Run Experiment (action)
-├─ Recording Mode
-│  ├─ Enable Recording Mode
-│  ├─ Disable Recording Mode
-│  └─ Show Recording Status
 ├─ Experiments
 │  └─ customer_support_test_20251104_143610
 │     ├─ summary.json
 │     ├─ traces.jsonl
+│     ├─ trace_summary.jsonl
 │     ├─ observations.jsonl
 │     ├─ errors.json
 │     └─ logs.json
-└─ Recordings
-   └─ args_recording.jsonl
+└─ Recording (Advanced)
+   ├─ Enable Recording
+   ├─ Disable Recording
+   └─ (recordings/*.jsonl files)
 ```
 
 ## Features
 
-### Current Experiment
+### Configuration
 
 Displays configuration from `configs/simulation.yaml`:
-- **Configuration file**: Click to open in editor
+- **Open configuration**: Click to open in editor
 - **Runner**: Shows `module_path` and `function_name`
 - **Iterations**: Current iteration count from config
-- **Record Mode**: Shows if argument recording is enabled
 
 If no simulation config exists, shows placeholder message.
 
@@ -57,12 +54,13 @@ Root-level action button (no need to expand folders):
 
 See [Running Experiments](../user-guide/running-experiments.md) for details.
 
-### Recording Mode
+### Recording (Advanced)
 
-Collapsible section with three actions:
-- **Enable Recording Mode**: Turns on argument recording (updates `.env` and config)
-- **Disable Recording Mode**: Turns off argument recording
-- **Show Recording Status**: Displays current recording state in terminal
+Collapsible section for argument recording controls:
+- **Enable Recording**: Turns on argument recording (updates `.env` and config)
+- **Disable Recording**: Turns off argument recording
+
+Below the controls, any existing recording files from `recordings/` are listed.
 
 For complex agents (WebSocket handlers, callbacks), recording captures actual arguments for replay. See [Recording Mode Guide](../user-guide/recording-mode.md).
 
@@ -72,14 +70,7 @@ Lists recent experiment runs (same as Results view):
 - Grouped under **Experiments** for organization
 - Shows up to 10 most recent runs
 - Each displays timestamp and success rate
-- Expand to see artifact files
-
-### Recordings
-
-Shows recorded argument files from `recordings/` directory:
-- Lists up to 10 most recent `.jsonl` files
-- Click to open recording file
-- Used for argument replay during experiments
+- Expand to see artifact files including `trace_summary.jsonl`
 
 ## Actions
 
@@ -93,9 +84,8 @@ Opens `configs/simulation.yaml` in editor for direct editing.
 
 ### Recording Controls
 
-- **Enable**: Runs `fluxloop record enable` (or uses VSCode command)
-- **Disable**: Runs `fluxloop record disable`
-- **Status**: Runs `fluxloop record status`
+- **Enable Recording**: Runs `fluxloop record enable` (or uses VSCode command)
+- **Disable Recording**: Runs `fluxloop record disable`
 
 ## File Watchers
 
