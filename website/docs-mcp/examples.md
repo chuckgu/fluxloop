@@ -341,7 +341,9 @@ jobs:
         run: |
           python - <<'PY'
           from fluxloop_mcp.tools import RunIntegrationWorkflowTool
-          result = RunIntegrationWorkflowTool().run({"root": "."})
+          result = RunIntegrationWorkflowTool().run(
+              {"root": ".", "question": "How do I integrate FluxLoop here?"}
+          )
           validation = result["validation"]
           if not validation["valid"]:
               raise SystemExit(f"Validation failed: {validation['issues']}")

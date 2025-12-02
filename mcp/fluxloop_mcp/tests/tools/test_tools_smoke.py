@@ -129,6 +129,7 @@ def test_run_integration_workflow_success(tmp_path: Path, monkeypatch: pytest.Mo
     result = RunIntegrationWorkflowTool().run(
         {
             "root": str(repo_root),
+            "question": "How do I add FluxLoop to this repo?",
             "context": {
                 "scope": "files",
                 "targets": [str(repo_root / "src" / "server.ts")],
@@ -146,6 +147,7 @@ def test_run_integration_workflow_success(tmp_path: Path, monkeypatch: pytest.Mo
         "repo_profile",
         "integration_context",
         "llm_inputs",
+        "question",
     }
     assert result["validation"]["valid"] is True
     frameworks = {entry["name"] for entry in result["detection"]["frameworks"]}
@@ -160,7 +162,12 @@ def test_run_integration_workflow_success(tmp_path: Path, monkeypatch: pytest.Mo
 def test_run_integration_workflow_missing_root(tmp_path: Path) -> None:
     missing_root = tmp_path / "not-real"
 
-    result = RunIntegrationWorkflowTool().run({"root": str(missing_root)})
+    result = RunIntegrationWorkflowTool().run(
+        {
+            "root": str(missing_root),
+            "question": "Why can't FluxLoop run here?",
+        }
+    )
 
     assert result == {"error": f"root path does not exist: {missing_root.resolve()}"}
 
@@ -180,6 +187,7 @@ def test_run_integration_workflow_no_framework(tmp_path: Path, monkeypatch: pyte
     result = tool.run(
         {
             "root": str(repo_root),
+            "question": "What frameworks are available?",
             "context": {
                 "scope": "folder",
                 "targets": [str(repo_root / "src")],

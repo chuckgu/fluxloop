@@ -98,7 +98,9 @@ print(frameworks)
 ```python
 from fluxloop_mcp.tools import RunIntegrationWorkflowTool
 
-result = RunIntegrationWorkflowTool().run({"root": "."})
+result = RunIntegrationWorkflowTool().run(
+    {"root": ".", "question": "How do I integrate FluxLoop here?"}
+)
 print(result.keys())  # profile, detection, integration_steps, edit_plan, validation
 ```
 
