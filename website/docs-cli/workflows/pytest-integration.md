@@ -82,6 +82,128 @@ pytest -k fluxloop --maxfail=1
 pytest
 ```
 
+## Adapter Workflow for Existing Agents
+
+Use the pytest bridge as an *adapter layer* when your AI agent already lives inside another repository (e.g., a LangGraph tutorial project) and FluxLoop needs to drive that code end-to-end.
+
+### 1. Expose a FluxLoop Runner Entry Point
+
+Create a module such as `customer_support/runner.py` and define a `run` function. The FluxLoop python-function runner imports and calls this entry point directly.
+
+```python
+"""FluxLoop simulation runner entry point."""
+from __future__ import annotations
+
+import uuid
+from typing import Any, Dict, Optional
+
+from dotenv import load_dotenv
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+
+from customer_support import prepare_database
+from customer_support.data.travel_db import get_default_storage_dir
+from customer_support.graphs import build_part4_graph
+from customer_support.tracing import init_tracing, trace_graph_execution
+
+DEFAULT_PROVIDER = "anthropic"
+
+@trace_graph_execution
+def run(input_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    load_dotenv()
+    init_tracing()
+
+    payload = input_payload or {}
+    user_message = payload.get("message", "Hello, I need help with my flight.")
+    passenger_id = payload.get("passenger_id", "3442 587242")
+    provider = payload.get("provider", DEFAULT_PROVIDER).lower()
+    thread_id = payload.get("thread_id") or str(uuid.uuid4())
+
+    data_dir = get_default_storage_dir()
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db_path = prepare_database(target_dir=data_dir, overwrite=False)
+
+    if provider == "openai":
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=1)
+    else:
+        llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=1)
+
+    graph = build_part4_graph(str(db_path), llm=llm)
+    result = graph.invoke({"messages": [("user", user_message)]}, config={
+        "configurable": {"passenger_id": passenger_id, "thread_id": thread_id}
+    })
+
+    messages = result.get("messages", [])
+    response = ""
+    if messages and hasattr(messages[-1], "content"):
+        response = messages[-1].content
+
+    return {
+        "response": response,
+        "messages": [
+            {"role": getattr(m, "type", "unknown"), "content": getattr(m, "content", str(m))}
+            for m in messages
+        ],
+        "thread_id": thread_id,
+    }
+```
+
+### 2. Align `simulation.yaml`
+
+Point the runner section at the entry point you just created. If you need additional import paths, add them to `python_path` and FluxLoop will extend `sys.path` for you.
+
+```yaml
+runner:
+  module_path: "customer_support.runner"
+  function_name: "run"
+  working_directory: /Users/you/projects/customer-support
+  python_path:
+    - src
+  timeout_seconds: 120
+  max_retries: 3
+```
+
+Even if the tutorial removes metrics such as `task_completion`, FluxLoop CLI now injects default thresholds so the evaluation report keeps rendering.
+
+### 3. Write a Pytest Adapter Test
+
+The pytest file itself acts as the adapter that launches the FluxLoop experiment.
+
+```python
+# tests/test_customer_support.py
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+def test_customer_support_agent(fluxloop_runner):
+    result = fluxloop_runner(
+        project_root=PROJECT_ROOT,
+        simulation_config=PROJECT_ROOT / "configs" / "simulation.yaml",
+        overrides={
+            "iterations": 1,
+            "runner.working_directory": str(PROJECT_ROOT / "langgraph" / "customer-support"),
+            "runner.python_path.0": "src",
+        },
+        env={
+            "PYTHONPATH": str(PROJECT_ROOT / "langgraph" / "customer-support"),
+            "OPENAI_API_KEY": "...",
+            "ANTHROPIC_API_KEY": "...",
+        },
+        timeout=180,
+    )
+    result.require_success("customer support agent")
+```
+
+Before running the test for the first time, install the SDK locally (`pip install -e packages/sdk`) and verify `python -c "import fluxloop; print(fluxloop.__version__)"`. Use `env={"PYTHONPATH": ...}` to append extra agent source folders whenever imports would otherwise fail.
+
+### 4. Run from Pytest or CI
+
+```bash
+pytest tests/test_customer_support.py -k customer_support_agent -v
+```
+
+Use the same command inside GitHub Actions or GitLab CI (`pytest -k customer_support_agent --maxfail=1`). Upload `result.output_dir / report.html` as an artifact to share the regression report with the rest of your team.
+
 ## Available Fixtures
 
 ### fluxloop_runner
@@ -622,34 +744,6 @@ def test_with_custom_processing(fluxloop_runner):
     p95 = sorted(durations)[int(len(durations) * 0.95)]
     
     assert p95 < 1000, f"P95 latency too high: {p95}ms"
-```
-
-### Integration with Other Tools
-
-Combine with other testing tools:
-
-```python
-def test_with_deepeval(fluxloop_runner):
-    """Integrate with DeepEval for LLM evaluation."""
-    result = fluxloop_runner(
-        project_root=Path.cwd(),
-        simulation_config=Path("configs/simulation.yaml"),
-        overrides={"iterations": 5},
-    )
-    
-    # Use per_trace_path with DeepEval
-    from deepeval import evaluate
-    from deepeval.metrics import AnswerRelevancyMetric
-    
-    # Read traces and evaluate
-    with open(result.per_trace_path) as f:
-        traces = [json.loads(line) for line in f]
-    
-    metric = AnswerRelevancyMetric()
-    scores = [metric.measure(t["input"], t["output"]) for t in traces]
-    
-    avg_score = sum(scores) / len(scores)
-    assert avg_score > 0.7
 ```
 
 ## Troubleshooting

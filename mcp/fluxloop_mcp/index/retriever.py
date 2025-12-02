@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from math import sqrt
 from pathlib import Path
 from typing import Dict, Iterable, List, Protocol, Tuple
@@ -40,9 +41,32 @@ class Retriever:
         if not self._chunks:
             return []
         query_vec = self.embedder.embed([query])[0]
-        scored = []
+        lower_query = query.lower()
+        lexical_tokens = [token for token in re.split(r"\W+", lower_query) if token]
+
+        scored: List[Tuple[Dict, float]] = []
         for chunk, vector in zip(self._chunks, self._vectors):
-            score = cosine_similarity(query_vec, vector)
+            base_score = cosine_similarity(query_vec, vector)
+            content = chunk.get("content", "")
+            content_lower = content.lower()
+
+            lexical_score = 0.0
+            if lower_query and lower_query in content_lower:
+                lexical_score = 1.0
+            elif lexical_tokens:
+                matches = sum(1 for token in lexical_tokens if token in content_lower)
+                lexical_score = matches / len(lexical_tokens)
+
+            path_boost = 0.0
+            source = chunk.get("metadata", {}).get("source")
+            if isinstance(source, str):
+                normalized = source.lstrip("./")
+                if normalized.startswith("packages/website/"):
+                    path_boost = 0.2
+                elif normalized.startswith("docs/"):
+                    path_boost = 0.1
+
+            score = base_score + lexical_score + path_boost
             scored.append((chunk, score))
         scored.sort(key=lambda item: item[1], reverse=True)
         return scored[:k]

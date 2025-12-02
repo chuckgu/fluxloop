@@ -62,6 +62,7 @@ const sidebars: SidebarsConfig = {
         'workflows/basic-workflow',
         'workflows/multi-turn-workflow',
         'workflows/recording-workflow',
+        'workflows/pytest-integration',
         'workflows/ci-cd-integration',
       ],
     },

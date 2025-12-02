@@ -2,7 +2,7 @@
   "name": "fluxloop",
   "displayName": "FluxLoop",
   "description": "AI Agent Simulation and Observability",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "publisher": "fluxloop",
   "engines": {
     "vscode": "^1.74.0"

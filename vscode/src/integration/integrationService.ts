@@ -60,6 +60,13 @@ const FLUX_AGENT_MODES: { id: FluxAgentMode; label: string; description: string 
     },
 ];
 
+const INTEGRATION_CONTEXT_PROMPT =
+    [
+        'Prepare FluxLoop integration context.',
+        'Include runner settings from configs/simulation.yaml (module_path, function_name, working_directory, target) so the agent can update simulation.yaml accurately.',
+        'Also summarize pytest bridge guidance so the agent knows how to wire fluxloop_runner tests.',
+    ].join(' ');
+
 export class IntegrationService {
     private readonly output = OutputChannelManager.getInstance();
     private readonly refreshLock = new Map<string, boolean>();
@@ -765,7 +772,7 @@ export class IntegrationService {
         };
 
         if (!('question' in payload) && toolName === 'IntegrationContextTool') {
-            payload['question'] = 'Prepare FluxLoop integration context.';
+            payload['question'] = INTEGRATION_CONTEXT_PROMPT;
         }
 
         const script = `

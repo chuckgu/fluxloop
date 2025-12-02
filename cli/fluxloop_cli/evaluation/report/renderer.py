@@ -223,7 +223,7 @@ class ReportRenderer:
                     float(defaults["good"]),
                     float(defaults["fair"]),
                 )
-
+                    
         eff_flags = {}
         if "output_tokens" in efficiency:
             eff_flags["verbose"] = efficiency["output_tokens"].get("std_multiplier", 2) * 1000 # Approximation
