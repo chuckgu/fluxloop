@@ -22,7 +22,11 @@ def test_multi_mode_contexts_regression(tmp_path: Path, monkeypatch: pytest.Monk
     index_dir = seed_index(tmp_path)
     monkeypatch.setenv("FLUXLOOP_MCP_INDEX_DIR", str(index_dir))
 
-    integration = IntegrationContextTool().fetch({"root": str(repo_root), "context": {"scope": "workspace"}})
+    integration = IntegrationContextTool().fetch({
+        "root": str(repo_root),
+        "question": "How do I wire FluxLoop into this Express service?",
+        "context": {"scope": "workspace"},
+    })
     assert "workflow" in integration
     assert integration["workflow"].get("integration_steps")
     assert integration["structure_context"]

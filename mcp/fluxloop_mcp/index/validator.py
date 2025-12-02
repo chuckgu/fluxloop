@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List
 
+from .bootstrap import ensure_index
+
 
 REQUIRED_CHUNK_FIELDS = {"id", "content", "metadata"}
 REQUIRED_METADATA_FIELDS = {"source"}
@@ -103,6 +105,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 
 def main(argv: List[str] | None = None) -> None:
     args = parse_args(argv or sys.argv[1:])
+    try:
+        ensure_index(args.index_dir)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[fluxloop-mcp] warning: failed to seed bundled index: {exc}", file=sys.stderr)
     issues = validate_chunks(args.index_dir)
 
     if not issues:

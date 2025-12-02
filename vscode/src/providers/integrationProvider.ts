@@ -49,7 +49,6 @@ const DEFAULT_SYSTEM_STATUSES: SystemStatusItem[] = [
     { id: 'fluxloop-cli', label: 'FluxLoop CLI', state: 'unknown', description: 'Status pending' },
     { id: 'python', label: 'Python Environment', state: 'unknown', description: 'Status pending' },
     { id: 'fluxloop-mcp', label: 'fluxloop-mcp Package', state: 'unknown', description: 'Status pending' },
-    { id: 'mcp-index', label: 'MCP Index', state: 'unknown', description: 'Status pending' },
 ];
 
 const MAX_SUGGESTIONS = 5;

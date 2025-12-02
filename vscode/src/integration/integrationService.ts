@@ -86,7 +86,7 @@ export class IntegrationService {
             statuses.push(await this.checkFluxloopCli());
             statuses.push(await this.checkPython());
             statuses.push(await this.checkMcpPackage());
-            statuses.push(await this.checkMcpIndex());
+            // MCP index check removed (bundled index ships with CLI)
 
             this.lastStatuses = statuses;
             this.integrationProvider.setSystemStatuses(statuses);
@@ -228,10 +228,11 @@ export class IntegrationService {
                     this.output.appendLine('='.repeat(60));
                     this.output.appendLine('[Flux Agent] Running Flux Agent MCP pipeline...');
 
-                    const integrationContext = await this.promptIntegrationContext(
-                        workspacePath,
-                        options?.useDefaultContext ?? false,
-                    );
+                    const defaultContext = options?.useDefaultContext
+                        ? this.createDefaultContextSelection(workspacePath)
+                        : undefined;
+                    const integrationContext =
+                        defaultContext ?? (await this.promptIntegrationContext(workspacePath, true));
                     const mode: FluxAgentMode = 'integration';
                     const modeLabel = this.getModeLabel(mode);
                     const primaryTarget = integrationContext.targets[0] ?? integrationContext.workspacePath;
@@ -386,27 +387,6 @@ export class IntegrationService {
         };
     }
 
-    private async checkMcpIndex(): Promise<SystemStatusItem> {
-        const defaultPath = path.join(os.homedir(), '.fluxloop', 'mcp', 'index', 'dev');
-
-        try {
-            await fs.access(defaultPath);
-            return {
-                id: 'mcp-index',
-                label: 'MCP Index',
-                state: 'ok',
-                description: 'Default index located.',
-            };
-        } catch {
-            return {
-                id: 'mcp-index',
-                label: 'MCP Index',
-                state: 'warn',
-                description: 'Index missing. Run scripts/rebuild_index.sh to build it.',
-            };
-        }
-    }
-
     private async ensureOpenAIApiKey(): Promise<string> {
         const secretKey = await this.context.secrets.get('fluxloop.openaiApiKey');
         if (secretKey) {
@@ -541,7 +521,7 @@ export class IntegrationService {
 
     private async promptIntegrationContext(
         workspacePath: string,
-        preferDefaultSelection: boolean,
+        preferDefaultSelection = false,
     ): Promise<IntegrationContextSelection> {
         const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
         let selectedWorkspace = workspacePath;
@@ -670,6 +650,20 @@ export class IntegrationService {
             return project.path;
         }
         return workspacePath;
+    }
+
+    private createDefaultContextSelection(workspacePath: string): IntegrationContextSelection | undefined {
+        const target = this.resolveDefaultContextTarget(workspacePath);
+        if (!target) {
+            return undefined;
+        }
+
+        return {
+            workspacePath,
+            scope: 'folder',
+            targets: [target],
+            summary: this.buildContextSummary(workspacePath, 'Target source root', [target]),
+        };
     }
 
     private buildContextSummary(workspacePath: string, scopeLabel: string, targets: string[]): string {

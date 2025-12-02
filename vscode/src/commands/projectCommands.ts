@@ -628,20 +628,18 @@ export class ProjectCommands {
             }
         }
 
-        const scriptPath = this.findSetupScript(root);
-        if (!scriptPath) {
-            void vscode.window.showWarningMessage(
-                'Could not locate setup_fluxloop_env.sh in this workspace. Please install the FluxLoop packages manually.'
-            );
-            this.log('[Project Init] setup_fluxloop_env.sh not found in workspace.');
+        const scriptInfo = this.findSetupScript(root);
+        if (!scriptInfo) {
+            await this.showManualSetupInstructions(root);
+            this.log('[Project Init] setup_fluxloop_env.sh not found; prompted user with manual instructions.');
             return false;
         }
 
         const targetArg = this.quotePath(root);
-        const command = `bash ${this.quotePath(scriptPath)} --target-source-root ${targetArg}`;
+        const command = `bash ${this.quotePath(scriptInfo.path)} --target-source-root ${targetArg}`;
         const terminal = vscode.window.createTerminal({
             name: 'FluxLoop Setup Script',
-            cwd: path.dirname(scriptPath)
+            cwd: scriptInfo.useProjectCwd ? root : path.dirname(scriptInfo.path)
         });
         terminal.show();
         terminal.sendText(command);
@@ -651,17 +649,21 @@ export class ProjectCommands {
         return true;
     }
 
-    private findSetupScript(environmentRoot: string): string | undefined {
-        const candidates = new Set<string>();
+    private findSetupScript(environmentRoot: string): { path: string; useProjectCwd?: boolean } | undefined {
+        const candidates: Array<{ path: string; useProjectCwd?: boolean }> = [];
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (workspaceRoot) {
-            candidates.add(path.join(workspaceRoot, 'packages', 'cli', 'scripts', 'setup_fluxloop_env.sh'));
-            candidates.add(path.join(workspaceRoot, 'scripts', 'setup_fluxloop_env.sh'));
+            candidates.push({ path: path.join(workspaceRoot, 'packages', 'cli', 'scripts', 'setup_fluxloop_env.sh') });
+            candidates.push({ path: path.join(workspaceRoot, 'scripts', 'setup_fluxloop_env.sh') });
         }
-        candidates.add(path.join(environmentRoot, 'scripts', 'setup_fluxloop_env.sh'));
+        candidates.push({ path: path.join(environmentRoot, 'scripts', 'setup_fluxloop_env.sh') });
+        candidates.push({
+            path: this.context.asAbsolutePath(path.join('resources', 'scripts', 'setup_fluxloop_env.sh')),
+            useProjectCwd: true,
+        });
 
         for (const candidate of candidates) {
-            if (fs.existsSync(candidate)) {
+            if (fs.existsSync(candidate.path)) {
                 return candidate;
             }
         }
@@ -673,6 +675,34 @@ export class ProjectCommands {
             return `"${value.replace(/"/g, '\\"')}"`;
         }
         return value;
+    }
+
+    private async showManualSetupInstructions(root: string): Promise<void> {
+        const commands = [
+            `cd ${this.quotePath(root)}`,
+            'python3 -m venv .venv',
+            'source .venv/bin/activate',
+            'pip install fluxloop-cli fluxloop fluxloop-mcp',
+            '# rerun "FluxLoop: Select Environment" after installation completes',
+        ].join('\n');
+
+        const choice = await vscode.window.showWarningMessage(
+            'setup_fluxloop_env.sh was not found in this workspace. Run the default virtual-environment commands manually.',
+            'Copy Commands',
+            'Open Terminal',
+        );
+
+        if (choice === 'Copy Commands') {
+            await vscode.env.clipboard.writeText(commands);
+            void vscode.window.showInformationMessage('FluxLoop setup commands copied to clipboard.');
+        } else if (choice === 'Open Terminal') {
+            const terminal = vscode.window.createTerminal({
+                name: 'FluxLoop Manual Setup',
+                cwd: root,
+            });
+            terminal.show();
+            terminal.sendText(commands);
+        }
     }
 
     private log(message: string): void {

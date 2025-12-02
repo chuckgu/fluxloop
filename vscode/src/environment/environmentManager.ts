@@ -336,23 +336,34 @@ export class EnvironmentManager implements vscode.Disposable {
     }
 
     private buildEnvironmentCandidates(root: string): EnvironmentCandidate[] {
-        const directories: Array<{ dir: string; type: EnvironmentType }> = [
-            { dir: path.join(root, '.venv'), type: 'venv' },
-            { dir: path.join(root, 'venv'), type: 'venv' },
-            { dir: path.join(root, 'env'), type: 'venv' },
-            { dir: path.join(root, '.env'), type: 'venv' },
-            { dir: path.join(root, '.conda'), type: 'conda' }
-        ];
+        const directories: EnvironmentCandidate[] = [];
+        const seen = new Set<string>();
+
+        const pushCandidate = (dir: string, type: EnvironmentType) => {
+            const normalized = path.resolve(dir);
+            if (seen.has(normalized)) {
+                return;
+            }
+            if (!fs.existsSync(normalized) || !fs.statSync(normalized).isDirectory()) {
+                return;
+            }
+            seen.add(normalized);
+            directories.push({ baseDir: normalized, type });
+        };
+
+        pushCandidate(root, 'workspace');
+        pushCandidate(path.join(root, '.venv'), 'venv');
+        pushCandidate(path.join(root, 'venv'), 'venv');
+        pushCandidate(path.join(root, 'env'), 'venv');
+        pushCandidate(path.join(root, '.env'), 'venv');
+        pushCandidate(path.join(root, '.conda'), 'conda');
 
         const project = ProjectContext.getActiveProject();
         if (project?.path && project.sourceRoot) {
-            const candidate = path.resolve(project.path, project.sourceRoot, '.venv');
-            directories.push({ dir: candidate, type: 'venv' });
+            pushCandidate(path.resolve(project.path, project.sourceRoot, '.venv'), 'venv');
         }
 
-        return directories
-            .filter(entry => fs.existsSync(entry.dir) && fs.statSync(entry.dir).isDirectory())
-            .map(entry => ({ baseDir: entry.dir, type: entry.type }));
+        return directories;
     }
 
     private inspectCandidate(candidate: EnvironmentCandidate): DetectedEnvironment {
