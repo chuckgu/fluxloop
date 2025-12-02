@@ -13,6 +13,24 @@ from jinja2 import Environment, FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_METRIC_THRESHOLDS = {
+    "task_completion": {"good": 80, "fair": 60},
+    "hallucination": {"good": 5, "fair": 15},
+    "relevance": {"good": 90, "fair": 80},
+    "tool_usage": {"good": 90, "fair": 80},
+    "user_satisfaction": {"good": 70, "fair": 50},
+    "clarity": {"good": 90, "fair": 80},
+    "persona_consistency": {"good": 85, "fair": 70},
+}
+
+DISPLAY_TO_CONFIG_METRIC_KEYS = {"tool_usage": "tool_usage_appropriateness"}
+CONFIG_TO_DISPLAY_METRIC_KEYS = {
+    config_key: display_key for display_key, config_key in DISPLAY_TO_CONFIG_METRIC_KEYS.items()
+}
+GENERIC_THRESHOLD_FALLBACK = {"good": 80, "fair": 60}
+INVERTED_METRICS = {"hallucination"}
+
+
 class ReportRenderer:
     """Prepares data and renders the HTML report."""
 
@@ -155,28 +173,57 @@ class ReportRenderer:
         }
 
     def _transform_eval_criteria(self, eval_config: Dict[str, Any]) -> Dict[str, Any]:
-        metrics = eval_config.get("metrics", {})
-        efficiency = eval_config.get("efficiency", {})
-        
-        key_map = {"tool_usage_appropriateness": "tool_usage"}
-        thresholds = {}
-        
-        for k, v in metrics.items():
-            if "thresholds" in v:
-                thresh = v["thresholds"]
-                good, fair = thresh.get("good", 80), thresh.get("fair", 60)
-                norm_key = key_map.get(k, k)
-                
-                # Inverted logic handling for display strings
-                if k == "hallucination":
-                    thresholds[norm_key] = {
-                        "good": f"<={good}%", "fair": f"{good}-{fair}%", "poor": f">{fair}%"
-                    }
-                else:
-                    thresholds[norm_key] = {
-                        "good": f">={good}%", "fair": f"{fair}-{good}%", "poor": f"<{fair}%"
-                    }
-                    
+        metrics_cfg = eval_config.get("metrics", {}) or {}
+        efficiency = eval_config.get("efficiency", {}) or {}
+        thresholds: Dict[str, Dict[str, str]] = {}
+
+        def _coerce_number(value: Any, fallback: float) -> float:
+            if isinstance(value, (int, float)):
+                return float(value)
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return float(fallback)
+
+        def _format_number(value: float) -> str:
+            if value.is_integer():
+                return str(int(value))
+            return str(value)
+
+        def _register_threshold(display_key: str, good_val: float, fair_val: float) -> None:
+            good_text, fair_text = _format_number(good_val), _format_number(fair_val)
+            if display_key in INVERTED_METRICS:
+                thresholds[display_key] = {
+                    "good": f"<={good_text}%",
+                    "fair": f"{good_text}-{fair_text}%",
+                    "poor": f">{fair_text}%",
+                }
+            else:
+                thresholds[display_key] = {
+                    "good": f">={good_text}%",
+                    "fair": f"{fair_text}-{good_text}%",
+                    "poor": f"<{fair_text}%",
+                }
+
+        def _resolve_thresholds(display_key: str, metric_cfg: Dict[str, Any]) -> None:
+            defaults = DEFAULT_METRIC_THRESHOLDS.get(display_key, GENERIC_THRESHOLD_FALLBACK)
+            thresholds_cfg = metric_cfg.get("thresholds", {})
+            good_val = _coerce_number(thresholds_cfg.get("good"), defaults["good"])
+            fair_val = _coerce_number(thresholds_cfg.get("fair"), defaults["fair"])
+            _register_threshold(display_key, good_val, fair_val)
+
+        for cfg_key, cfg_value in metrics_cfg.items():
+            display_key = CONFIG_TO_DISPLAY_METRIC_KEYS.get(cfg_key, cfg_key)
+            _resolve_thresholds(display_key, cfg_value)
+
+        for display_key, defaults in DEFAULT_METRIC_THRESHOLDS.items():
+            if display_key not in thresholds:
+                _register_threshold(
+                    display_key,
+                    float(defaults["good"]),
+                    float(defaults["fair"]),
+                )
+
         eff_flags = {}
         if "output_tokens" in efficiency:
             eff_flags["verbose"] = efficiency["output_tokens"].get("std_multiplier", 2) * 1000 # Approximation

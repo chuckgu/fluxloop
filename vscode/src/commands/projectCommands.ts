@@ -600,7 +600,17 @@ export class ProjectCommands {
 
         if (normalizedEnvironment.startsWith(`${normalizedProject}${path.sep}`)) {
             const relative = path.relative(normalizedProject, normalizedEnvironment);
-            return relative || '.';
+            if (!relative) {
+                return '.';
+            }
+
+            const firstSegment = relative.split(path.sep)[0];
+            const knownEnvFolders = new Set<string>(['.venv', 'venv', '.env', 'env', '.conda']);
+            if (knownEnvFolders.has(firstSegment)) {
+                return '.';
+            }
+
+            return relative.replace(/\\/g, '/') || '.';
         }
 
         return normalizedEnvironment;
