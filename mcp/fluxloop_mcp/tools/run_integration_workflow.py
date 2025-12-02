@@ -29,6 +29,14 @@ class RunIntegrationWorkflowTool:
 
     def run(self, payload: Dict) -> Dict:
         root = payload.get("root", ".")
+        question = str(payload.get("question") or "").strip()
+        if not question:
+            return {
+                "error": {
+                    "code": "missing_question",
+                    "message": "run_integration_workflow requires a non-empty question prompt.",
+                }
+            }
 
         # Step 1: Analyze repository
         profile = self.analyze_tool.analyze({"root": root})
@@ -51,6 +59,7 @@ class RunIntegrationWorkflowTool:
             return repo_profile_v2
 
         integration_context = self._collect_context(root, context_payload)
+        integration_context["question"] = question
 
         if not frameworks:
             empty_steps: Dict[str, object] = {"steps": [], "framework": None}
@@ -123,6 +132,7 @@ class RunIntegrationWorkflowTool:
             "repo_profile": repo_profile_v2,
             "integration_context": integration_context,
             "llm_inputs": llm_inputs,
+            "question": question,
         }
 
     def _collect_context(self, root: str, context_payload: Optional[Dict]) -> Dict:

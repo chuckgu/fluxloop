@@ -2,7 +2,7 @@
   "name": "fluxloop",
   "displayName": "FluxLoop",
   "description": "AI Agent Simulation and Observability",
-  "version": "0.1.8",
+  "version": "0.1.10",
   "publisher": "fluxloop",
   "engines": {
     "vscode": "^1.74.0"
@@ -198,6 +198,11 @@
       {
         "command": "fluxloop.integration.showSetupGuide",
         "title": "Show Integration Setup Guide",
+        "category": "FluxLoop Integration"
+      },
+      {
+        "command": "fluxloop.integration.showPlaygroundGuide",
+        "title": "Show Playground Simulation Guide",
         "category": "FluxLoop Integration"
       },
       {

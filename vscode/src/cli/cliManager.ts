@@ -1,9 +1,21 @@
 import * as vscode from 'vscode';
 import * as child_process from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as which from 'which';
 import { OutputChannelManager } from '../utils/outputChannel';
 import { ProjectContext } from '../project/projectContext';
 import { EnvironmentManager } from '../environment/environmentManager';
+
+type RunCommandOptions = {
+    executablePath?: string;
+};
+
+type PipInstallCommand = {
+    command: string;
+    cwd?: string;
+    scope: 'environment' | 'global';
+};
 
 export class CLIManager {
     private cliPath: string | null = null;
@@ -51,9 +63,17 @@ export class CLIManager {
     }
 
     private async installWithPip(): Promise<boolean> {
-        const terminal = vscode.window.createTerminal('FluxLoop Install');
+        const installSpec = await this.buildEnvironmentAwarePipCommand('fluxloop-cli');
+        const terminal = vscode.window.createTerminal({
+            name: 'FluxLoop Install',
+            cwd: installSpec.cwd
+        });
+
         terminal.show();
-        terminal.sendText('pip install fluxloop-cli');
+        if (installSpec.scope === 'environment' && installSpec.cwd) {
+            terminal.sendText(`# Installing FluxLoop CLI inside ${installSpec.cwd}`);
+        }
+        terminal.sendText(installSpec.command);
         
         // Wait for user to complete installation
         const result = await vscode.window.showInformationMessage(
@@ -90,11 +110,11 @@ export class CLIManager {
         return false;
     }
 
-    async runCommand(args: string[], cwd?: string): Promise<void> {
+    async runCommand(args: string[], cwd?: string, options: RunCommandOptions = {}): Promise<void> {
         const environment = await this.environmentManager.getResolvedEnvironment();
 
         // Ensure CLI is available when no environment-specific executable exists
-        if (!environment?.fluxloopPath) {
+        if (!options.executablePath && !environment?.fluxloopPath) {
         if (!this.cliPath && !await this.checkInstallation()) {
             const installed = await this.promptInstall();
             if (!installed) {
@@ -119,8 +139,14 @@ export class CLIManager {
         }
 
         const executionWrapper = config.get<string>('executionWrapper')?.trim();
+
+        let resolvedExecutablePath = options.executablePath;
+        if (!resolvedExecutablePath) {
         const resolved = await this.environmentManager.resolveCommand('fluxloop');
-        const executable = this.quoteExecutable(resolved.command);
+            resolvedExecutablePath = resolved.command;
+        }
+
+        const executable = this.quoteExecutable(resolvedExecutablePath);
         const baseCommand = [executable, ...args].filter(Boolean).join(' ');
         const commandLine = executionWrapper ? `${executionWrapper} ${baseCommand}` : baseCommand;
 
@@ -164,6 +190,55 @@ export class CLIManager {
             return `"${executable.replace(/"/g, '\\"')}"`;
         }
         return executable;
+    }
+
+    private async buildEnvironmentAwarePipCommand(packageName: string): Promise<PipInstallCommand> {
+        try {
+            const environment = await this.environmentManager.getResolvedEnvironment(true);
+            if (environment && environment.environmentType !== 'global') {
+                const pythonExecutable =
+                    environment.pythonPath && fs.existsSync(environment.pythonPath) ? environment.pythonPath : undefined;
+                if (pythonExecutable) {
+                    const command = `${this.quoteExecutable(pythonExecutable)} -m pip install ${packageName}`;
+                    return { command, cwd: environment.root, scope: 'environment' };
+                }
+
+                const pipExecutable = this.findPipExecutable(environment.root);
+                if (pipExecutable) {
+                    const command = `${this.quoteExecutable(pipExecutable)} install ${packageName}`;
+                    return { command, cwd: environment.root, scope: 'environment' };
+                }
+            }
+        } catch (error) {
+            OutputChannelManager.getInstance().appendLine(`[FluxLoop Install] Failed to inspect environment: ${String(error)}`);
+        }
+
+        return {
+            command: `pip install ${packageName}`,
+            scope: 'global'
+        };
+    }
+
+    private findPipExecutable(root?: string): string | undefined {
+        if (!root) {
+            return undefined;
+        }
+
+        const pipDir = process.platform === 'win32' ? path.join(root, 'Scripts') : path.join(root, 'bin');
+        const candidates = process.platform === 'win32' ? ['pip.exe', 'pip3.exe', 'pip'] : ['pip', 'pip3'];
+
+        for (const candidateName of candidates) {
+            const candidatePath = path.join(pipDir, candidateName);
+            try {
+                if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
+                    return candidatePath;
+                }
+            } catch {
+                // ignore filesystem errors while probing for pip executables
+            }
+        }
+
+        return undefined;
     }
 
     private logCliPath(path: string, fromEnvironment: boolean): void {

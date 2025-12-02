@@ -10,7 +10,7 @@ import { ProjectEntry, ProjectManager } from './project/projectManager';
 import { ProjectContext } from './project/projectContext';
 import { ProjectCommands } from './commands/projectCommands';
 import { IntegrationProvider, IntegrationSuggestion, IntegrationItem } from './providers/integrationProvider';
-import { IntegrationService } from './integration/integrationService';
+import { IntegrationService, FluxAgentCommandOptions } from './integration/integrationService';
 import { EnvironmentManager } from './environment/environmentManager';
 import { DashboardViewProvider, FluxloopActiveView, OnboardingCard } from './providers/dashboardViewProvider';
 
@@ -291,8 +291,11 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('fluxloop.integration.showSetupGuide', () => {
             void integrationService.showSystemConsoleGuide();
         }),
-        vscode.commands.registerCommand('fluxloop.integration.runAgent', () => {
-            void integrationService.runFluxAgent();
+        vscode.commands.registerCommand('fluxloop.integration.showPlaygroundGuide', () => {
+            void integrationService.showPlaygroundGuide();
+        }),
+        vscode.commands.registerCommand('fluxloop.integration.runAgent', (options?: FluxAgentCommandOptions) => {
+            void integrationService.runFluxAgent(options);
         }),
         vscode.commands.registerCommand('fluxloop.integration.openKnowledgeSearch', () => {
             void integrationService.openKnowledgeSearch();

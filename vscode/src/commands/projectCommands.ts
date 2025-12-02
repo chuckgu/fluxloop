@@ -338,7 +338,8 @@ export class ProjectCommands {
             args.push('--no-example');
         }
 
-        await this.cliManager.runCommand(args, rootDir);
+        const executableOverride = await this.resolveFluxloopExecutable(environmentChoice);
+        await this.cliManager.runCommand(args, rootDir, { executablePath: executableOverride });
         await this.waitForProjectConfig(projectRoot, 30000);
 
         if (!this.looksLikeFluxloopProject(projectRoot)) {
@@ -352,6 +353,20 @@ export class ProjectCommands {
         await this.environmentManager.refreshActiveEnvironment();
 
         ProjectContext.ensureActiveProject();
+    }
+
+    private async resolveFluxloopExecutable(choice: PreparedEnvironment): Promise<string | undefined> {
+        if (choice.mode !== 'workspace') {
+            return undefined;
+        }
+
+        try {
+            const status = await this.environmentManager.checkEnvironment(choice.root);
+            return status.fluxloopPath;
+        } catch (error) {
+            this.log(`[Project Init] Failed to resolve fluxloop executable for ${choice.root}: ${String(error)}`);
+            return undefined;
+        }
     }
 
     private async prepareProjectEnvironment(

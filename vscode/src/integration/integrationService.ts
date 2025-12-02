@@ -33,6 +33,10 @@ interface CommandResult {
     stderr: string;
 }
 
+export interface FluxAgentCommandOptions {
+    useDefaultContext?: boolean;
+}
+
 const FLUX_AGENT_MODES: { id: FluxAgentMode; label: string; description: string }[] = [
     {
         id: 'integration',
@@ -130,6 +134,23 @@ export class IntegrationService {
         }
     }
 
+    async showPlaygroundGuide(): Promise<void> {
+        const guideUri = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'guides', 'playground-prep.md');
+        try {
+            await vscode.workspace.fs.stat(guideUri);
+        } catch {
+            vscode.window.showErrorMessage('Playground guide is missing from the extension package.');
+            return;
+        }
+
+        try {
+            await vscode.commands.executeCommand('markdown.showPreview', guideUri);
+        } catch (error) {
+            console.error('Failed to open playground guide', error);
+            vscode.window.showErrorMessage('Failed to open the playground guide. Check the developer console for details.');
+        }
+    }
+
     async openKnowledgeSearch(): Promise<void> {
         const query = await vscode.window.showInputBox({
             prompt: 'Ask anything about the FluxLoop documentation.',
@@ -175,7 +196,7 @@ export class IntegrationService {
         }
     }
 
-    async runFluxAgent(): Promise<void> {
+    async runFluxAgent(options?: FluxAgentCommandOptions): Promise<void> {
         try {
             await vscode.window.withProgress(
                 {
@@ -207,7 +228,10 @@ export class IntegrationService {
                     this.output.appendLine('='.repeat(60));
                     this.output.appendLine('[Flux Agent] Running Flux Agent MCP pipeline...');
 
-                    const integrationContext = await this.promptIntegrationContext(workspacePath);
+                    const integrationContext = await this.promptIntegrationContext(
+                        workspacePath,
+                        options?.useDefaultContext ?? false,
+                    );
                     const mode: FluxAgentMode = 'integration';
                     const modeLabel = this.getModeLabel(mode);
                     const primaryTarget = integrationContext.targets[0] ?? integrationContext.workspacePath;
@@ -238,6 +262,7 @@ export class IntegrationService {
                         runResult.mode === 'integration'
                             ? this.appendIntegrationCaution(runResult.suggestion)
                             : runResult.suggestion;
+                    const structuredSuggestion = this.extractSuggestionSections(suggestionContent);
 
                     const workflowPayload = runResult.workflow
                         ? {
@@ -255,11 +280,12 @@ export class IntegrationService {
                         filePath: primaryTarget,
                         selection: '',
                         workflow: workflowPayload,
-                        suggestion: suggestionContent,
+                        suggestion: structuredSuggestion.body || 'No response stored.',
                         contextSummary: integrationContext.summary,
                         mode,
                         modeContext: runResult.modeContext,
                         warnings: runResult.warnings,
+                        caution: structuredSuggestion.caution,
                     });
 
                     await this.integrationProvider.addSuggestion({
@@ -282,6 +308,7 @@ export class IntegrationService {
     }
 
     showSuggestionDetail(suggestion: IntegrationSuggestion): void {
+        const structured = this.extractSuggestionSections(suggestion.answer ?? '');
         if (suggestion.workflow || suggestion.filePath || suggestion.modeContext) {
             const contextSummary =
                 suggestion.workflow && typeof suggestion.workflow === 'object'
@@ -292,11 +319,12 @@ export class IntegrationService {
                 filePath: suggestion.filePath ?? 'Unknown file',
                 selection: suggestion.selection ?? '',
                 workflow: suggestion.workflow,
-                suggestion: suggestion.answer ?? 'No response stored.',
+                suggestion: structured.body || 'No response stored.',
                 contextSummary,
                 mode: suggestion.mode,
                 modeContext: suggestion.modeContext,
                 warnings: suggestion.warnings,
+                caution: structured.caution,
             });
             return;
         }
@@ -307,7 +335,7 @@ export class IntegrationService {
         this.output.appendLine(`[Suggestion Query] ${suggestion.query}`);
         this.output.appendLine('');
         this.output.appendLine('[Response]');
-        this.output.appendLine(suggestion.answer ?? 'No response stored.');
+        this.output.appendLine((structured.body || suggestion.answer) ?? 'No response stored.');
     }
 
     private async checkFluxloopCli(): Promise<SystemStatusItem> {
@@ -511,7 +539,10 @@ export class IntegrationService {
         return FLUX_AGENT_MODES.find((entry) => entry.id === mode)?.label ?? mode;
     }
 
-    private async promptIntegrationContext(workspacePath: string): Promise<IntegrationContextSelection> {
+    private async promptIntegrationContext(
+        workspacePath: string,
+        preferDefaultSelection: boolean,
+    ): Promise<IntegrationContextSelection> {
         const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
         let selectedWorkspace = workspacePath;
 
@@ -534,31 +565,56 @@ export class IntegrationService {
             selectedWorkspace = workspacePick.description ?? workspacePath;
         }
 
-        const scopePick = await vscode.window.showQuickPick(
-            [
+        const defaultTarget = this.resolveDefaultContextTarget(selectedWorkspace);
+
+        type ScopePick =
+            | (vscode.QuickPickItem & { type: 'default' })
+            | (vscode.QuickPickItem & { type: 'folder' })
+            | (vscode.QuickPickItem & { type: 'files' });
+
+        const scopeItems: ScopePick[] = [];
+        if (defaultTarget) {
+            scopeItems.push({
+                label: '$(target) Use target source root',
+                description: this.formatTargetDisplay(selectedWorkspace, defaultTarget),
+                detail: 'Reads configs/project.yaml · recommended starting point',
+                type: 'default',
+                picked: preferDefaultSelection,
+            });
+        }
+        scopeItems.push(
                 {
                     label: '$(folder-opened) Pick folder…',
                     description: 'Choose one or more folders to emphasize',
+                type: 'folder',
                 },
                 {
                     label: '$(files) Pick files…',
                     description: 'Choose one or more files to emphasize',
+                type: 'files',
                 },
-            ],
-            {
+        );
+
+        const scopePick = await vscode.window.showQuickPick(scopeItems, {
                 title: 'Flux Agent context scope',
                 placeHolder: 'Select folders or files for MCP analysis',
-            },
-        );
+            matchOnDetail: true,
+        });
 
         if (!scopePick) {
             throw new Error('Flux Agent cancelled by user.');
         }
 
-        let scope: IntegrationContextSelection['scope'] = 'folder';
-        let targets: string[] = [];
+        let scope: IntegrationContextSelection['scope'];
+        let targets: string[];
 
-        if (scopePick.label.includes('folder')) {
+        if (scopePick.type === 'default') {
+            if (!defaultTarget) {
+                throw new Error('Target source root is not configured for this workspace.');
+            }
+            scope = 'folder';
+            targets = [defaultTarget];
+        } else if (scopePick.type === 'folder') {
             scope = 'folder';
             const folders = await vscode.window.showOpenDialog({
                 canSelectFiles: false,
@@ -573,7 +629,7 @@ export class IntegrationService {
             }
 
             targets = folders.map((uri) => uri.fsPath);
-        } else if (scopePick.label.includes('files')) {
+        } else if (scopePick.type === 'files') {
             scope = 'files';
             const files = await vscode.window.showOpenDialog({
                 canSelectFiles: true,
@@ -592,23 +648,50 @@ export class IntegrationService {
             throw new Error('Flux Agent scope selection failed.');
         }
 
-        const summaryLines = [
-            `Workspace: ${selectedWorkspace}`,
-            `Scope: ${scopePick.label
-                .replace('$(file-code) ', '')
-                .replace('$(selection) ', '')
-                .replace('$(folder-opened) ', '')
-                .replace('$(files) ', '')}`,
-            'Targets:',
-            ...targets.map((target) => ` • ${path.relative(selectedWorkspace, target) || target}`),
-        ];
+        const summaryLabel = this.normalizeScopeLabel(scopePick.label);
+        const summary = this.buildContextSummary(selectedWorkspace, summaryLabel, targets);
 
         return {
             workspacePath: selectedWorkspace,
             scope,
             targets,
-            summary: summaryLines.join('\n'),
+            summary,
         };
+    }
+
+    private resolveDefaultContextTarget(workspacePath: string): string | undefined {
+        const project = ProjectContext.getActiveProject();
+        if (project?.path) {
+            if (project.sourceRoot && project.sourceRoot !== '.') {
+                return path.isAbsolute(project.sourceRoot)
+                    ? project.sourceRoot
+                    : path.resolve(project.path, project.sourceRoot);
+            }
+            return project.path;
+        }
+        return workspacePath;
+    }
+
+    private buildContextSummary(workspacePath: string, scopeLabel: string, targets: string[]): string {
+        const summaryLines = [
+            `Workspace: ${workspacePath}`,
+            `Scope: ${scopeLabel}`,
+            'Targets:',
+            ...targets.map((target) => ` • ${this.formatTargetDisplay(workspacePath, target)}`),
+        ];
+        return summaryLines.join('\n');
+    }
+
+    private normalizeScopeLabel(label: string): string {
+        return label.replace(/\$\([^)]+\)\s*/g, '').trim();
+    }
+
+    private formatTargetDisplay(workspacePath: string, targetPath: string): string {
+        const relative = path.relative(workspacePath, targetPath);
+        if (relative && !relative.startsWith('..')) {
+            return relative || '.';
+        }
+        return targetPath;
     }
 
     private createPlannerOrchestrator(apiKey: string, workspacePath: string): PlannerOrchestrator {
@@ -809,6 +892,35 @@ json.dump(docs, sys.stdout)
         }
 
         return `${cautionBlock}\n\n---\n\n${sanitizedContent}`;
+    }
+
+    private extractSuggestionSections(content: string | undefined): { body: string; caution?: string } {
+        const trimmed = (content ?? '').trim();
+        if (!trimmed) {
+            return { body: '' };
+        }
+
+        const cautionPrompt = 'Copy-and-paste this suggestion to your coding assistant or integrate by yourself.';
+        const cautionBody =
+            '⚠️ Caution: Keep the original source as intact as possible when applying this plan, and always get explicit confirmation from the requesting user before making changes.';
+        const cautionBlock = `${cautionPrompt}\n\n${cautionBody}`;
+        const separator = '\n\n---\n\n';
+
+        if (trimmed.startsWith(cautionBlock)) {
+            const remainder = trimmed.slice(cautionBlock.length);
+            const body = remainder.startsWith(separator) ? remainder.slice(separator.length) : remainder;
+            return { caution: cautionBlock, body: body.trimStart() };
+        }
+
+        if (trimmed.startsWith(cautionBody)) {
+            const body = trimmed.slice(cautionBody.length).trimStart();
+            return {
+                caution: cautionBlock,
+                body,
+            };
+        }
+
+        return { body: trimmed };
     }
 
 

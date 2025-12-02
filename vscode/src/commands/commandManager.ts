@@ -620,7 +620,7 @@ export class CommandManager {
         const pythonOverride = configuration.get<string>('pythonPath') ?? '';
         const mcpOverride = configuration.get<string>('mcpCommandPath') ?? '';
 
-        const items: Array<vscode.QuickPickItem & { mode?: 'auto' | 'workspace' | 'global' | 'custom'; action?: 'custom' | 'clear' }> = [
+        const items: Array<vscode.QuickPickItem & { mode?: 'auto' | 'workspace' | 'global' | 'custom'; action?: 'custom' | 'clear' | 'folder' }> = [
             {
                 label: 'Auto (detect project environment)',
                 description: 'Use project .venv/uv/conda if available, otherwise fallback to PATH',
@@ -632,6 +632,12 @@ export class CommandManager {
                 description: 'Require a virtual environment inside the project',
                 picked: executionMode === 'workspace',
                 mode: 'workspace'
+            },
+            {
+                label: 'Choose environment folder…',
+                description: 'Browse to a project virtual environment (updates target source root)',
+                detail: project ? project.path : undefined,
+                action: 'folder'
             },
             {
                 label: 'Global PATH',
@@ -699,6 +705,11 @@ export class CommandManager {
             return;
         }
 
+        if (selection.action === 'folder') {
+            await this.selectEnvironmentFolder(project, configuration, target);
+            return;
+        }
+
         if (selection.action === 'clear') {
             await configuration.update('pythonPath', undefined, target);
             await configuration.update('mcpCommandPath', undefined, target);
@@ -757,6 +768,84 @@ export class CommandManager {
         }
 
         return value.trim();
+    }
+
+    private async selectEnvironmentFolder(
+        project: ProjectEntry | undefined,
+        configuration: vscode.WorkspaceConfiguration,
+        target: vscode.ConfigurationTarget
+    ): Promise<void> {
+        const dialog = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: 'Use this folder',
+            title: 'Select FluxLoop environment folder',
+            defaultUri: project ? vscode.Uri.file(project.path) : undefined
+        });
+
+        if (!dialog || dialog.length === 0) {
+            return;
+        }
+
+        const selectedPath = dialog[0].fsPath;
+        const storedValue = this.computeTargetSourceRootValue(project?.path, selectedPath);
+
+        await configuration.update('targetSourceRoot', storedValue, target);
+        await configuration.update('executionMode', 'workspace', target);
+        await configuration.update('defaultEnvironment', 'Local Python', target);
+        await configuration.update('pythonPath', undefined, target);
+        await configuration.update('mcpCommandPath', undefined, target);
+
+        if (project) {
+            const configPath = path.join(project.path, 'configs', 'project.yaml');
+            if (fs.existsSync(configPath)) {
+                this.writeSourceRoot(configPath, storedValue);
+                ProjectManager.getInstance().refreshProjectById(project.id);
+            }
+        }
+
+        const display = this.formatEnvironmentFolderDisplay(selectedPath, project?.path);
+        vscode.window.showInformationMessage(`FluxLoop environment folder set to ${display}.`);
+        await this.environmentManager.refreshActiveEnvironment();
+    }
+
+    private computeTargetSourceRootValue(projectPath: string | undefined, folderPath: string): string {
+        const normalizedFolder = path.resolve(folderPath);
+        if (!projectPath) {
+            return normalizedFolder.replace(/\\/g, '/');
+        }
+
+        const normalizedProject = path.resolve(projectPath);
+        if (normalizedFolder === normalizedProject) {
+            return '.';
+        }
+
+        if (normalizedFolder.startsWith(`${normalizedProject}${path.sep}`)) {
+            const relative = path.relative(normalizedProject, normalizedFolder);
+            return relative ? relative.replace(/\\/g, '/') : '.';
+        }
+
+        return normalizedFolder.replace(/\\/g, '/');
+    }
+
+    private formatEnvironmentFolderDisplay(folderPath: string, projectPath?: string): string {
+        if (!projectPath) {
+            return folderPath;
+        }
+
+        const normalizedProject = path.resolve(projectPath);
+        const normalizedFolder = path.resolve(folderPath);
+        if (normalizedFolder === normalizedProject) {
+            return projectPath;
+        }
+
+        if (normalizedFolder.startsWith(`${normalizedProject}${path.sep}`)) {
+            const relative = path.relative(normalizedProject, normalizedFolder);
+            return relative || '.';
+        }
+
+        return folderPath;
     }
 
     private resolveConfigurationTarget(project: ProjectEntry | undefined): { target: vscode.ConfigurationTarget; uri?: vscode.Uri } {

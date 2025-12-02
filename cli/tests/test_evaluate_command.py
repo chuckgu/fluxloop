@@ -28,9 +28,7 @@ def pipeline_stub(monkeypatch):
             self.output_dir.mkdir(parents=True, exist_ok=True)
             html_path = self.output_dir / "report.html"
             html_path.write_text("<html>stub</html>", encoding="utf-8")
-            pdf_path = self.output_dir / "report.pdf"
-            pdf_path.write_bytes(b"%PDF-1.4\n%Stub\n")
-            return ReportArtifacts(html_path=html_path, pdf_path=pdf_path)
+            return ReportArtifacts(html_path=html_path)
 
     monkeypatch.setattr("fluxloop_cli.commands.evaluate.ReportPipeline", StubPipeline)
     return instances
@@ -312,7 +310,6 @@ def test_evaluate_generates_outputs(tmp_path: Path, pipeline_stub) -> None:
     output_dir = experiment_dir / "evaluation_report"
     html_report = output_dir / "report.html"
     assert html_report.exists()
-    assert (output_dir / "report.pdf").exists()
 
     assert len(pipeline_stub) == 1
     stub_instance = pipeline_stub[0]
@@ -354,7 +351,6 @@ def test_evaluate_llm_without_api_key_is_recorded(tmp_path: Path, pipeline_stub)
 
     output_dir = experiment_dir / "evaluation_report"
     assert (output_dir / "report.html").exists()
-    assert (output_dir / "report.pdf").exists()
 
     assert len(pipeline_stub) == 1
     assert pipeline_stub[0].api_key is None
@@ -395,7 +391,6 @@ def test_evaluate_phase2_extended_outputs(tmp_path: Path, pipeline_stub) -> None
 
     output_dir = experiment_dir / "evaluation_report"
     assert (output_dir / "report.html").exists()
-    assert (output_dir / "report.pdf").exists()
 
     assert len(pipeline_stub) == 1
     stub_instance = pipeline_stub[0]

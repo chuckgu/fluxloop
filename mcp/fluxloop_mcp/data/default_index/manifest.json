@@ -1,0 +1,12 @@
+{
+  "version": "2025-12-02T03:40:58Z",
+  "description": "Generated via scripts/rebuild_index.sh",
+  "generated_at": "2025-12-02T03:40:58Z",
+  "sources": [
+    "docs/**/*.md",
+    "packages/website/docs-cli/**/*.md",
+    "packages/website/docs-sdk/**/*.md",
+    "packages/sdk/**/*.md",
+    "samples/**/*.md"
+  ]
+}

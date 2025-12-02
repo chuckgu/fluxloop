@@ -93,6 +93,16 @@ class LlmContextBuilder:
             )
 
         if integration_context:
+            question = (integration_context or {}).get("question")
+            if question:
+                topics.insert(
+                    0,
+                    {
+                        "id": "user-question",
+                        "query": question,
+                        "reasons": ["User provided MCP question"],
+                    },
+                )
             for file_item in integration_context.get("files", [])[:3]:
                 topics.append(
                     {

@@ -50,6 +50,25 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
                 configInfo.path
             ));
             items.push(new ExperimentItem(
+                'Prepare Simulation',
+                'Flux Agent context gathering (recommended)',
+                vscode.TreeItemCollapsibleState.None,
+                'command',
+                undefined,
+                'fluxloop.integration.runAgent',
+                'debug-start',
+                [{ useDefaultContext: true }]
+            ));
+            items.push(new ExperimentItem(
+                'Simulation Guide',
+                'Checklist before running experiments',
+                vscode.TreeItemCollapsibleState.None,
+                'command',
+                undefined,
+                'fluxloop.integration.showPlaygroundGuide',
+                'book'
+            ));
+            items.push(new ExperimentItem(
                 'Run Experiment',
                 undefined,
                 vscode.TreeItemCollapsibleState.None,
@@ -128,14 +147,6 @@ export class ExperimentsProvider implements vscode.TreeDataProvider<ExperimentIt
 
         if (element.type === 'experiment') {
             const workspacePath = ProjectContext.getActiveWorkspacePath();
-            details.push(new ExperimentItem(
-                'Prepare Simulation',
-                'Use Flux Agent to gather run context',
-                vscode.TreeItemCollapsibleState.None,
-                'command',
-                undefined,
-                'fluxloop.integration.runAgent'
-            ));
             // Show config details
             if (element.resourcePath) {
                 const configLabel = workspacePath
@@ -513,7 +524,8 @@ class ExperimentItem extends vscode.TreeItem {
         public readonly type: 'experiment' | 'experimentsGroup' | 'result' | 'file' | 'info' | 'command' | 'recordings' | 'recordingGroup' | 'recordingAdvanced',
         public readonly resourcePath?: string,
         private readonly commandId?: string,
-        private readonly iconId?: string
+        private readonly iconId?: string,
+        private readonly commandArgs?: unknown[]
     ) {
         super(label, collapsibleState);
 
@@ -551,7 +563,8 @@ class ExperimentItem extends vscode.TreeItem {
                 if (commandId) {
                     this.command = {
                         command: commandId,
-                        title: label
+                        title: label,
+                        arguments: commandArgs
                     };
                 }
                 break;

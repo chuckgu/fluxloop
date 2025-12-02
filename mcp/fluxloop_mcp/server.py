@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 from msgspec import ValidationError
 from msgspec import json as msgjson
 
+from .index.bootstrap import ensure_index
 from .tools import (
     AnalyzeRepositoryTool,
     CollectRepoProfileTool,
@@ -242,6 +243,11 @@ def main(argv: Optional[list[str]] = None) -> None:
     """Console script entry point."""
 
     args = parse_args(argv)
+    try:
+        ensure_index()
+    except Exception as exc:  # noqa: BLE001 - bootstrap should not crash CLI
+        sys.stderr.write(f"[fluxloop-mcp] Failed to install bundled index: {exc}\n")
+
     server = MCPServer()
 
     async def _runner() -> None:

@@ -10,6 +10,7 @@ interface IntegrationPanelData {
     mode?: FluxAgentMode;
     modeContext?: unknown;
     warnings?: string[];
+    caution?: string;
 }
 
 export class IntegrationPanel {
@@ -93,6 +94,7 @@ export class IntegrationPanel {
         </style>
     </head>
     <body>
+        ${data.caution ? `<div class="caution">${this.escapeHtml(data.caution)}</div>` : ''}
         <h1>Flux Agent Suggestion</h1>
         <section>
             <div class="label">Target File</div>

@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 
 from .aggregator import StatsAggregator
 from .generator import OverallEvaluator, ReportLLMClient, TraceEvaluator
-from .pdf_exporter import PdfExportError, ReportPdfExporter
 from .renderer import ReportRenderer
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,6 @@ class ReportArtifacts:
     """Artifacts produced by the evaluation report pipeline."""
 
     html_path: Path
-    pdf_path: Optional[Path] = None
 
 
 class ReportPipeline:
@@ -45,7 +43,6 @@ class ReportPipeline:
         self.aggregator = StatsAggregator(config)
         self.overall_evaluator = OverallEvaluator(self.client, config)
         self.renderer = ReportRenderer(output_dir)
-        self.pdf_exporter = ReportPdfExporter(output_dir)
 
     async def run(
         self,
@@ -86,18 +83,9 @@ class ReportPipeline:
         report_path = self.renderer.render(
             rule_based_data, llm_ov_data, traces_for_rules, self.config
         )
-        
-        pdf_path: Optional[Path] = None
-        try:
-            pdf_path = self.pdf_exporter.export(report_path)
-        except PdfExportError as exc:
-            logger.warning("PDF export failed: %s", exc)
 
         logger.info("✅ Pipeline Complete! Report: %s", report_path)
-        if pdf_path:
-            logger.info("✅ PDF ready: %s", pdf_path)
-
-        return ReportArtifacts(html_path=report_path, pdf_path=pdf_path)
+        return ReportArtifacts(html_path=report_path)
 
     async def _run_pt_evaluations(self, traces: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Run TraceEvaluator concurrently."""

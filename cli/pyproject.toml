@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fluxloop-cli"
-version = "0.2.33"
+version = "0.2.34"
 description = "FluxLoop CLI for running agent simulations"
 authors = [
     {name = "FluxLoop Team", email = "team@fluxloop.dev"}
@@ -34,7 +34,6 @@ dependencies = [
     "fluxloop>=0.1.0",
     "ruamel.yaml>=0.17.0",
     "Jinja2>=3.0",
-    "weasyprint>=61.0",
 ]
 
 [project.optional-dependencies]

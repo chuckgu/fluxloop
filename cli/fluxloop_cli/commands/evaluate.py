@@ -259,12 +259,6 @@ def experiment(
 
     artifacts = asyncio.run(pipeline.run(trace_records, trace_summaries))
     console.print(f"\n✅ Report ready: [bold cyan]{artifacts.html_path}[/bold cyan]")
-    if artifacts.pdf_path:
-        console.print(f"🖨️ PDF ready: [bold green]{artifacts.pdf_path}[/bold green]")
-    else:
-        console.print(
-            "⚠️ PDF export skipped (WeasyPrint is unavailable or PDF rendering failed)."
-        )
 
 
 
