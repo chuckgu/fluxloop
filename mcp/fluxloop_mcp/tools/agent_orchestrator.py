@@ -14,7 +14,12 @@ class IntegrationContextTool:
         self.workflow_tool = RunIntegrationWorkflowTool()
 
     def fetch(self, payload: Dict) -> Dict:
-        workflow = self.workflow_tool.run(payload)
+        prepared_payload = dict(payload)
+        question = str(prepared_payload.get("question") or "").strip()
+        if not question:
+            prepared_payload["question"] = "Prepare FluxLoop integration context."
+
+        workflow = self.workflow_tool.run(prepared_payload)
         if workflow.get("error"):
             return workflow
 

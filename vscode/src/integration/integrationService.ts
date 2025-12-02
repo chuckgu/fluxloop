@@ -754,7 +754,7 @@ export class IntegrationService {
         toolName: string,
         extras?: Record<string, unknown>,
     ): Promise<T> {
-        const payload = {
+        const payload: Record<string, unknown> = {
             root,
             context: {
                 scope: context.scope,
@@ -763,6 +763,10 @@ export class IntegrationService {
             },
             ...(extras ?? {}),
         };
+
+        if (!('question' in payload) && toolName === 'IntegrationContextTool') {
+            payload['question'] = 'Prepare FluxLoop integration context.';
+        }
 
         const script = `
 import json
