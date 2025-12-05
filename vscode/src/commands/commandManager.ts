@@ -70,8 +70,15 @@ export class CommandManager {
             vscode.commands.registerCommand('fluxloop.showInputWizard', () => this.showInputWizard()),
             vscode.commands.registerCommand('fluxloop.showDialogsWireframe', () => this.showDialogsWireframe()),
             vscode.commands.registerCommand('fluxloop.showWebviewsWireframe', () => this.showWebviewsWireframe()),
-            vscode.commands.registerCommand('fluxloop.showInteractiveWireframe', () => this.showInteractiveWireframe())
+            vscode.commands.registerCommand('fluxloop.showInteractiveWireframe', () => this.showInteractiveWireframe()),
+            vscode.commands.registerCommand('fluxloop.openInBrowser', (uri: vscode.Uri) => this.openInBrowser(uri))
         );
+    }
+
+    private async openInBrowser(uri: vscode.Uri) {
+        if (uri) {
+            await vscode.env.openExternal(uri);
+        }
     }
 
     private async initProject() {

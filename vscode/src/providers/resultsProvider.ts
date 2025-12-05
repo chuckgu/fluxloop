@@ -278,11 +278,19 @@ class ResultItem extends vscode.TreeItem {
             case 'file':
                 this.iconPath = vscode.ThemeIcon.File;
                 if (resourcePath) {
-                    this.command = {
-                        command: 'vscode.open',
-                        title: 'Open Result File',
-                        arguments: [vscode.Uri.file(resourcePath)]
-                    };
+                    if (resourcePath.toLowerCase().endsWith('.html')) {
+                        this.command = {
+                            command: 'fluxloop.openInBrowser',
+                            title: 'Open in Browser',
+                            arguments: [vscode.Uri.file(resourcePath)]
+                        };
+                    } else {
+                        this.command = {
+                            command: 'vscode.open',
+                            title: 'Open Result File',
+                            arguments: [vscode.Uri.file(resourcePath)]
+                        };
+                    }
                 }
                 break;
             case 'command':
