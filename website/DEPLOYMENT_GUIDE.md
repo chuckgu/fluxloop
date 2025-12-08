@@ -5,7 +5,7 @@
 ### 전제조건
 - ✅ GitHub 계정
 - ✅ Vercel 계정 (GitHub로 로그인)
-- ✅ fluxloop.io 도메인
+- ✅ fluxloop.ai 도메인
 
 ### 1단계: 코드 푸시
 
@@ -33,7 +33,7 @@ git push origin main
 
 **Vercel 대시보드:**
 1. Settings → Domains
-2. Add `docs.fluxloop.io`
+2. Add `docs.fluxloop.ai`
 3. DNS 레코드 안내 표시됨
 
 **도메인 DNS 설정:**
@@ -43,7 +43,7 @@ Name: docs
 Value: cname.vercel-dns.com
 ```
 
-5-10분 후 → `https://docs.fluxloop.io` 접속 가능!
+5-10분 후 → `https://docs.fluxloop.ai` 접속 가능!
 
 ## 📋 상세 가이드
 
@@ -131,7 +131,7 @@ ALGOLIA_INDEX_NAME=fluxloop
 
 배포 완료 후 확인:
 
-- [ ] https://docs.fluxloop.io 접속 가능
+- [ ] https://docs.fluxloop.ai 접속 가능
 - [ ] HTTPS 인증서 활성화
 - [ ] 모든 페이지 정상 작동
 - [ ] 네비게이션 링크 작동
@@ -172,7 +172,7 @@ npm run build
 
 ### 404 오류
 - `docusaurus.config.ts`의 `baseUrl: '/'` 확인
-- `url: 'https://docs.fluxloop.io'` 확인
+- `url: 'https://docs.fluxloop.ai'` 확인
 
 ## 📞 지원
 

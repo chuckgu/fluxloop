@@ -4,14 +4,14 @@ sidebar_position: 1
 
 # Vercel 배포 (추천)
 
-FluxLoop 문서를 Vercel로 배포하고 `fluxloop.io` 도메인을 연결하세요.
+FluxLoop 문서를 Vercel로 배포하고 `fluxloop.ai` 도메인을 연결하세요.
 
 ## 왜 Vercel인가?
 
 - ⚡ **엄청나게 빠름**: 글로벌 Edge Network
 - 🔄 **자동 배포**: Git push하면 자동 배포
 - 🎨 **PR 프리뷰**: 모든 PR마다 고유 URL 생성
-- 🌍 **커스텀 도메인**: `fluxloop.io` 무료 연결
+- 🌍 **커스텀 도메인**: `fluxloop.ai` 무료 연결
 - 🔒 **자동 HTTPS**: Let's Encrypt 인증서 자동 갱신
 - 💰 **무료**: 개인/오픈소스 프로젝트 무료
 
@@ -82,7 +82,7 @@ vercel --prod
 2. **Settings** → **Domains**
 
 3. **Add Domain**
-   - `docs.fluxloop.io` 입력 (또는 `fluxloop.io`)
+   - `docs.fluxloop.ai` 입력 (또는 `fluxloop.ai`)
    - Add 클릭
 
 4. **DNS 설정 지시사항 표시**
@@ -92,7 +92,7 @@ vercel --prod
 
 도메인 등록업체(GoDaddy, Namecheap, Cloudflare 등)에서:
 
-#### 옵션 1: 서브도메인 (docs.fluxloop.io)
+#### 옵션 1: 서브도메인 (docs.fluxloop.ai)
 
 ```
 Type: CNAME
@@ -100,7 +100,7 @@ Name: docs
 Value: cname.vercel-dns.com
 ```
 
-#### 옵션 2: Apex 도메인 (fluxloop.io)
+#### 옵션 2: Apex 도메인 (fluxloop.ai)
 
 ```
 Type: A
@@ -129,10 +129,10 @@ DNS 변경은 최대 48시간이 걸릴 수 있지만, 보통 5-10분 내에 완
 
 ```bash
 # DNS 확인
-nslookup docs.fluxloop.io
+nslookup docs.fluxloop.ai
 
 # 또는
-dig docs.fluxloop.io
+dig docs.fluxloop.ai
 ```
 
 ## 4단계: 프로젝트 설정 최적화
@@ -143,7 +143,7 @@ dig docs.fluxloop.io
 
 ```typescript
 const config: Config = {
-  url: 'https://docs.fluxloop.io',  // 또는 'https://fluxloop.io'
+  url: 'https://docs.fluxloop.ai',  // 또는 'https://fluxloop.ai'
   baseUrl: '/',  // Apex 도메인이므로 /
   organizationName: 'chuckgu',
   projectName: 'fluxloop',
@@ -156,7 +156,7 @@ const config: Config = {
 
 ```bash
 git add website/docusaurus.config.ts
-git commit -m "Update domain to fluxloop.io"
+git commit -m "Update domain to fluxloop.ai"
 git push
 ```
 
@@ -170,7 +170,7 @@ Vercel이 자동으로 재배포합니다!
 
 ```bash
 git push origin main
-# → 자동으로 docs.fluxloop.io에 배포
+# → 자동으로 docs.fluxloop.ai에 배포
 ```
 
 ### PR → 프리뷰 URL
@@ -318,7 +318,7 @@ jobs:
 
 - [ ] Vercel 프로젝트 생성 완료
 - [ ] Git push로 자동 배포 확인
-- [ ] 커스텀 도메인 연결 (`docs.fluxloop.io`)
+- [ ] 커스텀 도메인 연결 (`docs.fluxloop.ai`)
 - [ ] HTTPS 인증서 활성화 확인
 - [ ] PR 프리뷰 URL 생성 확인
 - [ ] 환경 변수 설정 (필요시)
@@ -327,7 +327,7 @@ jobs:
 
 ```bash
 # 도메인 접속 테스트
-curl -I https://docs.fluxloop.io
+curl -I https://docs.fluxloop.ai
 
 # 응답 확인
 # HTTP/2 200
@@ -393,5 +393,5 @@ baseUrl: '/',  // Apex 도메인의 경우
 
 **축하합니다!** 🎉 
 
-FluxLoop 문서 사이트가 `https://docs.fluxloop.io`에서 라이브되었습니다!
+FluxLoop 문서 사이트가 `https://docs.fluxloop.ai`에서 라이브되었습니다!
 

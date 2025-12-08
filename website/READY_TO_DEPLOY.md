@@ -28,7 +28,7 @@ git commit -m "Add FluxLoop documentation website
 - 70+ pages covering SDK, CLI, VSCode Extension
 - Vercel deployment configuration
 - GitHub Actions CI/CD pipeline
-- Ready for deployment at docs.fluxloop.io
+- Ready for deployment at docs.fluxloop.ai
 "
 
 # 로컬 모노레포 푸시
@@ -57,9 +57,9 @@ git push origin main
 
 **Vercel Dashboard:**
 1. Settings → Domains
-2. Add `docs.fluxloop.io`
+2. Add `docs.fluxloop.ai`
 
-**fluxloop.io DNS 설정:**
+**fluxloop.ai DNS 설정:**
 ```
 Type: CNAME
 Name: docs
@@ -101,7 +101,7 @@ packages/website/
 ├── blog/                      # 릴리즈 노트 (기본 예제)
 ├── src/                       # 랜딩 페이지 (커스터마이징 완료)
 ├── static/                    # 이미지, 에셋
-├── docusaurus.config.ts      ✅ docs.fluxloop.io 설정
+├── docusaurus.config.ts      ✅ docs.fluxloop.ai 설정
 ├── vercel.json               ✅ Vercel 최적화
 └── sidebars-*.ts             ✅ 4개 사이드바 설정
 ```
@@ -123,10 +123,10 @@ npm run build  # ✅ 빌드 성공
 
 ## 🎯 배포 후 URL
 
-- **메인**: https://docs.fluxloop.io
-- **SDK 문서**: https://docs.fluxloop.io/sdk
-- **CLI 문서**: https://docs.fluxloop.io/cli
-- **VSCode 문서**: https://docs.fluxloop.io/vscode
+- **메인**: https://docs.fluxloop.ai
+- **SDK 문서**: https://docs.fluxloop.ai/sdk
+- **CLI 문서**: https://docs.fluxloop.ai/cli
+- **VSCode 문서**: https://docs.fluxloop.ai/vscode
 
 ## 🔄 자동 배포 플로우
 
@@ -136,7 +136,7 @@ git push → GitHub → Vercel 자동 빌드 → 배포 완료 (2-3분)
 
 ## 📝 배포 완료 후 할 일
 
-1. ✅ https://docs.fluxloop.io 접속 확인
+1. ✅ https://docs.fluxloop.ai 접속 확인
 2. ✅ 모든 네비게이션 링크 테스트
 3. ✅ 모바일 반응형 확인
 4. 🔍 Google Search Console 등록

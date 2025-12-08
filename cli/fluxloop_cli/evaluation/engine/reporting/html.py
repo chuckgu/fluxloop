@@ -93,7 +93,7 @@ DEFAULT_TEMPLATE = r"""<!DOCTYPE html>
           </div>
         </div>
         <a
-          href="https://fluxloop.io/"
+          href="https://fluxloop.ai/"
           class="inline-flex items-center gap-2 self-start rounded-full border border-sky-400 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/10 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-slate-950"
           target="_blank"
           rel="noopener noreferrer"

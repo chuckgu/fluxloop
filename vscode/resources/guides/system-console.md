@@ -1,6 +1,6 @@
 # FluxLoop System Console Guide
 
-Use this guide to quickly review the **System Console** actions and installation steps required by the FluxLoop VS Code extension. For deeper walkthroughs, refer to the official docs (e.g., [CLI Quick Start](https://docs.fluxloop.io/cli/getting-started/quick-start), [Experiment Workflow](https://docs.fluxloop.io/cli/workflows/basic-workflow)).
+Use this guide to quickly review the **System Console** actions and installation steps required by the FluxLoop VS Code extension. For deeper walkthroughs, refer to the official docs (e.g., [CLI Quick Start](https://docs.fluxloop.ai/cli/getting-started/quick-start), [Experiment Workflow](https://docs.fluxloop.ai/cli/workflows/basic-workflow)).
 
 ---
 
@@ -47,9 +47,9 @@ fluxloop doctor
 ---
 
 ## 3. Additional Resources
-- [FluxLoop CLI Reference](https://docs.fluxloop.io/cli/intro)
-- [Recording & Experiment Workflow](https://docs.fluxloop.io/cli/workflows/basic-workflow)
-- [VS Code Extension Guide](https://docs.fluxloop.io/vscode/intro)
+- [FluxLoop CLI Reference](https://docs.fluxloop.ai/cli/intro)
+- [Recording & Experiment Workflow](https://docs.fluxloop.ai/cli/workflows/basic-workflow)
+- [VS Code Extension Guide](https://docs.fluxloop.ai/vscode/intro)
 
 If issues persist, hit **System Status → Refresh Status** to rerun diagnostics, then capture the `Run Doctor` output for your team when requesting help.
 

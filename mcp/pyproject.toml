@@ -41,7 +41,7 @@ fluxloop-mcp = "fluxloop_mcp.server:main"
 [project.urls]
 Homepage = "https://github.com/chuckgu/fluxloop"
 Repository = "https://github.com/chuckgu/fluxloop"
-Documentation = "https://docs.fluxloop.io/mcp"
+Documentation = "https://docs.fluxloop.ai/mcp"
 
 [tool.setuptools.packages.find]
 where = ["."]

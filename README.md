@@ -75,7 +75,7 @@ FluxLoop consists of multiple integrated packages that work together to provide 
 
 Add `@fluxloop.agent()` decorator to your code to automatically capture traces, observations, and execution context. Supports async, streaming, and complex agent frameworks.
 
-📖 **Documentation**: [https://fluxloop.io/sdk/](https://fluxloop.io/sdk/)  
+📖 **Documentation**: [https://fluxloop.ai/sdk/](https://fluxloop.ai/sdk/)  
 📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
 
 ### 2. CLI
@@ -85,7 +85,7 @@ Initialize projects, generate test inputs with LLM, run batch simulations, and p
 
 - **New:** Pytest Bridge (`fluxloop init pytest-template`) produces a ready-to-run smoke test wired to the `fluxloop_runner` fixture; see `docs/guides/pytest_bridge.md` for examples and the sample GitHub Actions workflow.
 
-📖 **Documentation**: [https://fluxloop.io/cli/](https://fluxloop.io/cli/)  
+📖 **Documentation**: [https://fluxloop.ai/cli/](https://fluxloop.ai/cli/)  
 📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
 
 ### 3. VSCode Extension
@@ -93,7 +93,7 @@ Initialize projects, generate test inputs with LLM, run batch simulations, and p
 
 Browse projects, run experiments with one click, parse results into Markdown timelines, and explore outputs in a structured tree view—all without leaving your IDE.
 
-📖 **Documentation**: [https://fluxloop.io/vscode/](https://fluxloop.io/vscode/)  
+📖 **Documentation**: [https://fluxloop.ai/vscode/](https://fluxloop.ai/vscode/)  
 🛒 **Marketplaces**: [VS Code](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop) | [Open VSX (Cursor)](https://open-vsx.org/extension/fluxloop/fluxloop)
 
 ### 4. MCP Server (Python 3.11+)
@@ -101,7 +101,7 @@ Browse projects, run experiments with one click, parse results into Markdown tim
 
 Automatically detect your agent framework, suggest integration patterns, and provide context-aware help for setting up FluxLoop in your codebase.
 
-📖 **Documentation**: [https://fluxloop.io/mcp/](https://fluxloop.io/mcp/)  
+📖 **Documentation**: [https://fluxloop.ai/mcp/](https://fluxloop.ai/mcp/)  
 📦 **PyPI**: [fluxloop-mcp](https://pypi.org/project/fluxloop-mcp/)
 
 ### 5. Flux Agent (Beta)
@@ -109,7 +109,7 @@ Automatically detect your agent framework, suggest integration patterns, and pro
 
 Flux Agent analyzes your code, consults FluxLoop documentation via MCP, and generates intelligent integration suggestions using LLM. It combines repository analysis with OpenAI models to provide contextualized, framework-specific guidance—without making automatic changes. You review and apply suggestions manually.
 
-📖 **Documentation**: [https://fluxloop.io/vscode/integration-assistant/overview](https://fluxloop.io/vscode/integration-assistant/overview)  
+📖 **Documentation**: [https://fluxloop.ai/vscode/integration-assistant/overview](https://fluxloop.ai/vscode/integration-assistant/overview)  
 ✨ **Features**:
 - Repository analysis and framework detection
 - AI-generated code integration suggestions
@@ -132,7 +132,7 @@ pip install fluxloop fluxloop-cli fluxloop-mcp
 # Search "FluxLoop" in Extensions marketplace
 ```
 
-📖 **Installation Guides**: [SDK](https://fluxloop.io/sdk/getting-started/sdk-installation) | [CLI](https://fluxloop.io/cli/getting-started/cli-installation) | [VSCode](https://fluxloop.io/vscode/getting-started/installation) | [MCP](https://fluxloop.io/mcp/installation)
+📖 **Installation Guides**: [SDK](https://fluxloop.ai/sdk/getting-started/sdk-installation) | [CLI](https://fluxloop.ai/cli/getting-started/cli-installation) | [VSCode](https://fluxloop.ai/vscode/getting-started/installation) | [MCP](https://fluxloop.ai/mcp/installation)
 
 ### Quick Workflow
 
@@ -152,7 +152,7 @@ fluxloop run experiment
 fluxloop parse experiment experiments/<experiment_dir>
 ```
 
-📖 **Complete Tutorial**: [End-to-End Workflow Guide](https://fluxloop.io/docs/guides/getting-started)
+📖 **Complete Tutorial**: [End-to-End Workflow Guide](https://fluxloop.ai/docs/guides/getting-started)
 
 ### What You Can Do
 

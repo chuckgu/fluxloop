@@ -40,7 +40,7 @@
 - Root Directory: `website` (in OSS repo)
 - Build Command: `npm run build`
 - Output Directory: `build`
-- URL: https://docs.fluxloop.io
+- URL: https://docs.fluxloop.ai
 
 ---
 
