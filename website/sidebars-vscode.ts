@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'User Guide',
       items: [
+        'user-guide/video-guide',
         'user-guide/creating-projects',
         'user-guide/managing-inputs',
         'user-guide/running-experiments',

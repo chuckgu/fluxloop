@@ -291,9 +291,9 @@
         },
         {
           "id": "fluxloop.integration",
-          "name": "Integration",
+          "name": "Environment",
           "icon": "$(extensions)",
-          "contextualTitle": "FluxLoop Integration",
+          "contextualTitle": "FluxLoop Environment",
           "when": "fluxloop.activeView == 'workspace'"
         },
         {
@@ -312,9 +312,9 @@
         },
         {
           "id": "fluxloop.results",
-          "name": "Results",
+          "name": "Evaluation",
           "icon": "$(graph)",
-          "contextualTitle": "Experiment Results",
+          "contextualTitle": "Experiment Evaluation",
           "when": "fluxloop.activeView == 'insights'"
         }
       ]
