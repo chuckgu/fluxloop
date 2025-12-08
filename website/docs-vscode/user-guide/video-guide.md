@@ -17,7 +17,7 @@ FluxLoop 프로젝트를 생성하는 두 가지 방법입니다.
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_DEFAULT_MODE"
+  src="https://youtu.be/vyzmJWKLHHg"
   title="FluxLoop - Default Mode Project Creation"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -47,6 +47,12 @@ FluxLoop 프로젝트를 생성하는 두 가지 방법입니다.
 - 모노레포, 원격 폴더 등 복잡한 구조에 적합
 - FluxLoop 설정을 소스 트리 내부에 배치 가능
 - 세밀한 환경 설정 지원
+
+:::warning Environment 선택 시 주의사항
+두 모드 모두 프로젝트 생성 과정에서 **Python 환경을 선택**하는 단계가 있습니다.
+
+**실제 에이전트가 실행되는 가상환경(venv, Conda 등)이 있다면 반드시 해당 환경을 선택하세요.** 그렇지 않으면 시스템 기본 Python이 선택되며, 에이전트에 필요한 패키지들이 설치되어 있지 않아 실험 실행 시 오류가 발생할 수 있습니다.
+:::
 
 ---
 
