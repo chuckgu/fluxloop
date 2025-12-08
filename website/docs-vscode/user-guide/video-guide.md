@@ -86,7 +86,7 @@ Python 환경 설정 및 상태 확인 방법입니다.
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_INPUTS"
+  src="https://www.youtube.com/embed/eXO_Xs1I8Ps"
   title="FluxLoop - Generate Inputs"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -126,7 +126,7 @@ Prepare Simulation은 설정 가이드일 뿐입니다. 실제 실험을 위해�
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_RUN_EXPERIMENT"
+  src="https://www.youtube.com/embed/xPH86AVkfzY"
   title="FluxLoop - Run Experiment"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

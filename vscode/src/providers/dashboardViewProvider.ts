@@ -67,6 +67,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            if (message.type === 'openVideoGuide') {
+                void vscode.env.openExternal(
+                    vscode.Uri.parse('https://docs.fluxloop.ai/vscode/user-guide/video-guide')
+                );
+                return;
+            }
+
             if (message.type === 'dismissOnboarding') {
                 const cardId = message.cardId as string | undefined;
                 if (cardId) {
@@ -210,6 +217,56 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             color: var(--vscode-foreground);
         }
 
+        .video-guide-cta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid color-mix(in srgb, var(--vscode-editorWidget-border) 65%, transparent);
+            background: linear-gradient(
+                120deg,
+                color-mix(in srgb, var(--vscode-button-background) 85%, transparent),
+                color-mix(in srgb, var(--vscode-button-background) 35%, var(--vscode-sideBar-background) 65%)
+            );
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        }
+
+        .video-guide-content {
+            flex: 1 1 220px;
+        }
+
+        .video-guide-title {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .video-guide-description {
+            margin: 4px 0 0;
+            font-size: 11px;
+            color: color-mix(in srgb, var(--vscode-foreground) 80%, var(--vscode-editorWidget-background));
+        }
+
+        .video-guide-button {
+            align-self: center;
+            padding: 8px 14px;
+            border-radius: 5px;
+            border: none;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--vscode-button-foreground);
+            background-color: var(--vscode-button-background);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 120ms ease, box-shadow 120ms ease;
+        }
+
+        .video-guide-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        }
+
         .tabs {
             display: flex;
             gap: 8px;
@@ -338,6 +395,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
                 </span>
             </div>
         </div>
+        <div class="video-guide-cta">
+            <div class="video-guide-content">
+                <p class="video-guide-title">Watch the Video Tutorial</p>
+                <p class="video-guide-description">Tour the key workflows in under 3 minutes.</p>
+            </div>
+            <button class="video-guide-button" id="videoGuideButton">Open Tutorial</button>
+        </div>
         <div class="tabs">
             <button class="tab-button" data-view="workspace">
                 <svg class="tab-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -464,6 +528,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
                 vscode.postMessage({ type: 'switchView', view });
             });
         });
+
+        const videoGuideButton = document.getElementById('videoGuideButton');
+        if (videoGuideButton) {
+            videoGuideButton.addEventListener('click', () => {
+                vscode.postMessage({ type: 'openVideoGuide' });
+            });
+        }
 
         window.addEventListener('message', event => {
             const message = event.data;
