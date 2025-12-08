@@ -17,7 +17,7 @@ FluxLoop 프로젝트를 생성하는 두 가지 방법입니다.
 <iframe
   width="100%"
   height="400"
-  src="https://youtu.be/vyzmJWKLHHg"
+  src="https://www.youtube.com/watch?v=vyzmJWKLHHg"
   title="FluxLoop - Default Mode Project Creation"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
