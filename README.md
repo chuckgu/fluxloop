@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="fluxloop_logo.png" alt="FluxLoop Logo" width="400"/>
+  <img src="fluxloop_hero.png" alt="FluxLoop Logo" width="400"/>
 </p>
 
 # FluxLoop OSS
