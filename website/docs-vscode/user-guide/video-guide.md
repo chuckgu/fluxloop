@@ -2,84 +2,102 @@
 sidebar_position: 0
 ---
 
-# 비디오 가이드
+# Video Guide
 
-FluxLoop VSCode Extension의 주요 기능을 영상과 함께 빠르게 살펴보세요.
+Get a quick look at the core features of the FluxLoop VSCode Extension through these video guides.
 
 ---
 
 ## 1. Projects
 
-FluxLoop 프로젝트를 생성하는 두 가지 방법입니다.
+There are two ways to create a FluxLoop project.
 
-### Default 모드 (권장)
+### Default Mode - Auto (Automatic Detection)
 
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/vyzmJWKLHHg"
-  title="FluxLoop - Default Mode Project Creation"
+  src="https://www.youtube.com/embed/ov8ju0gLBfQ"
+  title="FluxLoop - Default Mode (Auto Detection)"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
 ></iframe>
 
-**Default 모드**는 현재 열려있는 워크스페이스를 에이전트 소스로 재사용합니다. 환경을 자동으로 감지하고, FluxLoop 설정 파일들은 공유 루트 폴더(`~/FluxLoopProjects`)에 생성됩니다.
+**Auto mode** automatically detects virtual environments like `.venv` or `venv` within your workspace and completes the setup instantly. This is the recommended way for most users.
 
-- 대부분의 사용자에게 권장되는 방식
-- 기존 프로젝트 구조를 변경하지 않음
-- 빠른 시작 가능
+- **Quick Start**: Skip manual environment setup and create projects immediately.
+- **Seamless Workflow**: Keeps your existing project structure intact.
+- **Organized Management**: Simulation data is stored separately in a shared folder (`~/FluxLoopProjects`).
 
-### Custom 모드 (고급)
+### Default Mode - Manual (Manual Selection)
 
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_CUSTOM_MODE"
+  src="https://www.youtube.com/embed/iYN_w10ql8I"
+  title="FluxLoop - Default Mode (Manual Selection)"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+**Manual mode** is for when virtual environments are not in standard locations or when you need to specify a particular interpreter from multiple options.
+
+- **Granular Control**: Choose from any environment detected by the VS Code Python extension.
+- **Custom Path**: Manually browse and select a virtual environment folder if it's not listed.
+- **Flexibility**: Suitable for environments using various Python distributions like Conda, Pyenv, etc.
+
+### Custom Mode (Advanced)
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/cK0Wbf81Ung"
   title="FluxLoop - Custom Mode Project Creation"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
 ></iframe>
 
-**Custom 모드**는 프로젝트 위치와 설정을 완전히 제어하고 싶을 때 사용합니다.
+**Custom mode** is for when you want full control over the project location and configuration.
 
-- 모노레포, 원격 폴더 등 복잡한 구조에 적합
-- FluxLoop 설정을 소스 트리 내부에 배치 가능
-- 세밀한 환경 설정 지원
+- Ideal for complex structures like monorepos or remote folders.
+- Allows placing FluxLoop configs inside the source tree for easier Git management.
+- Supports independent environment settings per project.
 
-:::warning Environment 선택 시 주의사항
-두 모드 모두 프로젝트 생성 과정에서 **Python 환경을 선택**하는 단계가 있습니다.
+:::warning Important Note on Environment Selection
+Both modes include a step to select a Python environment during project creation.
 
-**실제 에이전트가 실행되는 가상환경(venv, Conda 등)이 있다면 반드시 해당 환경을 선택하세요.** 그렇지 않으면 시스템 기본 Python이 선택되며, 에이전트에 필요한 패키지들이 설치되어 있지 않아 실험 실행 시 오류가 발생할 수 있습니다.
+**If you have a virtual environment (venv, Conda, etc.) where your agent actually runs, make sure to select it.** Otherwise, the system's default Python will be used, which might lack the necessary packages, leading to errors during experiments.
 :::
 
 ---
 
 ## 2. Environment
 
-Python 환경 설정 및 상태 확인 방법입니다.
+Learn how to configure and check the status of your Python environment. Use this when agent dependencies change or when testing in different virtual environments.
 
 ### System Console
 
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_ENVIRONMENT"
+  src="https://www.youtube.com/embed/CUc8v3JLX2Q"
   title="FluxLoop - Environment Setup"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
 ></iframe>
 
-- **Select Environment**: 프로젝트에서 사용할 Python 인터프리터를 선택합니다. venv, Conda, Poetry, pyenv, uv 등 다양한 환경을 자동으로 감지합니다.
-- **Show Environment**: 현재 선택된 환경의 상세 정보(Python 버전, 설치된 패키지 등)를 확인합니다.
+- **Select Environment**: Choose the Python interpreter for your project. Automatically detects environments like venv, Conda, Poetry, pyenv, uv, and allows manual path specification if needed.
+- **Show Environment**: View detailed info about the currently selected environment (Python version, installed packages, etc.) to ensure consistency.
 
 ---
 
 ## 3. Inputs
 
-에이전트 테스트를 위한 입력 데이터를 생성합니다.
+Generate and manage large-scale input data for agent testing.
 
 ### Generate New Inputs
 
@@ -93,32 +111,32 @@ Python 환경 설정 및 상태 확인 방법입니다.
   allowFullScreen
 ></iframe>
 
-입력 생성 전에 **Base Input 설정이 필요합니다**. `configs/input.yaml` 파일에서 페르소나와 기본 입력값을 정의한 후, Generate 기능을 사용하여 다양한 변형 입력을 자동 생성할 수 있습니다.
+A **Base Input configuration is required before generating inputs**. Define personas and base input values in `configs/input.yaml`, then use the Generate feature to automatically create hundreds of variations. Generated inputs are saved in the `inputs/` folder and can be manually edited to refine your dataset.
 
 ---
 
 ## 4. Experiments
 
-시뮬레이션을 준비하고 실험을 실행합니다.
+Prepare simulations and run experiments to observe your agent's behavior.
 
 ### Prepare Simulation
 
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_PREPARE_SIM"
+  src="https://www.youtube.com/embed/zq2xDacSXLg"
   title="FluxLoop - Prepare Simulation"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
 ></iframe>
 
-:::info 참고
-Prepare Simulation은 설정 가이드일 뿐입니다. 실제 실험을 위해서는 직접 셋업이 필요합니다:
+:::info Note
+Prepare Simulation is a guide that walks you through the configuration process. For actual agent integration, refer to the following:
 
-- [FluxLoop SDK 기본 사용법](/sdk/getting-started/basic-usage) - 에이전트 코드에 SDK 적용하기
-- [Runner 설정 가이드](/cli/configuration/runner-targets) - 다양한 Runner 패턴 (Python, HTTP, Subprocess 등)
-- [pytest 통합](/cli/workflows/pytest-integration) - CI/CD 파이프라인에서 실험 실행하기
+- [FluxLoop SDK Basic Usage](/sdk/getting-started/basic-usage) - Applying SDK decorators to your agent code.
+- [Runner Configuration Guide](/cli/configuration/runner-targets) - Setting up various runner patterns (Python, HTTP, Subprocess, etc.).
+- [pytest Integration](/cli/workflows/pytest-integration) - Integrating FluxLoop simulations with existing test code.
 :::
 
 ### Run Experiment
@@ -133,42 +151,46 @@ Prepare Simulation은 설정 가이드일 뿐입니다. 실제 실험을 위해�
   allowFullScreen
 ></iframe>
 
-준비된 시뮬레이션 설정을 바탕으로 실험을 실행합니다. 실행 중인 실험의 진행 상황을 실시간으로 확인할 수 있습니다.
+Execute experiments based on the prepared configurations.
 
-:::tip 복잡한 Args 설정이 어렵다면?
-시뮬레이션에 필요한 `args` 설정이 복잡하거나 어렵다면, [Recording Mode](./recording-mode)를 활용해보세요. 실제 에이전트 실행 시 사용된 인자를 녹화해두고, 이후 실험에서 그대로 재사용할 수 있습니다.
+- **Real-time Monitoring**: Instantly track experiment progress and logs from the dashboard.
+- **Parallel Execution**: Process large volumes of inputs in parallel across multiple processes to save time.
+- **Trace Viewer**: Analyze the detailed execution flow (Trace) of each running simulation in real-time.
+
+:::tip Struggling with complex Args settings?
+If configuring simulation arguments (`args`) is too complex, try [Recording Mode](./recording-mode). Record the actual arguments used during agent execution and reuse them in your experiments.
 :::
 
 ---
 
 ## 5. Evaluation
 
-실험 결과를 분석하고 평가합니다.
+Analyze and evaluate experiment results using quantitative metrics.
 
 <iframe
   width="100%"
   height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID_EVALUATION"
+  src="https://www.youtube.com/embed/0zHYjQlNOS0"
   title="FluxLoop - Evaluation"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
 ></iframe>
 
-평가는 세 단계로 진행됩니다:
+Evaluation proceeds in three steps, allowing you to **compare and analyze multiple experiment results** to track your agent's performance improvement at a glance:
 
-1. **Configure**: 평가 기준과 메트릭을 설정합니다.
-2. **Parse**: 실험 결과에서 평가에 필요한 데이터를 추출합니다.
-3. **Evaluate**: 설정된 기준에 따라 결과를 평가하고 점수를 산출합니다.
+1. **Configure**: Set up evaluation rubrics and metrics.
+2. **Parse**: Extract key data required for evaluation from experiment results (Traces).
+3. **Evaluate**: Calculate scores and gain insights through LLM or rule-based evaluators.
 
 ---
 
-## 다음 단계
+## Next Steps
 
-각 기능에 대한 자세한 설명은 아래 문서를 참고하세요:
+For more details on each feature, please refer to the documents below:
 
-- [프로젝트 생성](./creating-projects) - 상세 프로젝트 설정 가이드
-- [환경 설정](./environment-setup) - Python 환경 구성
-- [입력 관리](./managing-inputs) - 입력 데이터 생성 및 관리
-- [실험 실행](./running-experiments) - 시뮬레이션 실행 방법
-- [결과 확인](./viewing-results) - 실험 결과 분석
+- [Creating Projects](./creating-projects) - Detailed project setup guide.
+- [Environment Setup](./environment-setup) - Configuring Python environments.
+- [Managing Inputs](./managing-inputs) - Creating and managing input data.
+- [Running Experiments](./running-experiments) - How to run simulations.
+- [Viewing Results](./viewing-results) - Analyzing experiment results.
