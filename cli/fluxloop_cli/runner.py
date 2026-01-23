@@ -311,6 +311,7 @@ class ExperimentRunner:
                 persona,
                 iteration,
                 turn_progress_callback=turn_progress_callback,
+                turn_record_callback=turn_record_callback,
             )
             return
 

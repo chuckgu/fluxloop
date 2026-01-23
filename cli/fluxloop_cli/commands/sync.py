@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from uuid import UUID, uuid4
@@ -60,6 +61,93 @@ def _resolve_api_key(override: Optional[str]) -> str:
     if not key:
         raise typer.BadParameter("Sync API key is not set. Use fluxloop config set-sync-key.")
     return key
+
+
+def _post_with_retry(
+    client: httpx.Client,
+    endpoint: str,
+    *,
+    payload: Dict[str, Any],
+    headers: Dict[str, str],
+    max_retries: int = 3,
+    backoff_seconds: float = 1.0,
+    timeout_seconds: float = 10.0,
+) -> httpx.Response:
+    attempt = 0
+    while True:
+        try:
+            resp = client.post(
+                endpoint,
+                json=payload,
+                headers=headers,
+                timeout=timeout_seconds,
+            )
+            resp.raise_for_status()
+            return resp
+        except Exception:
+            attempt += 1
+            if attempt > max_retries:
+                raise
+            time.sleep(backoff_seconds * (2 ** (attempt - 1)))
+
+
+def stream_turn(
+    *,
+    turn: Dict[str, Any],
+    experiment_id: str,
+    project_root: Path,
+    api_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    max_retries: int = 3,
+    backoff_seconds: float = 1.0,
+    timeout_seconds: float = 10.0,
+    quiet: bool = False,
+) -> bool:
+    """
+    Stream a single turn to the sync API (best-effort).
+    """
+    try:
+        api_url = _resolve_api_url(api_url)
+        api_key = _resolve_api_key(api_key)
+        sync_state = _read_sync_state(project_root)
+
+        run_id = turn.get("run_id")
+        turn_id = turn.get("turn_id")
+        if not run_id or not turn_id:
+            return False
+
+        payload: Dict[str, Any] = {
+            "run_id": run_id,
+            "turn": turn,
+            "experiment_id": experiment_id,
+            "project_id": sync_state.get("project_id"),
+            "bundle_version_id": sync_state.get("bundle_version_id"),
+        }
+
+        idempotency_key = f"{run_id}:{turn_id}"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Idempotency-Key": idempotency_key,
+        }
+        if endpoint is None:
+            endpoint = "/api/sync/turns"
+
+        with httpx.Client(base_url=api_url, timeout=timeout_seconds) as client:
+            _post_with_retry(
+                client,
+                endpoint,
+                payload=payload,
+                headers=headers,
+                max_retries=max_retries,
+                backoff_seconds=backoff_seconds,
+                timeout_seconds=timeout_seconds,
+            )
+        return True
+    except Exception as exc:
+        if not quiet:
+            console.print(f"[yellow]Turn stream failed:[/yellow] {exc}")
+        return False
 
 
 def _ensure_fluxloop_dir(project_root: Path) -> Path:

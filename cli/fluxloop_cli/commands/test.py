@@ -5,6 +5,9 @@ Test command to run pull -> run -> upload workflow.
 from __future__ import annotations
 
 import asyncio
+import os
+from concurrent.futures import ThreadPoolExecutor
+import yaml
 from pathlib import Path
 from typing import Optional
 
@@ -42,6 +45,9 @@ def main(
     ),
     skip_upload: Optional[bool] = typer.Option(
         None, "--skip-upload/--no-skip-upload", help="Skip sync upload step"
+    ),
+    stream_turns: Optional[bool] = typer.Option(
+        None, "--stream-turns/--no-stream-turns", help="Stream turns to Web while running"
     ),
     smoke: bool = typer.Option(False, "--smoke", help="Run a smoke test"),
     full: bool = typer.Option(False, "--full", help="Run full test"),
@@ -93,16 +99,73 @@ def main(
 
     if mode == "smoke":
         config.iterations = 1
+        inputs_path = Path(config.inputs_file) if config.inputs_file else None
+        if inputs_path:
+            source_dir = config.get_source_dir()
+            resolved_inputs = (
+                (source_dir / inputs_path).resolve() if source_dir and not inputs_path.is_absolute() else inputs_path
+            )
+            if resolved_inputs.exists():
+                payload = yaml.safe_load(resolved_inputs.read_text()) or {}
+                entries = payload.get("inputs") if isinstance(payload, dict) else payload
+                if isinstance(entries, list) and entries:
+                    smoke_payload = (
+                        {"inputs": entries[:1]} if isinstance(payload, dict) else entries[:1]
+                    )
+                    smoke_path = project_root / ".fluxloop" / "smoke_inputs.yaml"
+                    smoke_path.parent.mkdir(parents=True, exist_ok=True)
+                    smoke_path.write_text(
+                        yaml.safe_dump(smoke_payload, sort_keys=False, allow_unicode=True),
+                        encoding="utf-8",
+                    )
+                    config.inputs_file = str(smoke_path)
 
     guardrails = load_guardrails_from_config(project_config)
     runner = ExperimentRunner(config, no_collector=no_collector)
     recorder = TurnRecorder(runner.output_dir / "turns.jsonl", guardrails)
+    criteria_items = load_criteria_items(project_root / ".fluxloop" / "criteria")
+    result_path = runner.output_dir / "result.md"
+    result_path.write_text("", encoding="utf-8")
+    latest_path = write_latest_result_link(project_root, result_path)
+
+    stream_enabled = stream_turns
+    if stream_enabled is None:
+        stream_enabled = bool(
+            test_config.get("turn_streaming", False)
+            or os.getenv("FLUXLOOP_TURN_STREAMING") in ("1", "true", "True")
+        )
+    stream_endpoint = test_config.get("turn_stream_endpoint") or os.getenv(
+        "FLUXLOOP_TURN_STREAM_ENDPOINT"
+    )
+    stream_retries = int(test_config.get("turn_stream_retry_max", 3))
+    stream_backoff = float(test_config.get("turn_stream_backoff_seconds", 1.0))
+    stream_timeout = float(test_config.get("turn_stream_timeout_seconds", 10.0))
+    stream_executor = ThreadPoolExecutor(max_workers=2) if stream_enabled else None
+    stream_futures = []
+    if stream_enabled:
+        sync._load_env(project, root)
 
     if not quiet:
         console.print(f"[Run] Executing {mode} test...")
 
     def _turn_record_callback(turn_payload: dict) -> None:
         record = recorder.record_turn(turn_payload)
+        if stream_enabled and stream_executor:
+            stream_futures.append(
+                stream_executor.submit(
+                    sync.stream_turn,
+                    turn=record,
+                    experiment_id=runner.output_dir.name,
+                    project_root=project_root,
+                    api_url=None,
+                    api_key=None,
+                    endpoint=stream_endpoint,
+                    max_retries=stream_retries,
+                    backoff_seconds=stream_backoff,
+                    timeout_seconds=stream_timeout,
+                    quiet=quiet,
+                )
+            )
         if quiet:
             return
         if record.get("role") != "assistant":
@@ -117,6 +180,11 @@ def main(
         else:
             status = "✓"
         console.print(f"  Turn {turn_index}: {status} assistant ({duration})")
+        # Update result.md progressively so latest_result is always available.
+        result_path.write_text(
+            render_result_markdown(list(recorder.iter_turns()), recorder.get_overall_summary(), criteria_items),
+            encoding="utf-8",
+        )
 
     try:
         asyncio.run(
@@ -131,14 +199,18 @@ def main(
         console.print(f"[red]Test failed:[/red] {exc}")
         raise typer.Exit(1)
 
-    criteria_items = load_criteria_items(project_root / ".fluxloop" / "criteria")
     summary = recorder.get_overall_summary()
     turns = list(recorder.iter_turns())
-    result_path = runner.output_dir / "result.md"
     result_path.write_text(
         render_result_markdown(turns, summary, criteria_items), encoding="utf-8"
     )
-    latest_path = write_latest_result_link(project_root, result_path)
+    if stream_executor:
+        for future in stream_futures:
+            try:
+                future.result()
+            except Exception:
+                continue
+        stream_executor.shutdown(wait=True)
 
     if do_upload:
         if not quiet:
