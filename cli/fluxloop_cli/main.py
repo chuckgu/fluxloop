@@ -9,7 +9,20 @@ from rich.console import Console
 from rich.panel import Panel
 
 from . import __version__
-from .commands import config, doctor, evaluate, generate, init, parse, record, run, status
+from .commands import (
+    config,
+    criteria,
+    doctor,
+    evaluate,
+    generate,
+    init,
+    parse,
+    record,
+    run,
+    status,
+    sync,
+    test,
+)
 
 # Create the main Typer app
 app = typer.Typer(
@@ -32,6 +45,9 @@ app.add_typer(parse.app, name="parse", help="Parse experiments into readable fil
 app.add_typer(record.app, name="record", help="Manage recording mode and settings")
 app.add_typer(doctor.app, name="doctor", help="Diagnose CLI and MCP environment issues")
 app.add_typer(evaluate.app, name="evaluate", help="Evaluate experiment results")
+app.add_typer(sync.app, name="sync", help="Sync bundles and upload results")
+app.add_typer(criteria.app, name="criteria", help="Show pulled evaluation criteria")
+app.add_typer(test.app, name="test", help="Run pull -> run -> upload test workflow")
 
 
 def version_callback(value: bool):

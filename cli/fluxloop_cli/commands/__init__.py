@@ -1,9 +1,23 @@
 """CLI commands."""
 
-from . import config, doctor, evaluate, generate, init, parse, record, run, status
+from . import (
+    config,
+    criteria,
+    doctor,
+    evaluate,
+    generate,
+    init,
+    parse,
+    record,
+    run,
+    status,
+    sync,
+    test,
+)
 
 __all__ = [
     "config",
+    "criteria",
     "doctor",
     "evaluate",
     "generate",
@@ -12,4 +26,6 @@ __all__ = [
     "record",
     "run",
     "status",
+    "sync",
+    "test",
 ]

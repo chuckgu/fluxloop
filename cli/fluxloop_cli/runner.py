@@ -12,7 +12,8 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from uuid import uuid4
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
@@ -131,6 +132,7 @@ class ExperimentRunner:
         self,
         progress_callback: Optional[Callable] = None,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
+        turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> Dict[str, Any]:
         """
         Run the complete experiment.
@@ -165,6 +167,7 @@ class ExperimentRunner:
                         persona,
                         iteration,
                         turn_progress_callback=turn_progress_callback,
+                        turn_record_callback=turn_record_callback,
                     )
 
                     if progress_callback:
@@ -182,6 +185,7 @@ class ExperimentRunner:
                             persona,
                             iteration,
                             turn_progress_callback=turn_progress_callback,
+                        turn_record_callback=turn_record_callback,
                         )
 
                         if progress_callback:
@@ -296,6 +300,7 @@ class ExperimentRunner:
         iteration: int,
         *,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
+        turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         """Run a single execution."""
 
@@ -344,7 +349,29 @@ class ExperimentRunner:
                 if persona:
                     ctx.add_metadata("persona", persona.name)
                 
+                run_id = trace_id or str(uuid4())
+                if not trace_id:
+                    trace_id = run_id
+                    ctx.add_metadata("trace_id", trace_id)
+
+                if turn_record_callback:
+                    turn_record_callback(
+                        {
+                            "run_id": run_id,
+                            "role": "user",
+                            "content": input_text,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "duration_ms": None,
+                            "metadata": {
+                                "iteration": iteration,
+                                "persona": persona.name if persona else None,
+                                "source": "input",
+                            },
+                        }
+                    )
+
                 # Run agent
+                turn_start = time.time()
                 result = await self._call_agent(
                     agent_func,
                     input_text,
@@ -396,10 +423,16 @@ class ExperimentRunner:
             duration_ms = (time.time() - start_time) * 1000
             self.results["durations"].append(duration_ms)
 
+            variation_metadata = variation.get("metadata") or {}
+            if persona and not variation_metadata.get("persona"):
+                variation_metadata = dict(variation_metadata)
+                variation_metadata["persona"] = persona.name
+            trace_persona = persona.name if persona else variation_metadata.get("persona")
+
             trace_entry = {
                 "trace_id": trace_id,
                 "iteration": iteration,
-                "persona": persona.name if persona else None,
+                "persona": trace_persona,
                 "input": input_text,
                 "output": result,
                 "duration_ms": duration_ms,
@@ -429,12 +462,28 @@ class ExperimentRunner:
                     role="user",
                     content=input_text,
                     source="input",
-                    persona=persona.name if persona else None,
+                    persona=trace_persona,
                 )
             )
             actions = self._summarize_observation_actions(observations, seen_observation_keys)
             assistant_text = self._ensure_text(result)
             trace_entry["output"] = assistant_text
+
+            if turn_record_callback:
+                turn_record_callback(
+                    {
+                        "run_id": run_id,
+                        "role": "assistant",
+                        "content": assistant_text,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "duration_ms": (time.time() - turn_start) * 1000,
+                        "metadata": {
+                            "iteration": iteration,
+                            "persona": trace_persona,
+                            "source": "agent",
+                        },
+                    }
+                )
             conversation.append(
                 self._make_conversation_entry(
                     turn_index=turn_index,
@@ -449,7 +498,12 @@ class ExperimentRunner:
                 "turns": [
                     {"role": "user", "content": input_text},
                     {"role": "assistant", "content": assistant_text},
-                ]
+                ],
+                "metadata": {
+                    "iteration": iteration,
+                    "persona": trace_persona,
+                    "variation": variation_metadata,
+                },
             }
 
             self.results["traces"].append(trace_entry)
@@ -476,6 +530,7 @@ class ExperimentRunner:
         iteration: int,
         *,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
+        turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         """Execute a multi-turn conversation using the supervisor loop."""
 
@@ -564,6 +619,27 @@ class ExperimentRunner:
                     ctx.add_metadata("persona", persona.name)
                 ctx.add_metadata("multi_turn", True)
 
+                run_id = trace_id or str(uuid4())
+                if not trace_id:
+                    trace_id = run_id
+                    ctx.add_metadata("trace_id", trace_id)
+
+                if turn_record_callback:
+                    turn_record_callback(
+                        {
+                            "run_id": run_id,
+                            "role": "user",
+                            "content": input_text,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "duration_ms": None,
+                            "metadata": {
+                                "iteration": iteration,
+                                "persona": persona.name if persona else None,
+                                "source": "input",
+                            },
+                        }
+                    )
+
                 current_user_input = input_text
                 turn_count = 0
 
@@ -589,6 +665,7 @@ class ExperimentRunner:
                         type(current_user_input).__name__,
                         current_user_input if isinstance(current_user_input, str) else str(current_user_input),
                     )
+                    turn_start = time.time()
                     result = await self._call_agent(
                         agent_func,
                         current_user_input,
@@ -643,6 +720,22 @@ class ExperimentRunner:
                             actions=new_actions or None,
                         )
                     )
+                    if turn_record_callback:
+                        turn_record_callback(
+                            {
+                                "run_id": run_id,
+                                "role": "assistant",
+                                "content": assistant_text,
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "duration_ms": (time.time() - turn_start) * 1000,
+                                "metadata": {
+                                    "iteration": iteration,
+                                    "persona": persona.name if persona else None,
+                                    "source": "agent",
+                                    "turn_index": turn_index,
+                                },
+                            }
+                        )
                     turn_index += 1
 
                     turn_count += 1
@@ -691,6 +784,23 @@ class ExperimentRunner:
                                     closing=True,
                                 )
                             )
+                            if turn_record_callback:
+                                turn_record_callback(
+                                    {
+                                        "run_id": run_id,
+                                        "role": "user",
+                                        "content": closing_text,
+                                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                                        "duration_ms": None,
+                                        "metadata": {
+                                            "iteration": iteration,
+                                            "persona": persona.name if persona else None,
+                                            "source": "supervisor",
+                                            "closing": True,
+                                            "turn_index": turn_index,
+                                        },
+                                    }
+                                )
                         ctx.add_metadata("termination_reason", termination_reason)
                         break
 
@@ -721,6 +831,24 @@ class ExperimentRunner:
                             persona=persona.name if persona else None,
                         )
                     )
+                    if turn_record_callback:
+                        turn_record_callback(
+                            {
+                                "run_id": run_id,
+                                "role": "user",
+                                "content": next_user_text,
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "duration_ms": None,
+                                "metadata": {
+                                    "iteration": iteration,
+                                    "persona": persona.name if persona else None,
+                                    "source": "supervisor"
+                                    if decision.raw_response
+                                    else "user",
+                                    "turn_index": turn_index,
+                                },
+                            }
+                        )
                     current_user_input = next_user_message
 
                 EventBuffer.get_instance().flush()

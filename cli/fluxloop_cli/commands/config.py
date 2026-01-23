@@ -192,7 +192,9 @@ def env(
 
     env_vars = [
         ("FLUXLOOP_COLLECTOR_URL", "Collector service URL", "http://localhost:8000"),
+        ("FLUXLOOP_SYNC_URL", "Sync API base URL", None),
         ("FLUXLOOP_API_KEY", "API key for authentication", None),
+        ("FLUXLOOP_SYNC_API_KEY", "Sync API key for uploads", None),
         ("FLUXLOOP_ENABLED", "Enable/disable tracing", "true"),
         ("FLUXLOOP_DEBUG", "Enable debug mode", "false"),
         ("FLUXLOOP_SAMPLE_RATE", "Trace sampling rate (0-1)", "1.0"),
@@ -321,6 +323,41 @@ def set_llm(
     console.print(
         f"[green]✓[/green] Updated {display_config_path} with provider='{normalized_provider}' model='{llm_config['model']}'"
     )
+
+
+@app.command()
+def set_sync_key(
+    api_key: str = typer.Argument(..., help="Sync API key"),
+    api_url: Optional[str] = typer.Option(None, "--url", help="Sync API base URL"),
+    overwrite_env: bool = typer.Option(False, "--overwrite-env", help="Overwrite existing key in .env"),
+    env_file: Path = typer.Option(Path(".env"), "--env-file", help="Path to environment file"),
+    project: Optional[str] = typer.Option(None, "--project", help="Project name under the FluxLoop root"),
+    root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="FluxLoop root directory"),
+):
+    """Save Sync API credentials to .env."""
+
+    env_path = resolve_env_path(env_file, project, root)
+    env_contents: Dict[str, str] = {}
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            env_contents[key.strip()] = value.strip()
+
+    if "FLUXLOOP_SYNC_API_KEY" in env_contents and not overwrite_env:
+        console.print(
+            "[yellow]Warning:[/yellow] FLUXLOOP_SYNC_API_KEY already set. Use --overwrite-env to replace it."
+        )
+    else:
+        env_contents["FLUXLOOP_SYNC_API_KEY"] = api_key
+
+    if api_url:
+        env_contents["FLUXLOOP_SYNC_URL"] = api_url
+
+    env_lines = [f"{key}={value}" for key, value in env_contents.items()]
+    env_path.write_text("\n".join(env_lines) + "\n")
+    console.print(f"[green]✓[/green] Saved sync credentials to {env_path}")
 
 
 @app.command()

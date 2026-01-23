@@ -133,17 +133,18 @@ def check(
     
     # Check environment
     import os
-    if os.getenv("FLUXLOOP_API_KEY"):
+    sync_key = os.getenv("FLUXLOOP_SYNC_API_KEY") or os.getenv("FLUXLOOP_API_KEY")
+    if sync_key:
         status_table.add_row(
-            "API Key",
+            "Sync API Key",
             "[green]✓ Set[/green]",
-            "****" + os.getenv("FLUXLOOP_API_KEY")[-4:] if verbose else "Configured"
+            "****" + sync_key[-4:] if verbose else "Configured",
         )
     else:
         status_table.add_row(
-            "API Key",
+            "Sync API Key",
             "[yellow]- Not set[/yellow]",
-            "Set FLUXLOOP_API_KEY in .env"
+            "Set FLUXLOOP_SYNC_API_KEY in .env",
         )
     
     console.print(status_table)
@@ -152,8 +153,8 @@ def check(
     recommendations = []
     if not resolved_config.exists():
         recommendations.append("Initialize a project: [cyan]fluxloop init project[/cyan]")
-    if not os.getenv("FLUXLOOP_API_KEY"):
-        recommendations.append("Set up API key in .env file")
+    if not sync_key:
+        recommendations.append("Set up sync API key in .env file")
     
     if recommendations:
         console.print("\n[bold]Recommendations:[/bold]")

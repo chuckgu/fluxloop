@@ -2,7 +2,7 @@
 FluxLoop CLI - Command-line interface for running agent simulations.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from .main import app
 
