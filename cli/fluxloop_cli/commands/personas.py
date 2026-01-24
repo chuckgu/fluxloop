@@ -1,0 +1,267 @@
+"""
+Persona management commands for FluxLoop CLI.
+"""
+
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from ..api_utils import (
+    handle_api_error,
+    load_payload_file,
+    resolve_api_url,
+    save_cache_file,
+)
+from ..http_client import create_authenticated_client, post_with_retry
+
+app = typer.Typer(help="Manage test personas")
+console = Console()
+
+
+@app.command()
+def suggest(
+    scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID for persona suggestions"),
+    count: int = typer.Option(3, "--count", help="Number of personas to suggest"),
+    file: Optional[Path] = typer.Option(
+        None, "--file", "-f", help="Load payload from YAML or JSON file"
+    ),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Get AI-suggested personas for a scenario.
+    """
+    api_url = resolve_api_url(api_url)
+
+    # Build payload
+    payload: Dict[str, Any] = {
+        "scenario_id": scenario_id,
+        "count": count,
+    }
+
+    # Override with file if provided
+    if file:
+        file_data = load_payload_file(file)
+        payload.update(file_data)
+
+    try:
+        console.print("[cyan]Suggesting personas...[/cyan]")
+
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = post_with_retry(client, "/api/personas/suggest", payload=payload)
+
+        handle_api_error(resp, f"persona suggestions for scenario {scenario_id}")
+
+        data = resp.json()
+        personas = data if isinstance(data, list) else data.get("personas", [])
+
+        if not personas:
+            console.print("[yellow]No personas suggested.[/yellow]")
+            return
+
+        console.print()
+        console.print(f"[green]✓[/green] {len(personas)} personas suggested")
+
+        # Create table
+        console.print("\n[bold]Suggested personas:[/bold]")
+        table = Table()
+        table.add_column("Difficulty", style="cyan")
+        table.add_column("Name", style="bold")
+        table.add_column("Description")
+
+        for persona in personas:
+            difficulty = persona.get("difficulty", "unknown")
+            difficulty_display = {
+                "easy": "[green]Easy[/green]",
+                "medium": "[yellow]Medium[/yellow]",
+                "hard": "[red]Hard[/red]",
+            }.get(difficulty, difficulty)
+
+            table.add_row(
+                difficulty_display,
+                persona.get("name", "N/A"),
+                persona.get("description", "N/A"),
+            )
+
+        console.print(table)
+
+        # Save to cache
+        cache_path = save_cache_file(
+            "personas", f"suggested_{scenario_id}.yaml", {"personas": personas}
+        )
+        console.print(f"\n[dim]Saved to: {cache_path}[/dim]")
+
+        # Show next steps
+        if personas and "id" in personas[0]:
+            ids = ",".join(p.get("id", "") for p in personas if "id" in p)
+            console.print(
+                f"\n[dim]To select: fluxloop personas select --ids {ids} --scenario-id {scenario_id}[/dim]"
+            )
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Suggestion failed: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def select(
+    ids: str = typer.Option(..., "--ids", help="Comma-separated persona IDs to select"),
+    scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID to associate personas with"),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Select personas for a scenario.
+    """
+    api_url = resolve_api_url(api_url)
+
+    # Parse persona IDs
+    persona_ids: List[str] = [pid.strip() for pid in ids.split(",") if pid.strip()]
+
+    if not persona_ids:
+        raise typer.BadParameter("No persona IDs provided")
+
+    # Build payload
+    payload: Dict[str, Any] = {
+        "persona_ids": persona_ids,
+    }
+
+    try:
+        console.print(f"[cyan]Selecting {len(persona_ids)} personas for scenario {scenario_id}...[/cyan]")
+
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = post_with_retry(
+            client,
+            f"/api/scenarios/{scenario_id}/personas",
+            payload=payload
+        )
+
+        handle_api_error(resp, f"persona selection for scenario {scenario_id}")
+
+        console.print()
+        console.print(
+            f"[green]✓[/green] {len(persona_ids)} personas selected for scenario {scenario_id}"
+        )
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Selection failed: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def list(
+    scenario_id: Optional[str] = typer.Option(
+        None, "--scenario-id", help="Filter by scenario ID"
+    ),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    List all personas.
+    """
+    api_url = resolve_api_url(api_url)
+
+    try:
+        client = create_authenticated_client(api_url, use_jwt=True)
+
+        # Build query params
+        params = {}
+        if scenario_id:
+            params["scenario_id"] = scenario_id
+
+        resp = client.get("/api/personas", params=params)
+        handle_api_error(resp, "personas list")
+
+        data = resp.json()
+        personas = data if isinstance(data, list) else data.get("personas", [])
+
+        if not personas:
+            console.print("[yellow]No personas found.[/yellow]")
+            return
+
+        # Create table
+        table = Table(title="Personas")
+        table.add_column("ID", style="cyan")
+        table.add_column("Name", style="bold")
+        table.add_column("Difficulty")
+        table.add_column("Description")
+
+        for persona in personas:
+            difficulty = persona.get("difficulty", "unknown")
+            difficulty_display = {
+                "easy": "[green]Easy[/green]",
+                "medium": "[yellow]Medium[/yellow]",
+                "hard": "[red]Hard[/red]",
+            }.get(difficulty, difficulty)
+
+            table.add_row(
+                persona.get("id", "N/A"),
+                persona.get("name", "N/A"),
+                difficulty_display,
+                persona.get("description", "N/A")[:50] + "..." if len(persona.get("description", "")) > 50 else persona.get("description", "N/A"),
+            )
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] List failed: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def create(
+    name: str = typer.Option(..., "--name", help="Persona name"),
+    description: Optional[str] = typer.Option(
+        None, "--description", help="Persona description"
+    ),
+    file: Optional[Path] = typer.Option(
+        None, "--file", "-f", help="Load full PersonaConfig from YAML or JSON file"
+    ),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Create a custom persona.
+    """
+    api_url = resolve_api_url(api_url)
+
+    # Build payload
+    payload: Dict[str, Any] = {"name": name}
+
+    if description:
+        payload["description"] = description
+
+    # Override with file if provided
+    if file:
+        file_data = load_payload_file(file)
+        payload.update(file_data)
+
+    try:
+        console.print("[cyan]Creating persona...[/cyan]")
+
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = post_with_retry(client, "/api/personas", payload=payload)
+
+        handle_api_error(resp, "persona creation")
+
+        data = resp.json()
+
+        console.print()
+        console.print(
+            f"[green]✓[/green] Persona created: [bold]{data.get('persona_id', 'N/A')}[/bold]"
+        )
+        console.print(f"  Name: {data.get('name', 'N/A')}")
+
+        if "description" in data:
+            console.print(f"  Description: {data['description']}")
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Creation failed: {e}", style="bold red")
+        raise typer.Exit(1)
