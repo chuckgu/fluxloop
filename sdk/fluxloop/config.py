@@ -86,11 +86,7 @@ class SDKConfig(BaseModel):
     """SDK configuration settings."""
 
     # Collector settings
-    collector_url: Optional[str] = Field(
-        default_factory=lambda: os.getenv(
-            "FLUXLOOP_COLLECTOR_URL", "http://localhost:8000"
-        )
-    )
+    collector_url: Optional[str] = Field(default=None)
     api_key: Optional[str] = Field(
         default_factory=lambda: os.getenv("FLUXLOOP_API_KEY")
     )

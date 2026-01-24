@@ -173,10 +173,6 @@ You can configure FluxLoop using environment variables:
 export FLUXLOOP_STORAGE=file
 export FLUXLOOP_BASE_PATH=./traces
 
-# HTTP collector
-export FLUXLOOP_COLLECTOR_URL=http://localhost:8000
-export FLUXLOOP_API_KEY=your-api-key
-
 # Project settings
 export FLUXLOOP_PROJECT_NAME=my-agent
 export FLUXLOOP_ENABLED=true

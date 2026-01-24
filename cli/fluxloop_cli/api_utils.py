@@ -28,8 +28,7 @@ def resolve_api_url(override: Optional[str]) -> str:
     1. Override parameter
     2. FLUXLOOP_API_URL
     3. FLUXLOOP_SYNC_URL
-    4. FLUXLOOP_COLLECTOR_URL
-    5. Default: http://localhost:8000
+    4. Default: https://api.fluxloop.ai
 
     Args:
         override: Optional URL override.
@@ -41,8 +40,7 @@ def resolve_api_url(override: Optional[str]) -> str:
         override
         or os.getenv("FLUXLOOP_API_URL")
         or os.getenv("FLUXLOOP_SYNC_URL")
-        or os.getenv("FLUXLOOP_COLLECTOR_URL")
-        or "http://localhost:8000"
+        or "https://api.fluxloop.ai"
     )
     return url.rstrip("/")
 

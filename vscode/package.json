@@ -322,15 +322,15 @@
     "configuration": {
       "title": "FluxLoop",
       "properties": {
-        "fluxloop.collectorUrl": {
+        "fluxloop.syncUrl": {
           "type": "string",
-          "default": "http://localhost:8000",
-          "description": "URL of the FluxLoop collector service"
+          "default": "https://api.fluxloop.ai",
+          "description": "URL of the FluxLoop sync API"
         },
         "fluxloop.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for FluxLoop collector"
+          "description": "API key for FluxLoop sync API"
         },
         "fluxloop.defaultEnvironment": {
           "type": "string",

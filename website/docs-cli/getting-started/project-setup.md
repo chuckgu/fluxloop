@@ -139,9 +139,9 @@ The `.env` file stores sensitive configuration:
 OPENAI_API_KEY=sk-your-key-here
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 
-# Collector Configuration
-FLUXLOOP_COLLECTOR_URL=http://localhost:8000
-FLUXLOOP_COLLECTOR_API_KEY=your-api-key
+# Sync Configuration
+FLUXLOOP_SYNC_URL=https://api.fluxloop.ai
+FLUXLOOP_SYNC_API_KEY=your-api-key
 
 # Recording Mode
 FLUXLOOP_RECORD_ARGS=false

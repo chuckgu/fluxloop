@@ -33,8 +33,7 @@ def _resolve_api_url(override: Optional[str]) -> str:
         override
         or os.getenv("FLUXLOOP_API_URL")
         or os.getenv("FLUXLOOP_SYNC_URL")
-        or os.getenv("FLUXLOOP_COLLECTOR_URL")
-        or "http://localhost:8000"
+        or "https://api.fluxloop.ai"
     )
     return url.rstrip("/")
 

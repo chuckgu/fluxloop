@@ -10,7 +10,6 @@ SDK environment variable reference.
 
 - `FLUXLOOP_STORAGE` - Storage backend (file or http)
 - `FLUXLOOP_BASE_PATH` - Base path for file storage
-- `FLUXLOOP_COLLECTOR_URL` - URL for HTTP collector
 
 ## Coming Soon
 

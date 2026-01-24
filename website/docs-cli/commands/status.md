@@ -307,14 +307,6 @@ Use `doctor`:
 | ✓ Installed | SDK found and loaded | None needed |
 | ✗ Not installed | SDK missing | `pip install fluxloop` |
 
-### Collector Status
-
-| Status | Meaning | Action |
-|--------|---------|--------|
-| ✓ Connected | Collector reachable | None needed |
-| ? Unknown | Cannot verify (offline mode OK) | Verify URL if needed |
-| ✗ Error | Connection failed | Check `FLUXLOOP_COLLECTOR_URL` |
-
 ### Config Status
 
 | Status | Meaning | Action |

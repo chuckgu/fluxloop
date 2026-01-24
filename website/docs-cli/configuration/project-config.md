@@ -195,11 +195,6 @@ collector_url: null
 collector_api_key: null
 ```
 
-**Environment Variable Override:**
-```bash
-export FLUXLOOP_COLLECTOR_URL="http://localhost:8000"
-```
-
 ---
 
 ### collector_api_key
@@ -419,7 +414,6 @@ These environment variables can override config values:
 
 | Variable | Overrides | Example |
 |----------|-----------|---------|
-| `FLUXLOOP_COLLECTOR_URL` | `collector_url` | `http://localhost:8000` |
 | `FLUXLOOP_API_KEY` | `collector_api_key` | `fl_sk_abc123...` |
 | `FLUXLOOP_SERVICE_NAME` | `name` | `my_agent` |
 

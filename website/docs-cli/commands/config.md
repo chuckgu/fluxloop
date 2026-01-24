@@ -131,8 +131,9 @@ fluxloop config env --show-values
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `FLUXLOOP_COLLECTOR_URL` | Collector service URL | `http://localhost:8000` |
+| `FLUXLOOP_SYNC_URL` | Sync API base URL | `https://api.fluxloop.ai` |
 | `FLUXLOOP_API_KEY` | API key for authentication | None |
+| `FLUXLOOP_SYNC_API_KEY` | Sync API key for uploads | None |
 | `FLUXLOOP_ENABLED` | Enable/disable tracing | `true` |
 | `FLUXLOOP_DEBUG` | Enable debug mode | `false` |
 | `FLUXLOOP_SAMPLE_RATE` | Trace sampling rate (0-1) | `1.0` |
@@ -146,7 +147,7 @@ fluxloop config env --show-values
 ```
 ╭─ FluxLoop Environment Variables ──────────────────────────────────╮
 │ Variable                  Description             Current Value   │
-│ FLUXLOOP_COLLECTOR_URL    Collector service URL   Not set        │
+│ FLUXLOOP_SYNC_URL         Sync API base URL       Not set        │
 │ FLUXLOOP_ENABLED          Enable/disable tracing  true           │
 │ OPENAI_API_KEY            OpenAI API key          ****abc123     │
 ╰────────────────────────────────────────────────────────────────────╯

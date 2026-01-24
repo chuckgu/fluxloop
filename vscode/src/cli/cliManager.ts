@@ -169,9 +169,9 @@ export class CLIManager {
         const config = vscode.workspace.getConfiguration('fluxloop');
         const env: { [key: string]: string } = {};
 
-        const collectorUrl = config.get<string>('collectorUrl');
-        if (collectorUrl) {
-            env['FLUXLOOP_COLLECTOR_URL'] = collectorUrl;
+        const syncUrl = config.get<string>('syncUrl');
+        if (syncUrl) {
+            env['FLUXLOOP_SYNC_URL'] = syncUrl;
         }
 
         const apiKey = config.get<string>('apiKey');

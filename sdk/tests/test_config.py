@@ -14,7 +14,7 @@ class TestSDKConfig:
         """Test default configuration values."""
         config = SDKConfig()
 
-        assert config.collector_url == "http://localhost:8000"
+        assert config.collector_url is None
         assert config.api_key is None
         assert config.enabled is True
         assert config.debug is False
@@ -30,7 +30,6 @@ class TestSDKConfig:
     def test_config_from_env_vars(self):
         """Test configuration from environment variables."""
         env_vars = {
-            "FLUXLOOP_COLLECTOR_URL": "https://api.example.com",
             "FLUXLOOP_API_KEY": "test-key",
             "FLUXLOOP_ENABLED": "false",
             "FLUXLOOP_DEBUG": "true",
@@ -46,7 +45,7 @@ class TestSDKConfig:
         with patch.dict(os.environ, env_vars):
             config = SDKConfig()
 
-            assert config.collector_url == "https://api.example.com"
+            assert config.collector_url is None
             assert config.api_key == "test-key"
             assert config.enabled is False
             assert config.debug is True

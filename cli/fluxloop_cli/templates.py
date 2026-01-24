@@ -524,7 +524,7 @@ def create_env_file() -> str:
     return dedent(
         """
         # FluxLoop Configuration
-        FLUXLOOP_COLLECTOR_URL=http://localhost:8000
+        FLUXLOOP_SYNC_URL=https://api.fluxloop.ai
         FLUXLOOP_API_KEY=your-api-key-here
         FLUXLOOP_ENABLED=true
         FLUXLOOP_DEBUG=false

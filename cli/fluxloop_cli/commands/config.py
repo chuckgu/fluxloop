@@ -191,8 +191,7 @@ def env(
         loaded_paths = []
 
     env_vars = [
-        ("FLUXLOOP_COLLECTOR_URL", "Collector service URL", "http://localhost:8000"),
-        ("FLUXLOOP_SYNC_URL", "Sync API base URL", None),
+        ("FLUXLOOP_SYNC_URL", "Sync API base URL", "https://api.fluxloop.ai"),
         ("FLUXLOOP_API_KEY", "API key for authentication", None),
         ("FLUXLOOP_SYNC_API_KEY", "Sync API key for uploads", None),
         ("FLUXLOOP_ENABLED", "Enable/disable tracing", "true"),

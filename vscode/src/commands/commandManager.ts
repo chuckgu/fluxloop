@@ -1246,7 +1246,7 @@ export class CommandManager {
     private getDefaultEnvTemplate(): string {
         return [
             '# FluxLoop Configuration',
-            'FLUXLOOP_COLLECTOR_URL=http://localhost:8000',
+            'FLUXLOOP_SYNC_URL=https://api.fluxloop.ai',
             'FLUXLOOP_API_KEY=your-api-key-here',
             'FLUXLOOP_ENABLED=true',
             'FLUXLOOP_DEBUG=false',
