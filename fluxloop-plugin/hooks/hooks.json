@@ -1,0 +1,9 @@
+{
+  "hooks": [
+    {
+      "type": "PostToolUse",
+      "matcher": "Write|Edit",
+      "command": "fluxloop test --smoke --quiet"
+    }
+  ]
+}
