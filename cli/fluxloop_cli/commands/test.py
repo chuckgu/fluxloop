@@ -49,6 +49,11 @@ def main(
     stream_turns: Optional[bool] = typer.Option(
         None, "--stream-turns/--no-stream-turns", help="Stream turns to Web while running"
     ),
+    stream_after_upload: Optional[bool] = typer.Option(
+        None,
+        "--stream-after-upload/--stream-during-run",
+        help="Stream turns only after upload completes (default: during run)",
+    ),
     smoke: bool = typer.Option(False, "--smoke", help="Run a smoke test"),
     full: bool = typer.Option(False, "--full", help="Run full test"),
     quiet: bool = typer.Option(False, "--quiet", help="Minimal output"),
@@ -131,8 +136,13 @@ def main(
     stream_enabled = stream_turns
     if stream_enabled is None:
         stream_enabled = bool(
-            test_config.get("turn_streaming", False)
+            test_config.get("turn_streaming", True)
             or os.getenv("FLUXLOOP_TURN_STREAMING") in ("1", "true", "True")
+        )
+    if stream_after_upload is None:
+        stream_after_upload = bool(
+            test_config.get("turn_stream_after_upload", False)
+            or os.getenv("FLUXLOOP_TURN_STREAM_AFTER_UPLOAD") in ("1", "true", "True")
         )
     stream_endpoint = test_config.get("turn_stream_endpoint") or os.getenv(
         "FLUXLOOP_TURN_STREAM_ENDPOINT"
@@ -145,12 +155,110 @@ def main(
     if stream_enabled:
         sync._load_env(project, root)
 
+    run_id_map = {}
+    if stream_enabled and not stream_after_upload:
+        inputs = asyncio.run(runner._load_inputs())
+        persona_map = {p.name: p for p in (config.personas or [])}
+        use_entry_persona = config.has_external_inputs()
+
+        inputs_path, _ = sync._resolve_inputs_path(project, root, config_file)
+        input_map = sync._load_inputs_mapping(inputs_path)
+
+        def _lookup_input_item_id(entry: dict, persona_name: Optional[str]) -> Optional[str]:
+            metadata = entry.get("metadata") or {}
+            direct = metadata.get("input_item_id")
+            if direct:
+                return direct
+            input_text = entry.get("input")
+            if not input_text:
+                return None
+            key = (input_text, persona_name)
+            if key in input_map and input_map[key]:
+                return input_map[key][0]
+            key = (input_text, None)
+            if key in input_map and input_map[key]:
+                return input_map[key][0]
+            fallback_keys = [k for k in input_map.keys() if k[0] == input_text and input_map[k]]
+            if fallback_keys:
+                fallback_keys.sort(key=lambda pair: "" if pair[1] is None else str(pair[1]))
+                return input_map[fallback_keys[0]][0]
+            return None
+
+        runs_payload = []
+        for iteration in range(config.iterations):
+            if use_entry_persona:
+                for entry in inputs:
+                    persona = runner._resolve_entry_persona(entry, persona_map)
+                    run_id = str(sync.uuid4())
+                    key = (
+                        iteration,
+                        persona.name if persona else None,
+                        entry.get("source_index"),
+                        entry.get("input"),
+                    )
+                    run_id_map[key] = run_id
+                    metadata = entry.get("metadata") or {}
+                    input_item_id = _lookup_input_item_id(
+                        entry, persona.name if persona else None
+                    )
+                    if not input_item_id:
+                        raise typer.BadParameter(
+                            "input_item_id not found. Run sync pull first."
+                        )
+                    runs_payload.append(
+                        {
+                            "id": run_id,
+                            "input_item_id": input_item_id,
+                            "persona_id": metadata.get("persona_id"),
+                            "status": "running",
+                        }
+                    )
+            else:
+                personas = config.personas or [None]
+                for persona in personas:
+                    for entry in inputs:
+                        run_id = str(sync.uuid4())
+                        key = (
+                            iteration,
+                            persona.name if persona else None,
+                            entry.get("source_index"),
+                            entry.get("input"),
+                        )
+                        run_id_map[key] = run_id
+                        metadata = entry.get("metadata") or {}
+                        input_item_id = _lookup_input_item_id(
+                            entry, persona.name if persona else None
+                        )
+                        if not input_item_id:
+                            raise typer.BadParameter(
+                                "input_item_id not found. Run sync pull first."
+                            )
+                        runs_payload.append(
+                            {
+                                "id": run_id,
+                                "input_item_id": input_item_id,
+                                "persona_id": metadata.get("persona_id"),
+                                "status": "running",
+                            }
+                        )
+
+        sync.precreate_runs(
+            runs=runs_payload,
+            experiment_id=runner.output_dir.name,
+            project=project,
+            root=root,
+            api_url=None,
+            api_key=None,
+            bundle_version_id=None,
+            quiet=quiet,
+        )
+
     if not quiet:
         console.print(f"[Run] Executing {mode} test...")
 
     def _turn_record_callback(turn_payload: dict) -> None:
         record = recorder.record_turn(turn_payload)
-        if stream_enabled and stream_executor:
+        if stream_enabled and stream_executor and not stream_after_upload:
             stream_futures.append(
                 stream_executor.submit(
                     sync.stream_turn,
@@ -172,6 +280,13 @@ def main(
             return
         run_id = record["run_id"]
         turn_index = recorder.get_assistant_turn_count(run_id)
+        total_runs = len(run_id_map) if run_id_map else None
+        run_number = None
+        if run_id_map:
+            try:
+                run_number = list(run_id_map.values()).index(run_id) + 1
+            except ValueError:
+                run_number = None
         duration_ms = record.get("duration_ms")
         duration = f"{duration_ms / 1000:.1f}s" if duration_ms is not None else "-"
         warning_msg = format_warning_for_display(record.get("warnings", []))
@@ -179,7 +294,17 @@ def main(
             status = f"⚠️ - {warning_msg}"
         else:
             status = "✓"
-        console.print(f"  Turn {turn_index}: {status} assistant ({duration})")
+        if run_number is not None and total_runs is not None:
+            console.print(
+                f"  Run {run_number}/{total_runs} · Turn {turn_index}: {status} assistant ({duration})"
+            )
+        else:
+            console.print(f"  Turn {turn_index}: {status} assistant ({duration})")
+        content = record.get("content") or ""
+        if content:
+            console.print("    Response:")
+            for line in str(content).splitlines():
+                console.print(f"      {line}")
         # Update result.md progressively so latest_result is always available.
         result_path.write_text(
             render_result_markdown(list(recorder.iter_turns()), recorder.get_overall_summary(), criteria_items),
@@ -190,6 +315,18 @@ def main(
         asyncio.run(
             runner.run_experiment(
                 turn_record_callback=_turn_record_callback,
+                run_id_provider=(
+                    None
+                    if not run_id_map
+                    else lambda variation, persona, iteration: run_id_map.get(
+                        (
+                            iteration,
+                            persona.name if persona else None,
+                            variation.get("source_index"),
+                            variation.get("input"),
+                        )
+                    )
+                ),
             )
         )
     except KeyboardInterrupt:
@@ -204,13 +341,6 @@ def main(
     result_path.write_text(
         render_result_markdown(turns, summary, criteria_items), encoding="utf-8"
     )
-    if stream_executor:
-        for future in stream_futures:
-            try:
-                future.result()
-            except Exception:
-                continue
-        stream_executor.shutdown(wait=True)
 
     if do_upload:
         if not quiet:
@@ -225,6 +355,54 @@ def main(
             bundle_version_id=None,
             quiet=quiet,
         )
+
+    if stream_enabled and stream_after_upload:
+        if not do_upload:
+            if not quiet:
+                console.print(
+                    "[yellow]Turn streaming skipped: upload is disabled.[/yellow]"
+                )
+        else:
+            if not quiet:
+                console.print("[Stream] Streaming turns after upload...")
+            for turn in turns:
+                if stream_executor:
+                    stream_futures.append(
+                        stream_executor.submit(
+                            sync.stream_turn,
+                            turn=turn,
+                            experiment_id=runner.output_dir.name,
+                            project_root=project_root,
+                            api_url=None,
+                            api_key=None,
+                            endpoint=stream_endpoint,
+                            max_retries=stream_retries,
+                            backoff_seconds=stream_backoff,
+                            timeout_seconds=stream_timeout,
+                            quiet=quiet,
+                        )
+                    )
+                else:
+                    sync.stream_turn(
+                        turn=turn,
+                        experiment_id=runner.output_dir.name,
+                        project_root=project_root,
+                        api_url=None,
+                        api_key=None,
+                        endpoint=stream_endpoint,
+                        max_retries=stream_retries,
+                        backoff_seconds=stream_backoff,
+                        timeout_seconds=stream_timeout,
+                        quiet=quiet,
+                    )
+
+    if stream_executor:
+        for future in stream_futures:
+            try:
+                future.result()
+            except Exception:
+                continue
+        stream_executor.shutdown(wait=True)
 
     if quiet:
         console.print(

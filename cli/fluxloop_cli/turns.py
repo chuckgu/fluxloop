@@ -125,7 +125,10 @@ class TurnRecorder:
             "timestamp": payload.get("timestamp") or utc_now_iso(),
         }
         if payload.get("duration_ms") is not None:
-            record["duration_ms"] = payload["duration_ms"]
+            try:
+                record["duration_ms"] = int(payload["duration_ms"])
+            except (TypeError, ValueError):
+                pass
         if warnings:
             record["warnings"] = warnings
 

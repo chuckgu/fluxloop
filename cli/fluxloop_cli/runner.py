@@ -13,7 +13,7 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
@@ -133,6 +133,9 @@ class ExperimentRunner:
         progress_callback: Optional[Callable] = None,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
         turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        run_id_provider: Optional[
+            Callable[[Dict[str, Any], Optional[PersonaConfig], int], Optional[str]]
+        ] = None,
     ) -> Dict[str, Any]:
         """
         Run the complete experiment.
@@ -168,6 +171,7 @@ class ExperimentRunner:
                         iteration,
                         turn_progress_callback=turn_progress_callback,
                         turn_record_callback=turn_record_callback,
+                        run_id_provider=run_id_provider,
                     )
 
                     if progress_callback:
@@ -186,6 +190,7 @@ class ExperimentRunner:
                             iteration,
                             turn_progress_callback=turn_progress_callback,
                         turn_record_callback=turn_record_callback,
+                        run_id_provider=run_id_provider,
                         )
 
                         if progress_callback:
@@ -301,6 +306,9 @@ class ExperimentRunner:
         *,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
         turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        run_id_provider: Optional[
+            Callable[[Dict[str, Any], Optional[PersonaConfig], int], Optional[str]]
+        ] = None,
     ) -> None:
         """Run a single execution."""
 
@@ -339,7 +347,16 @@ class ExperimentRunner:
             trace_id: Optional[str] = None
             result: Any
 
-            with fluxloop.instrument(trace_name) as ctx:
+            trace_id_override: Optional[UUID] = None
+            if run_id_provider:
+                candidate = run_id_provider(variation, persona, iteration)
+                if candidate:
+                    try:
+                        trace_id_override = UUID(str(candidate))
+                    except Exception:
+                        trace_id_override = None
+
+            with fluxloop.instrument(trace_name, trace_id=trace_id_override) as ctx:
                 if hasattr(ctx, "trace") and getattr(ctx, "trace") is not None:
                     trace_id = str(ctx.trace.id)
                     ctx.add_metadata("trace_id", trace_id)
@@ -532,6 +549,9 @@ class ExperimentRunner:
         *,
         turn_progress_callback: Optional[Callable[[int, int, Optional[str]], None]] = None,
         turn_record_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        run_id_provider: Optional[
+            Callable[[Dict[str, Any], Optional[PersonaConfig], int], Optional[str]]
+        ] = None,
     ) -> None:
         """Execute a multi-turn conversation using the supervisor loop."""
 
@@ -609,7 +629,16 @@ class ExperimentRunner:
         trace_id: Optional[str] = None
 
         try:
-            with fluxloop.instrument(trace_name) as ctx:
+            trace_id_override: Optional[UUID] = None
+            if run_id_provider:
+                candidate = run_id_provider(variation, persona, iteration)
+                if candidate:
+                    try:
+                        trace_id_override = UUID(str(candidate))
+                    except Exception:
+                        trace_id_override = None
+
+            with fluxloop.instrument(trace_name, trace_id=trace_id_override) as ctx:
                 if hasattr(ctx, "trace") and getattr(ctx, "trace") is not None:
                     trace_id = str(ctx.trace.id)
                     ctx.add_metadata("trace_id", trace_id)

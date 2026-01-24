@@ -3,6 +3,7 @@ Main CLI application entry point.
 """
 
 from typing import Optional
+import warnings
 
 import typer
 from rich.console import Console
@@ -22,6 +23,23 @@ from .commands import (
     status,
     sync,
     test,
+)
+
+# Suppress known noisy warnings from dependencies to keep CLI output clean.
+warnings.filterwarnings(
+    "ignore",
+    message=r"The package `typer==.*` does not have an extra named `all`",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Field name \"schema\" in \".*\" shadows an attribute in parent \"BaseModel\"",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Field name \"schema\" in \".*\" shadows an attribute in parent \"ValidatedFunction.*\"",
+    category=UserWarning,
 )
 
 # Create the main Typer app

@@ -24,7 +24,7 @@ from ..project_paths import (
     resolve_project_dir,
     resolve_project_relative,
 )
-from ..turns import load_turns, summarize_turns
+from ..turns import load_turns, summarize_turns, utc_now_iso
 
 
 app = typer.Typer(help="Sync bundle inputs and upload run results.")
@@ -91,6 +91,68 @@ def _post_with_retry(
             time.sleep(backoff_seconds * (2 ** (attempt - 1)))
 
 
+def precreate_runs(
+    *,
+    runs: List[Dict[str, Any]],
+    experiment_id: str,
+    project: Optional[str] = None,
+    root: Optional[Path] = None,
+    api_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    bundle_version_id: Optional[str] = None,
+    quiet: bool = False,
+) -> Optional[str]:
+    """
+    Precreate runs via /api/sync/upload so streaming can reference existing runs.
+    """
+    _load_env(project, root or Path(DEFAULT_ROOT_DIR_NAME))
+    api_url = _resolve_api_url(api_url)
+    api_key = _resolve_api_key(api_key)
+    project_root = _resolve_source_dir(project, root or Path(DEFAULT_ROOT_DIR_NAME))
+    sync_state = _read_sync_state(project_root)
+
+    bundle_version_id = bundle_version_id or sync_state.get("bundle_version_id")
+    if not bundle_version_id:
+        raise typer.BadParameter("bundle_version_id is required. Run sync pull first.")
+
+    payload = {
+        "bundle_version_id": bundle_version_id,
+        "run_batch": {
+            "experiment_id": experiment_id,
+            "execution_target": "local",
+            "status": "running",
+        },
+        "runs": runs,
+        "run_results": [],
+        "artifacts": [],
+        "upload_meta": {"mode": "precreate"},
+    }
+
+    with httpx.Client(base_url=api_url, timeout=30.0) as client:
+        resp = _post_with_retry(
+            client,
+            "/api/sync/upload",
+            payload=payload,
+            headers={"Authorization": f"Bearer {api_key}"},
+            max_retries=3,
+            backoff_seconds=1.0,
+            timeout_seconds=30.0,
+        )
+        upload_result = resp.json()
+
+    run_batch_id = upload_result.get("run_batch_id")
+    if run_batch_id:
+        sync_state["last_run_batch_id"] = run_batch_id
+        sync_state["last_experiment_id"] = experiment_id
+        _write_sync_state(project_root, sync_state)
+
+    if not quiet:
+        console.print(
+            f"[green]✓[/green] Precreated {len(runs)} runs (experiment: {experiment_id})"
+        )
+    return run_batch_id
+
+
 def stream_turn(
     *,
     turn: Dict[str, Any],
@@ -110,20 +172,36 @@ def stream_turn(
     try:
         api_url = _resolve_api_url(api_url)
         api_key = _resolve_api_key(api_key)
-        sync_state = _read_sync_state(project_root)
-
         run_id = turn.get("run_id")
         turn_id = turn.get("turn_id")
         if not run_id or not turn_id:
             return False
 
-        payload: Dict[str, Any] = {
-            "run_id": run_id,
-            "turn": turn,
-            "experiment_id": experiment_id,
-            "project_id": sync_state.get("project_id"),
-            "bundle_version_id": sync_state.get("bundle_version_id"),
+        allowed_keys = {
+            "run_id",
+            "turn_id",
+            "sequence",
+            "role",
+            "content",
+            "timestamp",
+            "duration_ms",
+            "warnings",
         }
+        payload: Dict[str, Any] = {key: turn.get(key) for key in allowed_keys}
+        payload["run_id"] = run_id
+        payload["turn_id"] = turn_id
+
+        if payload.get("sequence") is not None:
+            try:
+                payload["sequence"] = int(payload["sequence"])
+            except (TypeError, ValueError):
+                pass
+
+        if not payload.get("timestamp"):
+            payload["timestamp"] = utc_now_iso()
+
+        if payload.get("warnings") is None:
+            payload["warnings"] = []
 
         idempotency_key = f"{run_id}:{turn_id}"
         headers = {
@@ -143,6 +221,8 @@ def stream_turn(
                 backoff_seconds=backoff_seconds,
                 timeout_seconds=timeout_seconds,
             )
+        if not quiet:
+            console.print(f"[green][Stream][/green] ✓ {turn_id}")
         return True
     except Exception as exc:
         if not quiet:
