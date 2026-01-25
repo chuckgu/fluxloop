@@ -111,7 +111,36 @@ fluxloop scenarios list
 fluxloop context set-scenario <id>
 ```
 
-### 2.3 Agent Loader Setup (If Needed)
+### 2.3 API Key Setup (For Sync Operations)
+
+Before sync pull/upload, ensure API Key is set:
+
+```bash
+# Check if API Key is configured
+fluxloop apikeys check
+```
+
+**If not set:**
+```bash
+# Create API Key using current project context
+fluxloop apikeys create
+# → Automatically saved to .env as FLUXLOOP_SYNC_API_KEY
+```
+
+**Success message:**
+```
+✓ API Key created: flx_sk_****1234
+✓ Saved to .env as FLUXLOOP_SYNC_API_KEY
+
+You can now use:
+  fluxloop sync pull
+  fluxloop sync upload
+  fluxloop test
+```
+
+---
+
+### 2.4 Agent Loader Setup (If Needed)
 
 Check if `runner.module_path` is configured in `configs/simulation.yaml`:
 
@@ -190,6 +219,10 @@ Execute /fluxloop:synthesis
 
 Or manually:
 ```bash
+# Ensure API Key is set first (if not done in Phase 2.3)
+fluxloop apikeys check
+# If not set: fluxloop apikeys create
+
 # Uses current project/scenario from context
 fluxloop inputs synthesize --total-count 10
 fluxloop sync pull
@@ -252,7 +285,7 @@ cat .fluxloop/latest_result.md
     │   └─ "Current settings: order-bot / order-cancel
     │       Proceed with these?" (Y/n)
     │       │
-    │       ├─ Y → [Phase 4: Test]
+    │       ├─ Y → [Check API Key] → [Phase 4: Test]
     │       └─ n → "Create new or select different?"
     │
     └─ No context
@@ -266,6 +299,10 @@ cat .fluxloop/latest_result.md
         │   ▼
         ├─ Create scenario? ──Y──→ fluxloop scenarios create --name <name>
         │   │                       (auto-select)
+        │   ▼
+        ├─ API Key set? ──❌──→ fluxloop apikeys create
+        │   ✅                   (auto-save to .env)
+        │   │
         │   ▼
         ├─ Agent loader? ──❌──→ [Create wrapper from template]
         │   ✅
@@ -295,17 +332,20 @@ cat .fluxloop/latest_result.md
     │   └─ "Current settings: order-bot / order-cancel
     │       Proceed with these?" (Y/n)
     │       │
-    │       ├─ Y → Run test immediately
+    │       ├─ Y → [Check API Key] → Run test immediately
+    │       │       └─ If missing: fluxloop apikeys create
     │       └─ n → "Create new or select different?"
     │
     ├─ Has project only
     │   └─ "No scenario found. Would you like to create one?"
     │       → Intent-based scenario creation
+    │       → [Check API Key] → fluxloop apikeys create (if needed)
     │
     └─ No context
         └─ "No project found. Would you like to create one?"
             │
             ├─ Y → Intent-based project/scenario creation
+            │      → [Check API Key] → fluxloop apikeys create (if needed)
             └─ n → "Show existing projects?"
                    → fluxloop projects list
 ```
@@ -332,6 +372,22 @@ fluxloop context clear
 # List resources
 fluxloop projects list
 fluxloop scenarios list
+```
+
+## API Key Commands Reference
+
+```bash
+# Check if API Key is configured
+fluxloop apikeys check
+
+# Create API Key (auto-saved to .env)
+fluxloop apikeys create
+
+# Create with explicit project
+fluxloop apikeys create --project-id <project_id>
+
+# Don't auto-save (print key instead)
+fluxloop apikeys create --no-save
 ```
 
 ---
@@ -377,6 +433,23 @@ Recovery options:
   - Or execute: fluxloop inputs synthesize
 ```
 
+**API Key Not Set (Sync Failed):**
+```
+❌ Sync API key is not set.
+
+Creating API Key for current project...
+
+Running: fluxloop apikeys create
+```
+
+**After creation:**
+```
+✓ API Key created: flx_sk_****1234
+✓ Saved to .env as FLUXLOOP_SYNC_API_KEY
+
+Retrying sync...
+```
+
 ---
 
 ## Usage Examples
@@ -412,10 +485,11 @@ User: "Yes"
 
 Skill: ⏳ Setting up environment...
        
-       [1/4] Creating project... ✓ proj-abc123
-       [2/4] Creating scenario... ✓ scn-xyz789
-       [3/4] Creating personas... ✓ 3 created
-       [4/4] Synthesizing inputs... ✓ 10 generated
+       [1/5] Creating project... ✓ proj-abc123
+       [2/5] Creating scenario... ✓ scn-xyz789
+       [3/5] Creating API Key... ✓ saved to .env
+       [4/5] Creating personas... ✓ 3 created
+       [5/5] Synthesizing inputs... ✓ 10 generated
        
        ❓ Where is your agent located?
 

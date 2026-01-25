@@ -58,7 +58,11 @@ def _resolve_api_key(override: Optional[str]) -> str:
         or os.getenv("FLUXLOOP_API_KEY")
     )
     if not key:
-        raise typer.BadParameter("Sync API key is not set. Use fluxloop config set-sync-key.")
+        raise typer.BadParameter(
+            "Sync API key is not set. "
+            "Use 'fluxloop apikeys create' to generate one, "
+            "or 'fluxloop config set-sync-key' if you have an existing key."
+        )
     return key
 
 

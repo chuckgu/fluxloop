@@ -1,6 +1,7 @@
 """CLI commands."""
 
 from . import (
+    apikeys,
     auth,
     bundles,
     config,
@@ -24,6 +25,7 @@ from . import (
 )
 
 __all__ = [
+    "apikeys",
     "auth",
     "bundles",
     "config",

@@ -11,6 +11,7 @@ from rich.panel import Panel
 
 from . import __version__
 from .commands import (
+    apikeys,
     auth,
     bundles,
     config,
@@ -75,6 +76,7 @@ app.add_typer(sync.app, name="sync", help="Sync bundles and upload results")
 app.add_typer(criteria.app, name="criteria", help="Show pulled evaluation criteria")
 app.add_typer(test.app, name="test", help="Run pull -> run -> upload test workflow")
 app.add_typer(auth.app, name="auth", help="Manage authentication")
+app.add_typer(apikeys.app, name="apikeys", help="Manage API Keys for sync operations")
 app.add_typer(projects.app, name="projects", help="Manage projects")
 app.add_typer(scenarios.app, name="scenarios", help="Manage test scenarios")
 app.add_typer(context.app, name="intent", help="Refine intent and context")  # renamed to avoid conflict
