@@ -88,6 +88,9 @@ No project found. What would you like to test?
 fluxloop projects create --name "order-bot"
 # → context.json updated with project_id
 
+# Note: If user has multiple workspaces, --workspace-id is required
+# fluxloop projects create --name "order-bot" --workspace-id <workspace_id>
+
 # Or select existing
 fluxloop projects list
 fluxloop context set-project <id>
