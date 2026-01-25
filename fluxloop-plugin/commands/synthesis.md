@@ -1,4 +1,9 @@
-# /fluxloop:synthesis
+---
+description: Execute synthesis workflow from scenario creation to bundle publication
+allowed-tools: [Bash]
+---
+
+# FluxLoop Synthesis
 
 Execute synthesis workflow from scenario creation to bundle publication (excludes testing).
 

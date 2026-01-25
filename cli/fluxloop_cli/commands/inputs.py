@@ -19,6 +19,7 @@ from ..api_utils import (
     save_cache_file,
 )
 from ..http_client import create_authenticated_client, post_with_retry
+from ..context_manager import get_current_scenario_id
 
 app = typer.Typer(help="Synthesize and manage test inputs via Web API")
 console = Console()
@@ -26,7 +27,9 @@ console = Console()
 
 @app.command()
 def synthesize(
-    scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID for synthesis"),
+    scenario_id: Optional[str] = typer.Option(
+        None, "--scenario-id", help="Scenario ID for synthesis (defaults to current context)"
+    ),
     persona_ids: Optional[str] = typer.Option(
         None, "--persona-ids", help="Comma-separated persona IDs"
     ),
@@ -51,8 +54,18 @@ def synthesize(
 ):
     """
     Synthesize test inputs using Web API.
+    
+    Uses current scenario from context if --scenario-id is not specified.
     """
     api_url = resolve_api_url(api_url)
+    
+    # Use context if no scenario_id specified
+    if not scenario_id:
+        scenario_id = get_current_scenario_id()
+        if not scenario_id:
+            console.print("[yellow]No scenario selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop context set-scenario <id>[/dim]")
+            raise typer.Exit(1)
 
     # Build payload
     payload: Dict[str, Any] = {

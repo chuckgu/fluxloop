@@ -1,4 +1,9 @@
-# /fluxloop:criteria
+---
+description: Show locally pulled evaluation criteria
+allowed-tools: [Bash]
+---
+
+# FluxLoop Criteria
 
 Show locally pulled evaluation criteria
 

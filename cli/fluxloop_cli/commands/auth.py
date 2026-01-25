@@ -86,10 +86,13 @@ def login(
         # Save token
         save_auth_token(token)
 
-        # Success message
+        # Success message (User-scoped, no project selection at login)
         console.print()
         console.print(f"[green]✓[/green] Login successful: [bold]{token.user_email}[/bold]")
-        console.print(f"[green]✓[/green] Project: {token.project_name} ([dim]{token.project_id}[/dim])")
+        console.print()
+        console.print("[dim]Next steps:[/dim]")
+        console.print("[dim]  • fluxloop projects list    - View your projects[/dim]")
+        console.print("[dim]  • fluxloop context set-project <id>  - Select a project[/dim]")
 
     except TimeoutError as e:
         console.print(f"\n[red]✗[/red] {e}", style="bold red")
@@ -138,5 +141,15 @@ def status():
         console.print("[dim]Run [bold]fluxloop auth login[/bold] to login again.[/dim]")
     else:
         console.print(f"[green]✓[/green] Logged in: [bold]{token.user_email}[/bold]")
-        console.print(f"  Project: {token.project_name} ([dim]{token.project_id}[/dim])")
         console.print(f"  Token expires: {time_remaining}")
+        
+        # Show current context if available
+        from ..context_manager import load_context
+        context = load_context()
+        if context:
+            if context.current_project:
+                console.print(f"  Project: {context.current_project.name} ([dim]{context.current_project.id}[/dim])")
+            if context.current_scenario:
+                console.print(f"  Scenario: {context.current_scenario.name} ([dim]{context.current_scenario.id}[/dim])")
+        else:
+            console.print("[dim]  No project selected. Run [bold]fluxloop projects list[/bold] to see your projects.[/dim]")

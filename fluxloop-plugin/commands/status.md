@@ -1,4 +1,9 @@
-# /fluxloop:status
+---
+description: Check current FluxLoop project and login status
+allowed-tools: [Bash]
+---
+
+# FluxLoop Status
 
 Check current FluxLoop project and login status.
 

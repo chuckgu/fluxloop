@@ -1,0 +1,228 @@
+"""
+Project management commands for FluxLoop CLI.
+
+User-scoped JWT allows managing projects via CLI.
+"""
+
+from typing import Optional
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from ..http_client import create_authenticated_client, post_with_retry
+from ..api_utils import handle_api_error, resolve_api_url
+from ..context_manager import (
+    set_project,
+    load_context,
+    get_current_project_id,
+)
+
+app = typer.Typer(help="Manage FluxLoop projects")
+console = Console()
+
+
+def _resolve_workspace_id(
+    client, workspace_id: Optional[str]
+) -> str:
+    if workspace_id:
+        return workspace_id
+
+    resp = client.get("/api/workspaces")
+    handle_api_error(resp, "list workspaces")
+    data = resp.json()
+    workspaces = data if isinstance(data, list) else data.get("workspaces", [])
+
+    if not workspaces:
+        raise typer.BadParameter("No workspaces found. Create one in the web app first.")
+
+    if len(workspaces) == 1:
+        return workspaces[0].get("id")
+
+    console.print("[yellow]Multiple workspaces detected.[/yellow]")
+    for workspace in workspaces:
+        console.print(
+            f"  - {workspace.get('id', '')}: {workspace.get('name', '')}"
+        )
+    raise typer.BadParameter("Please specify --workspace-id.")
+
+
+@app.command("list")
+def list_projects(
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    List all projects you have access to.
+    """
+    api_url = resolve_api_url(api_url)
+    
+    try:
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = client.get("/api/projects")
+        handle_api_error(resp, "list projects")
+        
+        data = resp.json()
+        projects = data.get("projects", data) if isinstance(data, dict) else data
+        
+        if not projects:
+            console.print("[yellow]No projects found.[/yellow]")
+            console.print("[dim]Create one with: fluxloop projects create --name <name>[/dim]")
+            return
+        
+        # Get current context to mark selected project
+        current_project_id = get_current_project_id()
+        
+        # Display as table
+        table = Table(title="Your Projects")
+        table.add_column("ID", style="dim")
+        table.add_column("Name", style="bold")
+        table.add_column("Status", style="cyan")
+        table.add_column("Selected", style="green")
+        
+        for project in projects:
+            project_id = project.get("id", project.get("project_id", ""))
+            project_name = project.get("name", project.get("project_name", ""))
+            status = project.get("status", "-")
+            is_selected = "✓" if project_id == current_project_id else ""
+            
+            table.add_row(project_id, project_name, status, is_selected)
+        
+        console.print(table)
+        console.print()
+        console.print("[dim]Select a project: fluxloop context set-project <id>[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]✗[/red] Failed to list projects: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command("create")
+def create_project(
+    name: str = typer.Option(
+        ..., "--name", "-n", help="Project name"
+    ),
+    description: Optional[str] = typer.Option(
+        None, "--description", "-d", help="Project description"
+    ),
+    workspace_id: Optional[str] = typer.Option(
+        None, "--workspace-id", help="Workspace ID (required if multiple)"
+    ),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+    select: bool = typer.Option(
+        True, "--select/--no-select", help="Automatically select the created project"
+    ),
+):
+    """
+    Create a new project.
+    """
+    api_url = resolve_api_url(api_url)
+    
+    try:
+        client = create_authenticated_client(api_url, use_jwt=True)
+        
+        resolved_workspace_id = _resolve_workspace_id(client, workspace_id)
+        payload = {"name": name, "workspace_id": resolved_workspace_id}
+        if description:
+            payload["description"] = description
+        
+        console.print(f"[cyan]Creating project '{name}'...[/cyan]")
+        
+        resp = post_with_retry(client, "/api/projects", payload=payload)
+        handle_api_error(resp, "create project")
+        
+        data = resp.json()
+        project_id = data.get("id", data.get("project_id", ""))
+        project_name = data.get("name", data.get("project_name", name))
+        
+        console.print(f"[green]✓[/green] Project created: {project_name} ([dim]{project_id}[/dim])")
+        
+        # Automatically select if requested
+        if select:
+            set_project(project_id, project_name)
+            console.print(f"[green]✓[/green] Project selected as current context")
+        
+    except Exception as e:
+        console.print(f"[red]✗[/red] Failed to create project: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command("select")
+def select_project(
+    project_id: str = typer.Argument(..., help="Project ID to select"),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Select a project as the current working context.
+    
+    Shortcut for: fluxloop context set-project <id>
+    """
+    api_url = resolve_api_url(api_url)
+    
+    try:
+        # Verify project exists by fetching it
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = client.get(f"/api/projects/{project_id}")
+        handle_api_error(resp, "get project")
+        
+        data = resp.json()
+        project_name = data.get("name", data.get("project_name", project_id))
+        
+        # Set context
+        set_project(project_id, project_name)
+        
+        console.print(f"[green]✓[/green] Selected project: {project_name} ([dim]{project_id}[/dim])")
+        
+    except Exception as e:
+        console.print(f"[red]✗[/red] Failed to select project: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command("show")
+def show_project(
+    project_id: Optional[str] = typer.Argument(
+        None, help="Project ID (defaults to current context)"
+    ),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Show details of a project.
+    """
+    api_url = resolve_api_url(api_url)
+    
+    # Use current context if no project_id provided
+    if not project_id:
+        project_id = get_current_project_id()
+        if not project_id:
+            console.print("[yellow]No project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+    
+    try:
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = client.get(f"/api/projects/{project_id}")
+        handle_api_error(resp, "get project")
+        
+        data = resp.json()
+        
+        console.print(f"\n[bold]Project Details[/bold]")
+        console.print(f"  ID: [dim]{data.get('id', data.get('project_id', ''))}[/dim]")
+        console.print(f"  Name: [bold]{data.get('name', data.get('project_name', ''))}[/bold]")
+        
+        if data.get("description"):
+            console.print(f"  Description: {data.get('description')}")
+        if data.get("status"):
+            console.print(f"  Status: {data.get('status')}")
+        if data.get("created_at"):
+            console.print(f"  Created: {data.get('created_at')}")
+        
+    except Exception as e:
+        console.print(f"[red]✗[/red] Failed to get project: {e}", style="bold red")
+        raise typer.Exit(1)

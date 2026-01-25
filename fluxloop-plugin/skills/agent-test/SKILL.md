@@ -13,135 +13,482 @@ description: |
 
 # FluxLoop Agent Test Skill
 
-Manages the complete test cycle for AI agents.
+Manages the complete test cycle for AI agents — from initial setup to test execution.
 
 ## Role
 
-Receives user test requests, **assesses the situation**, and automatically executes the full workflow: **synthesis → test → result analysis** as needed.
+**Agent-First Approach:** Understands user intent, automatically configures the environment, 
+and executes the full workflow without requiring web visits (after initial login).
 
-## Workflow
+**Flow:** Intent parsing → Local context check → Auto-configuration → Test execution → Result analysis
 
-### Step 1: Assess Situation
+---
 
-First, check current status:
+## Phase 0: Local Context Check
+
+First, check local context state:
 
 ```bash
+# Check if logged in
 fluxloop auth status
+
+# Check local context
+fluxloop context show
 ```
 
-**Check for**:
-- Login status (not logged in → guide to `fluxloop auth login`)
-- Current project
-- Existing bundle availability
+**Based on results:**
 
-### Step 2: Understand Intent
+| Context State | Action |
+|---------------|--------|
+| **Has project & scenario** | "Use existing settings (order-bot / order-cancel)?" |
+| **Has project only** | "Would you like to create a scenario?" |
+| **No context** | "No project found. Would you like to create one?" |
+| **Not logged in** | → Phase 1 (Login) |
 
-Analyze user's request:
+---
 
-| Request Type | Assessment | Action |
-|--------------|------------|--------|
-| "create test" (new) | No bundle | synthesis → test |
-| "test again" | Bundle exists | test only |
-| "add more inputs" | Bundle exists | synthesis (--add-inputs) → test |
-| "add harder cases" | Bundle exists | synthesis (↑hard weight) → test |
+## Phase 1: Authentication (If Needed)
 
-### Step 3: Gather Context (for new test)
+```bash
+# Check login status
+fluxloop auth status
 
-Collect information needed to create a new test:
+# If not logged in:
+fluxloop login
+# Browser opens for code entry only (no project selection)
+# Wait for user to complete
 
-**Required questions**:
-1. What scenario do you want to test? (purpose)
-2. What service/product is this for? (domain)
+# After login, show next steps
+fluxloop projects list
+```
 
-**Optional questions** (have defaults):
-3. Difficulty distribution (default: even)
-4. Number of inputs (default: 10)
+**After login message:**
+```
+✅ Login successful: user@example.com
 
-### Step 4: Execute Workflow
+Please select or create a project:
+  - fluxloop projects list    - View your projects
+  - fluxloop projects create --name <name>  - Create new project
+```
 
-**When synthesis is needed**:
+---
+
+## Phase 2: Resource Setup (Auto-Configuration)
+
+### 2.1 Project Setup
+
+**If no project in context:**
+```
+No project found. What would you like to test?
+→ Parse intent and create project
+```
+
+```bash
+# Create project (auto-selects after creation)
+fluxloop projects create --name "order-bot"
+# → context.json updated with project_id
+
+# Or select existing
+fluxloop projects list
+fluxloop context set-project <id>
+```
+
+### 2.2 Scenario Setup
+
+**If no scenario in context:**
+```
+What scenario would you like to test?
+→ Create scenario based on intent
+```
+
+```bash
+# Create scenario based on intent
+fluxloop scenarios create --name "Order cancellation" --description "Angry customer handling"
+# → context.json updated with scenario_id
+
+# Or select existing
+fluxloop scenarios list
+fluxloop context set-scenario <id>
+```
+
+### 2.3 Agent Loader Setup (If Needed)
+
+Check if `runner.module_path` is configured in `configs/simulation.yaml`:
+
+```bash
+grep -A5 "runner:" configs/simulation.yaml
+```
+
+**If not configured, ask:**
+```
+Agent loader setup is required for testing.
+
+Where is your agent located?
+1) In this project (I'll scan for entry points)
+2) External location (please provide path)
+```
+
+#### Option 1: In-project Agent
+
+Scan codebase for potential entry points:
+- Functions with signatures like `def run(`, `async def handle(`
+- Classes with `invoke`, `run`, `respond` methods
+
+Present candidates and let user choose, then update `configs/simulation.yaml`.
+
+#### Option 2: External Agent (Recommended Pattern)
+
+**Use the built-in wrapper template:**
+
+1. Read the template file: `agents/_template_wrapper.py`
+2. Copy it to create a new wrapper:
+   ```bash
+   cp agents/_template_wrapper.py agents/<name>_agent.py
+   ```
+
+3. Help user modify the wrapper:
+   - Set `ORIGINAL_AGENT_PATH` to point to their agent
+   - Update the import statement
+   - Implement `_call_original_agent()` function
+
+4. Update `configs/simulation.yaml`:
+   ```yaml
+   runner:
+     module_path: "agents.<name>_agent"
+     function_name: "run"
+     target: "agents.<name>_agent:run"
+     working_directory: .
+     python_path:
+       - .
+     timeout_seconds: 300
+   ```
+
+5. Verify setup:
+   ```bash
+   python agents/<name>_agent.py
+   ```
+
+**Alternative: Use CLI command:**
+```bash
+fluxloop init agent <name> --template wrapper
+```
+
+---
+
+## Phase 3: Test Data Synthesis (If Needed)
+
+Check if test inputs exist:
+
+```bash
+ls inputs/generated.yaml
+```
+
+**If synthesis needed:**
 ```
 Execute /fluxloop:synthesis
 ```
 
-Run 8 CLI commands sequentially (synthesis only, excluding test):
-1. scenarios create
-2. context refine
-3. scenarios refine
-4. personas suggest
-5. inputs synthesize
-6. inputs qc
-7. (if needed) inputs refine
-8. bundles publish
-
-**Run test**:
-```
-Execute /fluxloop:test
+Or manually:
+```bash
+# Uses current project/scenario from context
+fluxloop inputs synthesize --total-count 10
+fluxloop sync pull
 ```
 
-### Step 5: Analyze Results
+---
 
-Analyze and summarize test results:
+## Phase 4: Test Execution
 
+```bash
+fluxloop test
+```
+
+---
+
+## Phase 5: Result Analysis
+
+Read and summarize results:
+
+```bash
+cat .fluxloop/latest_result.md
+```
+
+**Present summary:**
 ```
 ✅ Test Complete!
 
 📋 Summary:
   - Total tests: 10
   - Passed: 8 (80%)
-  - Failed: 2 (20%)
+  - Warnings: 2 (20%)
 
-⚠️ Failure Analysis:
+⚠️ Warning Analysis:
   - Input #3: [root cause analysis]
   - Input #7: [root cause analysis]
 
 💡 Improvement Suggestions:
-  - [specific improvement recommendations]
+  - [specific recommendations based on failures]
 
 🚀 Next Steps:
   - "show detailed results" - check individual turns
   - "test again" - retest with same bundle
   - "add more inputs" - generate additional cases
+
+🌐 Web Dashboard:
+  - https://app.fluxloop.ai/runs/...
 ```
+
+---
+
+## Complete Flow Diagram
+
+```
+"Test my agent"
+    │
+    ▼
+[Local Context Check] .fluxloop/context.json
+    │
+    ├─ Context exists (project + scenario)
+    │   └─ "Current settings: order-bot / order-cancel
+    │       Proceed with these?" (Y/n)
+    │       │
+    │       ├─ Y → [Phase 4: Test]
+    │       └─ n → "Create new or select different?"
+    │
+    └─ No context
+        │
+        ├─ Logged in? ──❌──→ fluxloop login (browser)
+        │   ✅                 → no project selection
+        │   │
+        │   ▼
+        ├─ Create project? ──Y──→ fluxloop projects create --name <name>
+        │   │                      (auto-select)
+        │   ▼
+        ├─ Create scenario? ──Y──→ fluxloop scenarios create --name <name>
+        │   │                       (auto-select)
+        │   ▼
+        ├─ Agent loader? ──❌──→ [Create wrapper from template]
+        │   ✅
+        │   ▼
+        └─ Test inputs? ──❌──→ /fluxloop:synthesis
+            ✅
+            │
+            ▼
+┌─────────────────────────────────────┐
+│  fluxloop test                      │
+│  + Result Summary                   │
+│  + Web Dashboard Link (optional)    │
+└─────────────────────────────────────┘
+```
+
+---
+
+## State-Based Branching
+
+```
+"Run test"
+    │
+    ▼
+[Check context.json]
+    │
+    ├─ Has project & scenario
+    │   └─ "Current settings: order-bot / order-cancel
+    │       Proceed with these?" (Y/n)
+    │       │
+    │       ├─ Y → Run test immediately
+    │       └─ n → "Create new or select different?"
+    │
+    ├─ Has project only
+    │   └─ "No scenario found. Would you like to create one?"
+    │       → Intent-based scenario creation
+    │
+    └─ No context
+        └─ "No project found. Would you like to create one?"
+            │
+            ├─ Y → Intent-based project/scenario creation
+            └─ n → "Show existing projects?"
+                   → fluxloop projects list
+```
+
+---
+
+## Context Commands Reference
+
+```bash
+# Show current context
+fluxloop context show
+
+# Set project
+fluxloop context set-project <project_id>
+# Or shortcut:
+fluxloop projects select <project_id>
+
+# Set scenario
+fluxloop context set-scenario <scenario_id>
+
+# Clear context
+fluxloop context clear
+
+# List resources
+fluxloop projects list
+fluxloop scenarios list
+```
+
+---
 
 ## Error Handling
 
-**Login Required**:
+**Not Logged In:**
 ```
 ❌ Login required.
 
-Please login with:
-  fluxloop auth login
+Running: fluxloop login
+Browser will open for authentication.
+Please complete login and let me know when done.
 ```
 
-**Synthesis Failed**:
+**No Project:**
 ```
-❌ Input synthesis failed
+❌ No project selected.
 
-Created resources:
-  - Scenario: scn-abc123
+Options:
+  1. Create new: fluxloop projects create --name <name>
+  2. Select existing: fluxloop projects list
+```
+
+**Agent Loader Failed:**
+```
+❌ Agent loader verification failed.
+
+Error: ModuleNotFoundError: No module named 'original_package'
+
+Possible fixes:
+1. Check the original agent path is correct
+2. Verify python_path in simulation.yaml includes the right directories
+3. Check if any dependencies are missing
+```
+
+**Synthesis Failed:**
+```
+❌ Input synthesis failed.
 
 Recovery options:
-  Run /fluxloop:synthesis again, or
-  Execute fluxloop inputs synthesize --scenario-id scn-abc123 directly
+  - Run /fluxloop:synthesis again
+  - Or execute: fluxloop inputs synthesize
 ```
+
+---
 
 ## Usage Examples
 
-### Create New Test
+### First-time User (Full Setup)
+
 ```
-User: "test the order cancellation agent"
-Skill: [gather context] → [synthesis] → [test] → [analyze results]
+User: "Test my agent"
+
+Skill: Checking environment...
+       ❌ Not logged in → Running login...
+       [Browser opens]
+       
+User: "I'm logged in"
+
+Skill: ✅ Logged in: user@example.com
+       
+       No project found. What would you like to test?
+
+User: "My chatbot. Order cancellation with angry customers."
+
+Skill: Got it! Should I create this setup?
+       
+       📋 Creating:
+       - Project: chatbot-test
+       - Scenario: Order cancellation handling
+       - Personas: Regular customer, Angry customer, VIP
+       - Inputs: 10 (40% hard)
+       
+       Proceed? (Y/n)
+
+User: "Yes"
+
+Skill: ⏳ Setting up environment...
+       
+       [1/4] Creating project... ✓ proj-abc123
+       [2/4] Creating scenario... ✓ scn-xyz789
+       [3/4] Creating personas... ✓ 3 created
+       [4/4] Synthesizing inputs... ✓ 10 generated
+       
+       ❓ Where is your agent located?
+
+User: "../chatbot/src/bot.py"
+
+Skill: Creating agents/chatbot_agent.py... ✓
+       
+       🚀 Running test...
+       
+       ✅ Complete! 8/10 passed (80%)
+       
+       [Analysis...]
 ```
 
-### Retest with Existing Bundle
+### Returning User (Quick Test)
+
 ```
-User: "test again"
-Skill: [run test only] → [analyze results]
+User: "Run test"
+
+Skill: [Checking context.json]
+       
+       Current settings:
+       - Project: chatbot-test
+       - Scenario: Order cancellation (10 inputs)
+       
+       Run test with these? (Y/n)
+
+User: "Yes"
+
+Skill: 🚀 Running test...
+       
+       ✅ Complete! 9/10 passed (90%)
+       
+       [Improved from last run!]
 ```
 
-### Add More Inputs
+### Add New Scenario
+
 ```
-User: "add harder test cases"
-Skill: [synthesis --add-inputs, ↑hard weight] → [test] → [analyze results]
+User: "I want to test refund scenarios too"
+
+Skill: Create a new scenario?
+       
+       Adding to current project (chatbot-test).
+       
+       📋 Creating:
+       - Scenario: Refund request handling
+       - Personas: Reusing existing 3
+       - Inputs: 10
+       
+       Proceed? (Y/n)
+```
+
+### Switch Context
+
+```
+User: "Switch to a different project"
+
+Skill: Your projects:
+       
+       1. chatbot-test (current)
+       2. support-bot
+       3. sales-assistant
+       
+       Which one?
+
+User: "2"
+
+Skill: ✅ Switched to support-bot.
+       
+       Scenarios:
+       1. Customer inquiry handling
+       2. Complaint processing
+       
+       Which scenario to test?
 ```

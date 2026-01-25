@@ -19,13 +19,17 @@ import httpx
 
 @dataclass
 class AuthToken:
-    """Authentication token data structure."""
+    """
+    Authentication token data structure.
+    
+    User-scoped JWT: project_id is NOT included in the token.
+    Project selection is handled via local context (.fluxloop/context.json).
+    """
 
     access_token: str
     refresh_token: str
     expires_at: str  # ISO 8601 format
-    project_id: str
-    project_name: str
+    user_id: str
     user_email: str
 
     @classmethod
@@ -35,9 +39,8 @@ class AuthToken:
             access_token=data["access_token"],
             refresh_token=data["refresh_token"],
             expires_at=data["expires_at"],
-            project_id=data["project_id"],
-            project_name=data["project_name"],
-            user_email=data["user_email"],
+            user_id=data["user_id"],
+            user_email=data.get("user_email", ""),
         )
 
     def to_dict(self) -> dict:
@@ -46,8 +49,7 @@ class AuthToken:
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
             "expires_at": self.expires_at,
-            "project_id": self.project_id,
-            "project_name": self.project_name,
+            "user_id": self.user_id,
             "user_email": self.user_email,
         }
 
@@ -202,16 +204,23 @@ def start_device_code_flow(api_url: str) -> DeviceCodeResponse:
     url = api_url.rstrip("/") + "/api/cli-connect/start"
 
     with httpx.Client(timeout=10.0) as client:
-        resp = client.post(url)
+        resp = client.post(url, json={})
         resp.raise_for_status()
         data = resp.json()
+
+    expires_in = data.get("expires_in")
+    if expires_in is None:
+        expires_in = data.get("expires_in_sec", 600)
+    interval = data.get("interval")
+    if interval is None:
+        interval = data.get("interval_sec", 5)
 
     return DeviceCodeResponse(
         device_code=data["device_code"],
         user_code=data["user_code"],
         verification_url=data["verification_url"],
-        expires_in=data["expires_in"],
-        interval=data.get("interval", 5),
+        expires_in=expires_in,
+        interval=interval,
     )
 
 
@@ -253,29 +262,31 @@ def poll_device_code(
                 time.sleep(interval)
                 continue
 
-            # Check for errors
-            if "error" in data:
-                error = data["error"]
-                if error == "expired":
-                    raise ValueError("Authentication code has expired")
-                elif error == "access_denied":
-                    raise ValueError("User denied authentication")
-                else:
-                    raise ValueError(f"Authentication error: {error}")
+            status = data.get("status")
+            if status == "denied":
+                raise ValueError("User denied authentication")
+            if status == "expired":
+                raise ValueError("Authentication code has expired")
+            if status not in {"approved", "pending"}:
+                raise ValueError(f"Authentication error: {status}")
 
-            # Success - extract token data
-            expires_in = data.get("expires_in", 3600)
-            expires_at = (
-                datetime.now(timezone.utc) + timedelta(seconds=expires_in)
-            ).isoformat()
+            credential = data.get("credential") or {}
+            access_token = credential.get("access_token")
+            if not access_token:
+                raise ValueError("Authentication response missing access token")
+
+            expires_at = credential.get("expires_at")
+            if not expires_at:
+                expires_at = (
+                    datetime.now(timezone.utc) + timedelta(seconds=3600)
+                ).isoformat()
 
             return AuthToken(
-                access_token=data["access_token"],
-                refresh_token=data["refresh_token"],
+                access_token=access_token,
+                refresh_token=credential.get("refresh_token", ""),
                 expires_at=expires_at,
-                project_id=data["project_id"],
-                project_name=data["project_name"],
-                user_email=data["user_email"],
+                user_id=credential.get("user_id", ""),
+                user_email=credential.get("user_email", ""),
             )
 
 
@@ -301,32 +312,28 @@ def refresh_access_token(api_url: str, refresh_token: str) -> AuthToken:
         resp.raise_for_status()
         data = resp.json()
 
-    # Check for errors
-    if "error" in data:
-        error = data["error"]
-        if error == "invalid_token":
-            raise ValueError("Token is invalid. Please login again.")
-        else:
-            raise ValueError(f"Token refresh error: {error}")
+    credential = data.get("credential") or {}
+    access_token = credential.get("access_token")
+    if not access_token:
+        raise ValueError("Token refresh failed. Please login again.")
 
-    # Calculate new expiry time
-    expires_in = data.get("expires_in", 3600)
-    expires_at = (
-        datetime.now(timezone.utc) + timedelta(seconds=expires_in)
-    ).isoformat()
-
-    # Load existing token to preserve user info
+    # Load existing token to preserve user info if response omits it
     existing_token = load_auth_token()
-    if not existing_token:
-        raise ValueError("Existing token not found")
+    user_id = credential.get("user_id") or (existing_token.user_id if existing_token else "")
+    user_email = credential.get("user_email") or (existing_token.user_email if existing_token else "")
+
+    expires_at = credential.get("expires_at")
+    if not expires_at:
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(seconds=3600)
+        ).isoformat()
 
     return AuthToken(
-        access_token=data["access_token"],
-        refresh_token=data["refresh_token"],
+        access_token=access_token,
+        refresh_token=credential.get("refresh_token", refresh_token),
         expires_at=expires_at,
-        project_id=existing_token.project_id,
-        project_name=existing_token.project_name,
-        user_email=existing_token.user_email,
+        user_id=user_id,
+        user_email=user_email,
     )
 
 

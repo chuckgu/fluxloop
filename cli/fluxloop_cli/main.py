@@ -21,8 +21,10 @@ from .commands import (
     generate,
     init,
     inputs,
+    local_context,
     parse,
     personas,
+    projects,
     record,
     run,
     scenarios,
@@ -73,8 +75,10 @@ app.add_typer(sync.app, name="sync", help="Sync bundles and upload results")
 app.add_typer(criteria.app, name="criteria", help="Show pulled evaluation criteria")
 app.add_typer(test.app, name="test", help="Run pull -> run -> upload test workflow")
 app.add_typer(auth.app, name="auth", help="Manage authentication")
+app.add_typer(projects.app, name="projects", help="Manage projects")
 app.add_typer(scenarios.app, name="scenarios", help="Manage test scenarios")
-app.add_typer(context.app, name="context", help="Refine intent and context")
+app.add_typer(context.app, name="intent", help="Refine intent and context")  # renamed to avoid conflict
+app.add_typer(local_context.app, name="context", help="Manage local working context")
 app.add_typer(personas.app, name="personas", help="Manage test personas")
 app.add_typer(inputs.app, name="inputs", help="Synthesize and manage test inputs")
 app.add_typer(bundles.app, name="bundles", help="Manage test bundles")

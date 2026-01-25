@@ -19,6 +19,8 @@ from ..templates import (
     create_gitignore,
     create_env_file,
     create_pytest_bridge_template,
+    create_agent_wrapper_template,
+    create_agents_readme,
 )
 from ..project_paths import resolve_root_dir, resolve_project_dir
 from ..constants import (
@@ -150,6 +152,24 @@ def project(
         gitignore_content = create_gitignore()
         gitignore_file.write_text(gitignore_content)
     
+    # Create agents directory with wrapper template
+    console.print("🔌 Creating agents directory with wrapper template...")
+    agents_dir = project_path / "agents"
+    agents_dir.mkdir(exist_ok=True)
+    
+    # Create __init__.py for the agents package
+    agents_init = agents_dir / "__init__.py"
+    if not agents_init.exists():
+        agents_init.write_text('"""FluxLoop agent wrappers."""\n')
+    
+    # Create wrapper template
+    wrapper_template = agents_dir / "_template_wrapper.py"
+    wrapper_template.write_text(create_agent_wrapper_template())
+    
+    # Create README
+    agents_readme = agents_dir / "README.md"
+    agents_readme.write_text(create_agents_readme())
+    
     # Create example agent if requested
     if with_example:
         console.print("🤖 Creating example agent...")
@@ -167,6 +187,9 @@ def project(
     configs_node = tree.add(f"📁 {CONFIG_DIRECTORY_NAME}/")
     for key in CONFIG_SECTION_ORDER:
         configs_node.add(f"📄 {CONFIG_SECTION_FILENAMES[key]}")
+    agents_node = tree.add("📁 agents/")
+    agents_node.add("📄 _template_wrapper.py")
+    agents_node.add("📄 README.md")
     tree.add("🔐 .env")
     tree.add("📄 .gitignore")
     tree.add("📁 recordings/")
@@ -275,14 +298,20 @@ def agent(
         "simple",
         "--template",
         "-t",
-        help="Agent template to use (simple, langchain, langgraph)",
+        help="Agent template to use (simple, wrapper, langchain, langgraph)",
     ),
 ):
     """
     Create a new agent from a template.
+    
+    Templates:
+    - simple: Basic agent with sample logic (for demos)
+    - wrapper: External agent wrapper (for connecting existing agents)
+    - langchain: LangChain-based agent (coming soon)
+    - langgraph: LangGraph-based agent (coming soon)
     """
     # Validate template
-    valid_templates = ["simple", "langchain", "langgraph"]
+    valid_templates = ["simple", "wrapper", "langchain", "langgraph"]
     if template not in valid_templates:
         console.print(
             f"[red]Error:[/red] Invalid template '{template}'. "
@@ -303,15 +332,30 @@ def agent(
     # Create agent based on template
     console.print(f"🤖 Creating {template} agent: {name}")
     
-    if template == "simple":
+    if template == "wrapper":
+        content = create_agent_wrapper_template(name)
+    elif template == "simple":
         content = create_sample_agent()
     else:
-        # TODO: Add more templates
+        # TODO: Add langchain/langgraph templates
         content = create_sample_agent()
     
     agent_file.write_text(content)
     
     console.print(f"[green]✓[/green] Agent created: {agent_file}")
-    console.print("\nTo use this agent, update your setting.yaml:")
-    console.print(f"  runner.module_path: agents.{name}")
-    console.print("  runner.function_name: run")
+    console.print("\n[bold]Next steps:[/bold]")
+    
+    if template == "wrapper":
+        console.print("1. Edit the wrapper file to connect your external agent:")
+        console.print(f"   [cyan]{agent_file}[/cyan]")
+        console.print("2. Set ORIGINAL_AGENT_PATH to your agent's location")
+        console.print("3. Implement _call_original_agent() function")
+        console.print("4. Test manually: [green]python {agent_file}[/green]")
+    else:
+        console.print("1. Customize the agent logic in:")
+        console.print(f"   [cyan]{agent_file}[/cyan]")
+    
+    console.print(f"\n5. Update [cyan]configs/simulation.yaml[/cyan]:")
+    console.print(f"   runner:")
+    console.print(f"     module_path: \"agents.{name}\"")
+    console.print(f"     function_name: \"run\"")

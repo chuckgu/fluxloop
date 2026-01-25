@@ -17,6 +17,11 @@ from ..api_utils import (
     save_cache_file,
 )
 from ..http_client import create_authenticated_client, post_with_retry
+from ..context_manager import (
+    get_current_project_id,
+    get_current_scenario_id,
+    set_scenario,
+)
 
 app = typer.Typer(help="Manage test scenarios")
 console = Console()
@@ -87,6 +92,9 @@ def refine(
 @app.command()
 def create(
     name: str = typer.Option(..., "--name", help="Scenario name"),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (defaults to current context)"
+    ),
     description: Optional[str] = typer.Option(
         None, "--description", help="Scenario description"
     ),
@@ -99,14 +107,30 @@ def create(
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
+    select: bool = typer.Option(
+        True, "--select/--no-select", help="Automatically select the created scenario"
+    ),
 ):
     """
     Create a new test scenario.
+    
+    Uses current project from context if --project-id is not specified.
     """
     api_url = resolve_api_url(api_url)
+    
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_project_id()
+        if not project_id:
+            console.print("[yellow]No project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop context set-project <id>[/dim]")
+            raise typer.Exit(1)
 
     # Build payload
-    payload: Dict[str, Any] = {"name": name}
+    payload: Dict[str, Any] = {
+        "name": name,
+        "project_id": project_id,
+    }
 
     if description:
         payload["description"] = description
@@ -131,15 +155,22 @@ def create(
         handle_api_error(resp, "scenario creation")
 
         data = resp.json()
+        scenario_id = data.get('scenario_id', data.get('id', 'N/A'))
+        scenario_name = data.get('name', name)
 
         console.print()
         console.print(
-            f"[green]✓[/green] Scenario created: [bold]{data.get('scenario_id', 'N/A')}[/bold]"
+            f"[green]✓[/green] Scenario created: [bold]{scenario_id}[/bold]"
         )
-        console.print(f"  Name: {data.get('name', 'N/A')}")
+        console.print(f"  Name: {scenario_name}")
 
         if "description" in data:
             console.print(f"  Description: {data['description']}")
+        
+        # Automatically select if requested
+        if select and scenario_id != 'N/A':
+            set_scenario(scenario_id, scenario_name)
+            console.print(f"[green]✓[/green] Scenario selected as current context")
 
     except Exception as e:
         console.print(f"[red]✗[/red] Creation failed: {e}", style="bold red")
@@ -209,52 +240,70 @@ def generate(
         raise typer.Exit(1)
 
 
-@app.command()
-def list(
+@app.command("list")
+def list_scenarios(
     project_id: Optional[str] = typer.Option(
-        None, "--project-id", help="Filter by project ID"
+        None, "--project-id", help="Filter by project ID (defaults to current context)"
     ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
 ):
     """
-    List all scenarios.
+    List all scenarios for a project.
+    
+    Uses current project from context if --project-id is not specified.
     """
     api_url = resolve_api_url(api_url)
+    
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_project_id()
+        if not project_id:
+            console.print("[yellow]No project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop context set-project <id>[/dim]")
+            raise typer.Exit(1)
 
     try:
         client = create_authenticated_client(api_url, use_jwt=True)
 
         # Build query params
-        params = {}
-        if project_id:
-            params["project_id"] = project_id
+        params = {"project_id": project_id}
 
         resp = client.get("/api/scenarios", params=params)
         handle_api_error(resp, "scenarios list")
 
         data = resp.json()
         scenarios = data if isinstance(data, list) else data.get("scenarios", [])
+        
+        # Get current scenario to mark selected
+        current_scenario_id = get_current_scenario_id()
 
         if not scenarios:
             console.print("[yellow]No scenarios found.[/yellow]")
+            console.print("[dim]Create one with: fluxloop scenarios create --name <name>[/dim]")
             return
 
         # Create table
-        table = Table(title="Scenarios")
+        table = Table(title=f"Scenarios (Project: {project_id})")
         table.add_column("ID", style="cyan")
         table.add_column("Name", style="bold")
         table.add_column("Created", style="dim")
+        table.add_column("Selected", style="green")
 
         for scenario in scenarios:
+            scenario_id = scenario.get("id", scenario.get("scenario_id", "N/A"))
+            is_selected = "✓" if scenario_id == current_scenario_id else ""
             table.add_row(
-                scenario.get("id", "N/A"),
+                scenario_id,
                 scenario.get("name", "N/A"),
                 scenario.get("created_at", "N/A"),
+                is_selected,
             )
 
         console.print(table)
+        console.print()
+        console.print("[dim]Select a scenario: fluxloop context set-scenario <id>[/dim]")
 
     except Exception as e:
         console.print(f"[red]✗[/red] List failed: {e}", style="bold red")

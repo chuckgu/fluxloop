@@ -544,3 +544,230 @@ def create_env_file() -> str:
         GEMINI_API_KEY=
         """
     ).strip() + "\n"
+
+
+def create_agent_wrapper_template(agent_name: str = "my_agent") -> str:
+    """Create an external agent wrapper template.
+    
+    This template wraps an external agent (located outside the FluxLoop project)
+    with a FluxLoop-compatible interface. Users should modify:
+    1. ORIGINAL_AGENT_PATH - path to the original agent code
+    2. Import statement for the original agent
+    3. The _call_original_agent() function to match their agent's interface
+    """
+
+    return dedent(
+        f'''
+        """
+        FluxLoop Agent Wrapper Template
+        ================================
+        This file wraps an external agent with a FluxLoop-compatible interface.
+        
+        HOW TO USE:
+        1. Set ORIGINAL_AGENT_PATH to your agent's location
+        2. Update the import statement for your agent
+        3. Modify _call_original_agent() to match your agent's interface
+        4. Update configs/simulation.yaml:
+           runner:
+             module_path: "agents.{agent_name}"
+             function_name: "run"
+        """
+
+        from __future__ import annotations
+
+        import asyncio
+        import sys
+        from pathlib import Path
+        from typing import Any, Optional
+
+        import fluxloop
+
+
+        # ============================================================
+        # STEP 1: Configure path to your original agent
+        # ============================================================
+        # Adjust the path to point to your agent's root directory.
+        # Example: If your agent is at ../my-bot/backend/, set:
+        #   ORIGINAL_AGENT_PATH = FLUXLOOP_PROJECT_ROOT.parent / "my-bot" / "backend"
+
+        FLUXLOOP_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+        ORIGINAL_AGENT_PATH = FLUXLOOP_PROJECT_ROOT.parent / "path" / "to" / "your" / "agent"
+
+        if str(ORIGINAL_AGENT_PATH) not in sys.path:
+            sys.path.insert(0, str(ORIGINAL_AGENT_PATH))
+
+
+        # ============================================================
+        # STEP 2: Import your original agent
+        # ============================================================
+        # Uncomment and modify based on your agent's structure:
+        #
+        # from your_package.agent import YourAgent
+        # from your_package.core import get_agent_manager
+        # from your_agent import run as original_run
+
+
+        # ============================================================
+        # STEP 3: Implement the bridge to your agent
+        # ============================================================
+
+        def _extract_prompt(
+            *,
+            input_text: Optional[str] = None,
+            prompt: Optional[str] = None,
+            data: Optional[dict[str, Any]] = None,
+            **kwargs: Any,
+        ) -> str:
+            """Extract prompt from various input formats supported by FluxLoop."""
+            candidates: list[Optional[str]] = [
+                input_text,
+                prompt,
+                kwargs.get("input"),
+                kwargs.get("text"),
+                kwargs.get("content"),
+            ]
+            if data:
+                candidates.extend([
+                    data.get("content"),
+                    data.get("input"),
+                    data.get("prompt"),
+                    data.get("text"),
+                ])
+
+            for candidate in candidates:
+                if candidate is not None:
+                    value = str(candidate).strip()
+                    if value:
+                        return value
+
+            raise ValueError(
+                "No prompt provided. Expected input_text, prompt, or data.content."
+            )
+
+
+        def _call_original_agent(prompt: str) -> str:
+            """
+            Call your original agent and return the response.
+            
+            MODIFY THIS FUNCTION to match your agent's interface.
+            
+            Examples:
+            
+            # Simple function call:
+            return original_run(prompt)
+            
+            # Class-based agent:
+            agent = YourAgent()
+            return agent.respond(prompt)
+            
+            # Async agent (wrap with asyncio.run):
+            async def _async_call():
+                agent = YourAgent()
+                return await agent.arespond(prompt)
+            return asyncio.run(_async_call())
+            
+            # Agent manager pattern:
+            manager = get_agent_manager()
+            conversation_id, run_id = manager.start_run(prompt)
+            result = asyncio.run(manager.get_result(run_id))
+            return result.get("answer", "")
+            """
+            # TODO: Replace with your agent call
+            raise NotImplementedError(
+                "Please implement _call_original_agent() to call your agent. "
+                "See the examples in the docstring above."
+            )
+
+
+        # ============================================================
+        # FluxLoop Entry Point (usually no changes needed)
+        # ============================================================
+
+        @fluxloop.agent(name="{agent_name.title().replace('_', '')}")
+        def run(
+            input_text: Optional[str] = None,
+            *,
+            prompt: Optional[str] = None,
+            data: Optional[dict[str, Any]] = None,
+            **kwargs: Any,
+        ) -> str:
+            """FluxLoop-compatible entry point for the agent."""
+            final_prompt = _extract_prompt(
+                input_text=input_text,
+                prompt=prompt,
+                data=data,
+                **kwargs,
+            )
+            return _call_original_agent(final_prompt)
+
+
+        # ============================================================
+        # Manual Testing
+        # ============================================================
+
+        if __name__ == "__main__":
+            # Quick smoke test without FluxLoop CLI
+            test_prompt = "Hello, can you help me?"
+            print(f"Testing with: {{test_prompt}}")
+            try:
+                result = run(input_text=test_prompt)
+                print(f"Result: {{result}}")
+            except NotImplementedError as e:
+                print(f"Setup needed: {{e}}")
+        '''
+    ).strip() + "\n"
+
+
+def create_agents_readme() -> str:
+    """Create README for agents directory."""
+
+    return dedent(
+        """
+        # Agent Wrappers
+
+        This directory contains FluxLoop-compatible agent wrappers.
+
+        ## Purpose
+
+        Agent wrappers bridge your original agent code with FluxLoop's testing framework.
+        This keeps your original code untouched while enabling simulation and testing.
+
+        ## Files
+
+        - `_template_wrapper.py` - Template for creating new agent wrappers
+        - `<your_agent>.py` - Your customized wrapper (copy from template)
+
+        ## Quick Start
+
+        1. Copy the template:
+           ```bash
+           cp _template_wrapper.py my_agent.py
+           ```
+
+        2. Edit `my_agent.py`:
+           - Set `ORIGINAL_AGENT_PATH` to your agent's location
+           - Update the import statement
+           - Implement `_call_original_agent()` function
+
+        3. Update `configs/simulation.yaml`:
+           ```yaml
+           runner:
+             module_path: "agents.my_agent"
+             function_name: "run"
+           ```
+
+        4. Test manually:
+           ```bash
+           python agents/my_agent.py
+           ```
+
+        5. Run FluxLoop test:
+           ```bash
+           fluxloop test
+           ```
+
+        ## Example
+
+        See `_template_wrapper.py` for detailed instructions and examples.
+        """
+    ).strip() + "\n"

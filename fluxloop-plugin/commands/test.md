@@ -1,4 +1,9 @@
-# /fluxloop:test
+---
+description: Run the full FluxLoop test workflow (pull → run → upload)
+allowed-tools: [Bash]
+---
+
+# FluxLoop Test
 
 Run the full FluxLoop test workflow (pull → run → upload)
 
