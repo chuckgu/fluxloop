@@ -9,8 +9,6 @@ website/
 ├── docs/                    # Main documentation (getting started, guides)
 ├── docs-sdk/                # SDK documentation (v0.1.3)
 ├── docs-cli/                # CLI documentation (v0.2.1)
-├── docs-vscode/             # VSCode Extension docs (Integration view, Flux Agent guides)
-├── docs-mcp/                # MCP Server docs (RAG pipeline, tooling reference)
 ├── blog/                    # Release notes and tutorials
 ├── src/
 │   ├── components/          # React components
@@ -21,9 +19,7 @@ website/
 ├── docusaurus.config.ts     # Main configuration
 ├── sidebars.ts              # Main docs sidebar
 ├── sidebars-sdk.ts          # SDK sidebar
-├── sidebars-cli.ts          # CLI sidebar
-├── sidebars-vscode.ts       # VSCode sidebar
-└── sidebars-mcp.ts          # MCP sidebar
+└── sidebars-cli.ts          # CLI sidebar
 ```
 
 ## Development
@@ -83,33 +79,6 @@ CLI tool documentation for project management and experiments.
 - Source: `packages/cli/`
 - Guides include the new Pytest Bridge walkthrough (`docs-cli/guides/pytest-bridge.md`) plus the accompanying CI workflow (`examples/ci/fluxloop_pytest.yml`) referenced throughout the site.
 
-### VSCode Extension (`/vscode`)
-
-Guides for the FluxLoop VSCode extension, including the Integration Assistant.
-- Covers: project workflow, Integration view, MCP knowledge search, Flux Agent multi-mode operation (Integration/Base Input/Experiment/Insight) and setup
-- Current version: 0.1.0
-- Source: `packages/vscode/`
-- API docs auto-generated from TypeScript source using TypeDoc
-
-### MCP Server (`/mcp`)
-
-Model Context Protocol server for AI-assisted FluxLoop integration.
-- Current version: 0.1.0
-- Source: `packages/mcp/`
-- Requires: Python 3.11+
-- Provides: repository analysis, framework detection, integration planning tools, and the `fetch_<mode>_context` APIs consumed by the VSCode multi-mode planner
-- Companion docs explain how VSCode’s Flux Agent consumes each MCP tool
-
-## Generating API Documentation
-
-VSCode Extension API documentation is auto-generated from TypeScript source:
-
-```bash
-npm run generate-api-docs
-```
-
-This uses TypeDoc to generate Markdown documentation from TypeScript comments.
-
 ## Deployment
 
 ### GitHub Pages
@@ -161,7 +130,7 @@ Edit generated JSON files in `i18n/ko/` directory.
 
 When adding new documentation:
 
-1. Choose the appropriate section (docs, docs-sdk, docs-cli, docs-vscode, docs-mcp)
+1. Choose the appropriate section (docs, docs-sdk, docs-cli)
 2. Create Markdown files with frontmatter:
    ```markdown
    ---
@@ -174,13 +143,10 @@ When adding new documentation:
 4. Test locally with `npm start`
 5. Submit a pull request
 
-> Flux Agent updates usually touch both `docs-vscode/` (UI workflow) and `docs-mcp/` (tooling reference). Keep them in sync so the assistant guide matches the underlying MCP capabilities.
-
 ## Resources
 
 - [Docusaurus Documentation](https://docusaurus.io/docs)
 - [Markdown Features](https://docusaurus.io/docs/markdown-features)
-- [TypeDoc Plugin](https://github.com/tgreyuk/typedoc-plugin-markdown/tree/master/packages/docusaurus-plugin-typedoc)
 
 ---
 

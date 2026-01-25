@@ -76,36 +76,6 @@ const config: Config = {
         editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
       },
     ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'vscode',
-        path: 'docs-vscode',
-        routeBasePath: 'vscode',
-        sidebarPath: './sidebars-vscode.ts',
-        editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
-      },
-    ],
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'mcp',
-        path: 'docs-mcp',
-        routeBasePath: 'mcp',
-        sidebarPath: './sidebars-mcp.ts',
-        editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
-      },
-    ],
-    // TypeDoc plugin - currently disabled
-    // Enable by running: npm run generate-api-docs
-    // [
-    //   'docusaurus-plugin-typedoc',
-    //   {
-    //     entryPoints: ['../packages/vscode/src/extension.ts'],
-    //     tsconfig: '../packages/vscode/tsconfig.json',
-    //     out: 'docs-vscode/api',
-    //   },
-    // ],
   ],
 
   themeConfig: {
@@ -141,16 +111,6 @@ const config: Config = {
           position: 'left',
         },
         {
-          to: '/vscode/',
-          label: 'VSCode',
-          position: 'left',
-        },
-        {
-          to: '/mcp/',
-          label: 'MCP',
-          position: 'left',
-        },
-        {
           to: '/blog',
           label: 'Blog',
           position: 'left'
@@ -183,14 +143,6 @@ const config: Config = {
             {
               label: 'CLI',
               to: '/cli/',
-            },
-            {
-              label: 'VSCode Extension',
-              to: '/vscode/',
-            },
-            {
-              label: 'MCP Server',
-              to: '/mcp/',
             },
           ],
         },

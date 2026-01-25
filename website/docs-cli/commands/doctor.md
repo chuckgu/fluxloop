@@ -12,8 +12,6 @@ The `doctor` command performs a comprehensive health check of your FluxLoop inst
 
 - **Python Environment**: Version, virtual environment detection, and executable path
 - **FluxLoop CLI**: Installation status and version
-- **FluxLoop MCP**: Installation status and availability
-- **MCP Index**: Knowledge base presence and integrity
 - **Project Configuration**: Config directory structure and files
 
 This command is essential for troubleshooting installation issues and verifying that all FluxLoop components are correctly set up.
@@ -37,7 +35,6 @@ fluxloop doctor --json
 |--------|-------------|---------|
 | `--project`, `-p` | Project name under the FluxLoop root directory | None (uses current) |
 | `--root` | FluxLoop root directory | `./fluxloop` |
-| `--index-dir` | Override FluxLoop MCP index directory | `~/.fluxloop/mcp/index/dev` |
 | `--json` | Output diagnostic information as JSON | `false` |
 
 ## What Gets Checked
@@ -46,7 +43,7 @@ fluxloop doctor --json
 
 Verifies:
 - Python executable path
-- Python version (requires 3.11+ for SDK/MCP, 3.8+ for CLI)
+- Python version (requires 3.11+ for SDK, 3.8+ for CLI)
 - Platform information
 - Virtual environment detection (venv, conda, uv)
 
@@ -62,21 +59,7 @@ Checks:
 - CLI version
 - Installation location
 
-### 3. FluxLoop MCP Server
-
-Checks:
-- `fluxloop-mcp` command availability
-- MCP server installation
-- Help output accessibility
-
-### 4. MCP Knowledge Index
-
-Verifies:
-- Index directory existence
-- `chunks.jsonl` presence and size
-- Default location: `~/.fluxloop/mcp/index/dev`
-
-### 5. Project Configuration
+### 3. Project Configuration
 
 Validates:
 - Project root directory
@@ -96,8 +79,6 @@ Component       Status  Details
 Python          ✓       3.11.5 (/Users/user/.venv/bin/python)
 Virtual Env     ✓       /Users/user/project/.venv
 FluxLoop CLI    ✓       /Users/user/.venv/bin/fluxloop
-FluxLoop MCP    ✓       /Users/user/.venv/bin/fluxloop-mcp
-MCP Index       ✓       ~/.fluxloop/mcp/index/dev • chunks.jsonl (1.2M bytes)
 Project Config  ✓       fluxloop/my-agent/configs/project.yaml
 
 ╭─ fluxloop --version ──────────────╮
@@ -120,12 +101,7 @@ Component       Status  Details
 Python          ✓       3.11.5 (/usr/bin/python3)
 Virtual Env     –       Global interpreter
 FluxLoop CLI    ✓       /usr/local/bin/fluxloop
-FluxLoop MCP    ✗       Not found
-MCP Index       –       ~/.fluxloop/mcp/index/dev
 Project Config  –       Run: fluxloop init project
-
-Errors
-• fluxloop-mcp: fluxloop-mcp not found on PATH
 
 ╭──────────────────╮
 │ Doctor completed │
@@ -164,24 +140,12 @@ fluxloop doctor --json
     "output": "FluxLoop CLI v0.2.30",
     "error": null
   },
-  "fluxloop_mcp": {
-    "success": true,
-    "path": "/Users/user/.venv/bin/fluxloop-mcp",
-    "output": "Usage: fluxloop-mcp [OPTIONS]",
-    "error": null
-  },
   "project": {
     "root": "/Users/user/project/fluxloop",
     "config_directory": "/Users/user/project/fluxloop/my-agent/configs",
     "project_yaml": "/Users/user/project/fluxloop/my-agent/configs/project.yaml",
     "project_yaml_exists": true,
     "config_directory_exists": true
-  },
-  "mcp_index": {
-    "exists": true,
-    "path": "/Users/user/.fluxloop/mcp/index/dev",
-    "chunks_exists": true,
-    "chunks_size": 1245678
   }
 }
 ```
@@ -207,38 +171,6 @@ pip install --user fluxloop-cli
 uv pip install fluxloop-cli
 ```
 
-### Issue: FluxLoop MCP Not Found
-
-**Symptom:**
-```
-FluxLoop MCP    ✗       Not found
-```
-
-**Solution:**
-```bash
-# Install in active virtual environment
-pip install fluxloop-mcp
-
-# Rebuild the knowledge index
-packages/mcp/scripts/rebuild_index.sh
-```
-
-### Issue: Missing MCP Index
-
-**Symptom:**
-```
-MCP Index       –       ~/.fluxloop/mcp/index/dev
-```
-
-**Solution:**
-```bash
-# Build the index manually
-fluxloop-mcp rebuild-index
-
-# Or run the build script from source
-packages/mcp/scripts/rebuild_index.sh
-```
-
 ### Issue: No Virtual Environment
 
 **Symptom:**
@@ -253,7 +185,7 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Reinstall FluxLoop packages
-pip install fluxloop-cli fluxloop fluxloop-mcp
+pip install fluxloop-cli fluxloop
 ```
 
 ### Issue: Missing Project Configuration
@@ -267,19 +199,6 @@ Project Config  –       Run: fluxloop init project
 ```bash
 # Initialize a new project
 fluxloop init project --name my-agent
-```
-
-## Integration with VSCode Extension
-
-The VSCode extension uses `fluxloop doctor` internally to:
-
-- Validate environment on startup
-- Display status in the Integration view
-- Provide actionable feedback when packages are missing
-
-You can also run doctor from Command Palette:
-```
-FluxLoop: Run Doctor
 ```
 
 ## When to Use Doctor
@@ -305,6 +224,5 @@ Note: `doctor` always exits with 0 if it completes the diagnostic scan, even if 
 
 - [Installation Guide](/cli/getting-started/installation) - Initial setup
 - [status Command](/cli/commands/status) - Check experiment and recording status
-- [VSCode Environment Configuration](/vscode/getting-started/environment-configuration) - IDE-specific setup
 
 

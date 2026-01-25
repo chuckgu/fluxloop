@@ -9,12 +9,15 @@
   <a href="https://github.com/chuckgu/fluxloop/blob/main/packages/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"/></a>
   <a href="https://pypi.org/project/fluxloop/"><img src="https://img.shields.io/pypi/v/fluxloop?label=SDK" alt="SDK PyPI"/></a>
   <a href="https://pypi.org/project/fluxloop-cli/"><img src="https://img.shields.io/pypi/v/fluxloop-cli?label=CLI" alt="CLI PyPI"/></a>
-  <a href="https://pypi.org/project/fluxloop-mcp/"><img src="https://img.shields.io/pypi/v/fluxloop-mcp?label=MCP" alt="MCP PyPI"/></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop"><img src="https://img.shields.io/visual-studio-marketplace/v/fluxloop.fluxloop?label=VS%20Code&logo=visualstudiocode" alt="VS Code Marketplace"/></a>
-  <a href="https://open-vsx.org/extension/fluxloop/fluxloop"><img src="https://img.shields.io/open-vsx/v/fluxloop/fluxloop?label=Open%20VSX&logo=eclipseide" alt="Open VSX"/></a>
 </p>
 
-## Ship Agents with Data. Scale Business.
+## Agentic Testing for AI Agents
+
+> **"Hey, test my agent for order cancellation with angry customers"**  
+> → FluxLoop handles the rest: setup, synthesis, execution, and analysis.
+
+### 🤖 Agent-First Workflow
+Your coding agent (Claude Code) orchestrates the entire testing flow. Just describe what you want to test—FluxLoop does the heavy lifting.
 
 ### 🎯 Simulate at Scale
 Run thousands of realistic multi-turn scenarios in parallel. Find edge cases before production.
@@ -22,44 +25,55 @@ Run thousands of realistic multi-turn scenarios in parallel. Find edge cases bef
 ### 📊 Align to Your Standards
 Capture your implicit decision criteria. Turn intuition into automated evaluation.
 
-### 🚀 Act on Insights
-Reports that show what to fix and how. Analysis that drives action.
-
 ---
 
 ## Simulate, Evaluate, and Trust Your AI Agents
 
-**FluxLoop is an open-source toolkit for running reproducible, offline-first simulations of AI agents against dynamic scenarios.** It empowers developers to rigorously test agent behavior, evaluate performance against custom criteria, and build confidence before shipping to production.
+**FluxLoop is an open-source toolkit for agentic testing of AI agents.** Integrated with Claude Code, it enables your coding agent to autonomously set up test environments, synthesize inputs, run simulations, and analyze results—all through natural conversation.
 
 ### Core Philosophy
 
-- **Easy to Use**: Get started quickly with MCP integration and Flux Agent (TBD) for automated setup
+- **Agentic Testing**: Let your coding agent handle the entire test workflow through conversation
+- **Zero Config**: Claude Code plugin auto-detects your setup and guides you through integration
 - **Local-first**: Run experiments on your machine with full control and reproducibility
 - **Framework-agnostic**: Works with any agent framework (LangGraph, LangChain, custom)
-- **Evaluation-first**: Solve the AI evaluation problem properly with rigorous, offline-first testing
 
-Stop guessing, start evaluating.
+Stop configuring, start conversing.
 
 ---
 
 ## Key Features
 
-### 🤖 AI-Assisted Setup
-Get started quickly with MCP Server integration that automatically detects your agent framework and guides you through the setup process. No more manual configuration or guesswork.
+### 🤖 Agentic Testing with Claude Code
+Your coding agent becomes your test engineer. Just tell it what to test:
+
+```
+User: "Test my chatbot for refund scenarios with frustrated customers"
+
+Agent: Setting up environment...
+       ✓ Project created
+       ✓ 10 test inputs synthesized (40% hard cases)
+       ✓ Running simulation...
+       
+       ✅ 8/10 passed (80%)
+       ⚠️ Failed on edge case: customer requesting partial refund
+       
+       💡 Suggested fix: Add handling for partial refund requests
+```
+
+**Slash Commands:**
+- `/fluxloop:test` — Full test cycle (pull → run → upload)
+- `/fluxloop:synthesis` — Generate test inputs from intent
+- `/fluxloop:status` — Check current configuration
 
 ### 🎯 Simple Decorator-Based Instrumentation
 Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing. Works with any Python-based agent framework.
 
 ### 📊 Evaluation-First Testing
-Rigorously test your agents with reproducible experiments and structured evaluation. Define rule-based and LLM-based evaluators, set success criteria, analyze trends and outliers, and generate comprehensive reports with customizable templates—all designed for proper AI evaluation.
+Rigorously test your agents with reproducible experiments and structured evaluation. Define rule-based and LLM-based evaluators, set success criteria, and generate comprehensive reports.
 
 ### 🧪 Offline-First Simulation
 Run experiments on your machine without cloud dependencies. Full control over your testing environment with reproducible, auditable results.
-
-### 🔌 VSCode/Cursor Extension
-Visual project management for your IDE. Browse projects, run experiments with one click, parse results into Markdown timelines, and explore outputs in a structured tree—all without leaving your editor.
-
-Available on [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop) and [Open VSX (Cursor)](https://open-vsx.org/extension/fluxloop/fluxloop).
 
 ### 🚀 Powerful CLI
 Complete command-line control for advanced workflows. Initialize projects, generate test inputs with LLM, run batch experiments, and parse results—all from your terminal.
@@ -68,114 +82,88 @@ Complete command-line control for advanced workflows. Initialize projects, gener
 
 ## 📦 Packages
 
-FluxLoop consists of multiple integrated packages that work together to provide a complete AI agent testing solution:
+FluxLoop consists of multiple integrated packages:
 
-### 1. SDK (Python 3.11+)
-**Core instrumentation library** for tracing and recording agent execution.
+### 1. Claude Code Plugin ⭐
+**Agentic testing interface** for Claude Code.
 
-Add `@fluxloop.agent()` decorator to your code to automatically capture traces, observations, and execution context. Supports async, streaming, and complex agent frameworks.
+The primary way to use FluxLoop. Your coding agent orchestrates the entire testing workflow through natural conversation and slash commands.
 
-📖 **Documentation**: [https://docs.fluxloop.ai/sdk/](https://docs.fluxloop.ai/sdk/)  
-📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
+📖 **Location**: `packages/fluxloop-plugin/`  
+✨ **Commands**: `/fluxloop:test`, `/fluxloop:synthesis`, `/fluxloop:status`
 
 ### 2. CLI
 **Command-line orchestration tool** for managing experiments end-to-end.
 
-Initialize projects, generate test inputs with LLM, run batch simulations, and parse results into human-readable formats—all from your terminal.
-
-- **New:** Pytest Bridge (`fluxloop init pytest-template`) produces a ready-to-run smoke test wired to the `fluxloop_runner` fixture; see `docs/guides/pytest_bridge.md` for examples and the sample GitHub Actions workflow.
+For power users and CI/CD pipelines. Initialize projects, generate test inputs, run batch simulations, and parse results.
 
 📖 **Documentation**: [https://docs.fluxloop.ai/cli/](https://docs.fluxloop.ai/cli/)  
 📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
 
-### 3. VSCode Extension
-**Visual project management** for Cursor and VS Code.
+### 3. SDK (Python 3.11+)
+**Core instrumentation library** for tracing and recording agent execution.
 
-Browse projects, run experiments with one click, parse results into Markdown timelines, and explore outputs in a structured tree view—all without leaving your IDE.
+Add `@fluxloop.agent()` decorator to your code to capture traces and execution context.
 
-📖 **Documentation**: [https://docs.fluxloop.ai/vscode/](https://docs.fluxloop.ai/vscode/)  
-🛒 **Marketplaces**: [VS Code](https://marketplace.visualstudio.com/items?itemName=fluxloop.fluxloop) | [Open VSX (Cursor)](https://open-vsx.org/extension/fluxloop/fluxloop)
-
-### 4. MCP Server (Python 3.11+)
-**AI-assisted integration guidance** via Model Context Protocol.
-
-Automatically detect your agent framework, suggest integration patterns, and provide context-aware help for setting up FluxLoop in your codebase.
-
-📖 **Documentation**: [https://docs.fluxloop.ai/mcp/](https://docs.fluxloop.ai/mcp/)  
-📦 **PyPI**: [fluxloop-mcp](https://pypi.org/project/fluxloop-mcp/)
-
-### 5. Flux Agent (Beta)
-**AI-powered integration assistant** built into the VSCode extension.
-
-Flux Agent analyzes your code, consults FluxLoop documentation via MCP, and generates intelligent integration suggestions using LLM. It combines repository analysis with OpenAI models to provide contextualized, framework-specific guidance—without making automatic changes. You review and apply suggestions manually.
-
-📖 **Documentation**: [https://docs.fluxloop.ai/vscode/integration-assistant/overview](https://docs.fluxloop.ai/vscode/integration-assistant/overview)  
-✨ **Features**:
-- Repository analysis and framework detection
-- AI-generated code integration suggestions
-- Knowledge search with citation-backed answers
-- Manual review and application workflow
-
-🔜 **Status**: Beta (available in VSCode extension v0.1.3+)
+📖 **Documentation**: [https://docs.fluxloop.ai/sdk/](https://docs.fluxloop.ai/sdk/)  
+📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
 
 ---
 
 ## Getting Started
 
-### Installation
+### Option 1: Claude Code (Recommended)
 
-```bash
-# Install Python packages (SDK and MCP require Python 3.11+)
-pip install fluxloop fluxloop-cli fluxloop-mcp
+1. **Install the plugin** — Add `packages/fluxloop-plugin` to your Claude Code plugins
+2. **Login** — `fluxloop login` (one-time browser auth)
+3. **Start testing** — Just tell Claude Code what to test:
 
-# Install VSCode/Cursor Extension
-# Search "FluxLoop" in Extensions marketplace
+```
+"Test my order-bot agent for cancellation scenarios"
 ```
 
-📖 **Installation Guides**: [SDK](https://docs.fluxloop.ai/sdk/getting-started/sdk-installation) | [CLI](https://docs.fluxloop.ai/cli/getting-started/cli-installation) | [VSCode](https://docs.fluxloop.ai/vscode/getting-started/installation) | [MCP](https://docs.fluxloop.ai/mcp/installation)
+Claude Code will:
+- Create project/scenario if needed
+- Synthesize test inputs based on your intent
+- Set up the agent loader
+- Run tests and analyze results
 
-### Quick Workflow
+### Option 2: CLI
 
 ```bash
-# 1. Create a project
+# Install Python packages (Python 3.11+)
+pip install fluxloop fluxloop-cli
+
+# Quick workflow
 fluxloop init project --name my-agent
-
-# 2. Add @fluxloop.agent() decorator to your code
-
-# 3. Generate test inputs
 fluxloop generate inputs --limit 50
-
-# 4. Run experiment
 fluxloop run experiment
-
-# 5. Parse results
 fluxloop parse experiment experiments/<experiment_dir>
 ```
 
-📖 **Complete Tutorial**: [End-to-End Workflow Guide](https://docs.fluxloop.ai/docs/guides/getting-started)
+📖 **Documentation**: [SDK](https://docs.fluxloop.ai/sdk/) | [CLI](https://docs.fluxloop.ai/cli/)
 
 ### What You Can Do
 
-- **🎯 Instrument Agents**: Add decorators to trace execution
-- **📝 Generate Inputs**: Create test scenarios with LLM or deterministic strategies
+- **🤖 Conversational Testing**: Describe what to test in natural language
+- **🎯 Instrument Agents**: Add `@fluxloop.agent()` decorator to trace execution
+- **📝 Intent-Based Synthesis**: Generate test inputs from high-level descriptions
 - **🧪 Run Simulations**: Execute batch experiments with different configurations
-- **💬 Multi-Turn Conversations**: Automatically extend single-input experiments into multi-turn dialogues with AI supervisor
-- **📊 Analyze Results**: Parse structured outputs into human-readable timelines
-- **🔴 Record & Replay**: Capture complex arguments and replay them (advanced)
-- **🧠 AI-Assisted Setup**: Use MCP server and Flux Agent for automated integration guidance
+- **💬 Multi-Turn Conversations**: Automatically extend into multi-turn dialogues
+- **📊 Analyze Results**: Get actionable insights and improvement suggestions
 
 ---
 
 ## 🤝 Why Contribute?
 
-Building trustworthy AI requires a community dedicated to rigorous, transparent evaluation. FluxLoop provides the foundational tooling, but there's much more to do:
+We're building the future of AI agent testing—where your coding agent tests your AI agents. There's much to do:
 
-- **Shape the standard**: Define the open contract for AI agent simulation data
-- **Build integrations**: Create adapters for popular frameworks (LangChain, LlamaIndex, CrewAI)
-- **Enhance developer experience**: Improve CLI, SDK, and VSCode extension
-- **Develop evaluation methods**: Create novel ways of measuring agent performance
+- **Improve agentic workflows**: Make the Claude Code integration smarter and more autonomous
+- **Build framework adapters**: LangChain, LlamaIndex, CrewAI, and more
+- **Enhance synthesis**: Better intent-to-input generation
+- **Develop evaluation methods**: Novel ways of measuring agent performance
 
-We're an early-stage project with an ambitious roadmap. Your contributions can have massive impact.
+Early-stage project with massive impact potential.
 
 Check out our [contribution guide](CONTRIBUTING.md) and open issues to get started.
 
