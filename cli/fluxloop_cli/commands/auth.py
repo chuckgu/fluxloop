@@ -234,14 +234,17 @@ def status():
         print(f"AUTH_USER: {token.user_email}")
     
     # Show current context if available
-    from ..context_manager import load_context
+    from ..context_manager import load_context, load_project_connection
+    
+    project_conn = load_project_connection()
+    if project_conn:
+        console.print(f"  Project: {project_conn.project_name} ([dim]{project_conn.project_id}[/dim])")
+        print(f"AUTH_PROJECT: {project_conn.project_id}")
+    
     context = load_context()
-    if context:
-        if context.current_project:
-            console.print(f"  Project: {context.current_project.name} ([dim]{context.current_project.id}[/dim])")
-            print(f"AUTH_PROJECT: {context.current_project.id}")
-        if context.current_scenario:
-            console.print(f"  Scenario: {context.current_scenario.name} ([dim]{context.current_scenario.id}[/dim])")
-            print(f"AUTH_SCENARIO: {context.current_scenario.id}")
-    else:
-        console.print("[dim]  No project selected. Run [bold]fluxloop projects list[/bold] to see your projects.[/dim]")
+    if context and context.current_scenario:
+        console.print(f"  Scenario: {context.current_scenario.name} ([dim]{context.current_scenario.id}[/dim])")
+        print(f"AUTH_SCENARIO: {context.current_scenario.id}")
+    
+    if not project_conn:
+        console.print("[dim]  No project selected. Run [bold]fluxloop projects select[/bold] to choose a project.[/dim]")

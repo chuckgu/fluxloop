@@ -130,6 +130,7 @@ def create(
     payload: Dict[str, Any] = {
         "name": name,
         "project_id": project_id,
+        "config_snapshot": {},  # Default empty snapshot (required by backend)
     }
 
     if description:

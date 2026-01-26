@@ -233,23 +233,35 @@ def stream_turn(
         return False
 
 
-def _ensure_fluxloop_dir(project_root: Path) -> Path:
-    fluxloop_dir = project_root / ".fluxloop"
-    fluxloop_dir.mkdir(parents=True, exist_ok=True)
-    return fluxloop_dir
+def _get_state_dir(scenario_root: Path) -> Path:
+    """Get the .state directory for a scenario."""
+    return scenario_root / ".state"
 
 
-def _ensure_sync_dir(project_root: Path) -> Path:
-    sync_dir = _ensure_fluxloop_dir(project_root) / "sync"
+def _ensure_state_dir(scenario_root: Path) -> Path:
+    """Ensure .state directory exists."""
+    state_dir = _get_state_dir(scenario_root)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir
+
+
+# Alias for backward compatibility within this file
+_ensure_fluxloop_dir = _ensure_state_dir
+
+
+def _ensure_sync_dir(scenario_root: Path) -> Path:
+    """Ensure .state/sync directory exists."""
+    sync_dir = _ensure_state_dir(scenario_root) / "sync"
     sync_dir.mkdir(parents=True, exist_ok=True)
     return sync_dir
 
 
-def _sync_state_paths(project_root: Path) -> List[Path]:
-    fluxloop_dir = _ensure_fluxloop_dir(project_root)
+def _sync_state_paths(scenario_root: Path) -> List[Path]:
+    """Get possible sync.json paths."""
+    state_dir = _get_state_dir(scenario_root)
     return [
-        fluxloop_dir / "sync.json",
-        fluxloop_dir / "sync" / "sync.json",
+        state_dir / "sync.json",
+        state_dir / "sync" / "sync.json",
     ]
 
 

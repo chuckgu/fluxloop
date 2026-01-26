@@ -1,5 +1,12 @@
 """
-Initialize command for creating new FluxLoop projects.
+Initialize command for creating new FluxLoop scenarios.
+
+Architecture:
+- `fluxloop init scenario --name xxx` creates .fluxloop/scenarios/xxx/
+
+Web ↔ Local Mapping:
+- Web Project ← .fluxloop/ (workspace)
+- Web Scenario ← .fluxloop/scenarios/{name}/ (scenario folder)
 """
 
 from pathlib import Path
@@ -11,23 +18,26 @@ from rich.prompt import Confirm
 from rich.tree import Tree
 
 from ..templates import (
-    create_project_config,
     create_input_config,
     create_simulation_config,
     create_evaluation_config,
-    create_sample_agent,
-    create_gitignore,
     create_env_file,
     create_pytest_bridge_template,
     create_agent_wrapper_template,
     create_agents_readme,
 )
-from ..project_paths import resolve_root_dir, resolve_project_dir
+from ..context_manager import (
+    ensure_fluxloop_dir,
+    ensure_scenarios_dir,
+    set_scenario,
+    load_project_connection,
+)
 from ..constants import (
-    DEFAULT_ROOT_DIR_NAME,
     CONFIG_DIRECTORY_NAME,
     CONFIG_SECTION_FILENAMES,
-    CONFIG_SECTION_ORDER,
+    SCENARIOS_DIR_NAME,
+    STATE_DIR_NAME,
+    SCENARIO_CONFIG_FILENAME,
 )
 
 app = typer.Typer()
@@ -35,21 +45,10 @@ console = Console()
 
 
 @app.command()
-def project(
-    path: Path = typer.Argument(
-        Path(DEFAULT_ROOT_DIR_NAME),
-        help="Root directory for FluxLoop projects",
-    ),
-    name: Optional[str] = typer.Option(
-        None,
-        "--name",
-        "-n",
-        help="Project name",
-    ),
-    with_example: bool = typer.Option(
-        True,
-        "--with-example/--no-example",
-        help="Include example agent",
+def scenario(
+    name: str = typer.Argument(
+        ...,
+        help="Scenario name (will create .fluxloop/scenarios/{name}/)",
     ),
     force: bool = typer.Option(
         False,
@@ -57,174 +56,181 @@ def project(
         "-f",
         help="Overwrite existing files",
     ),
+    link: Optional[str] = typer.Option(
+        None,
+        "--link",
+        help="Link to existing Web Scenario ID",
+    ),
+    create_remote: bool = typer.Option(
+        False,
+        "--create-remote",
+        help="Also create Scenario on the Web (requires login and project selection)",
+    ),
 ):
     """
-    Initialize a new FluxLoop project.
+    Initialize a new FluxLoop scenario.
     
-    This command creates:
-    - configs/: Separated configuration files (project/input/simulation/evaluation)
-    - .env: Environment variables template
-    - examples/: Sample agent code (optional)
+    Creates the scenario folder structure at .fluxloop/scenarios/{name}/:
+    - configs/: Configuration files (scenario/input/simulation/evaluation)
+    - agents/: Agent code
+    - inputs/: Input data
+    - experiments/: Test results
+    - .state/: Sync state (created on first sync)
+    
+    Web Mapping:
+    - This local scenario maps to a Web Scenario
+    - Use --link to connect to an existing Web Scenario
+    - Use --create-remote to create a new Web Scenario
     """
-    # Resolve path
-    root_dir = resolve_root_dir(path)
-
-    if not root_dir.exists():
-        console.print(f"[dim]Creating FluxLoop root directory at {root_dir}[/dim]")
-        root_dir.mkdir(parents=True, exist_ok=True)
-
-    if not name:
-        current = Path.cwd()
-        if current.parent == root_dir:
-            project_name = current.name
-        else:
-            console.print(
-                "[red]Error:[/red] Project name must be provided when running outside the FluxLoop root directory."
-            )
-            raise typer.Exit(1)
-    else:
-        project_name = name
-    project_path = resolve_project_dir(project_name, root_dir)
-
-    console.print(f"\n[bold blue]Initializing FluxLoop project:[/bold blue] {project_name}")
-    console.print(f"[dim]Location: {project_path}[/dim]\n")
+    # Ensure workspace exists
+    ensure_fluxloop_dir()
+    scenarios_dir = ensure_scenarios_dir()
     
-    console.print(f"\n[bold blue]Initializing FluxLoop project:[/bold blue] {project_name}")
-    console.print(f"[dim]Location: {project_path}[/dim]\n")
+    scenario_path = scenarios_dir / name
+    
+    console.print(f"\n[bold blue]Initializing FluxLoop scenario:[/bold blue] {name}")
+    console.print(f"[dim]Location: {scenario_path}[/dim]")
+    print(f"SCENARIO_PATH: {scenario_path}")
     
     # Check if directory exists
-    if not project_path.exists():
-        if Confirm.ask(f"Directory {project_path} doesn't exist. Create it?"):
-            project_path.mkdir(parents=True)
-        else:
+    if scenario_path.exists() and not force:
+        console.print(f"[yellow]Warning:[/yellow] Scenario '{name}' already exists.")
+        if not Confirm.ask("Overwrite existing files?", default=False):
             raise typer.Abort()
     
-    # Check for existing files
-    config_dir = project_path / CONFIG_DIRECTORY_NAME
-    section_paths = {
-        key: config_dir / CONFIG_SECTION_FILENAMES[key]
-        for key in CONFIG_SECTION_FILENAMES
-    }
-    env_file = project_path / ".env"
-    gitignore_file = project_path / ".gitignore"
+    scenario_path.mkdir(parents=True, exist_ok=True)
     
-    if not force:
-        existing_files = []
-        for key in CONFIG_SECTION_ORDER:
-            path = section_paths[key]
-            if path.exists():
-                existing_files.append(path.relative_to(project_path).as_posix())
-        if env_file.exists():
-            existing_files.append(".env")
-        
-        if existing_files:
-            console.print(
-                f"[yellow]Warning:[/yellow] The following files already exist: {', '.join(existing_files)}"
-            )
-            if not Confirm.ask("Overwrite existing files?", default=False):
-                raise typer.Abort()
-    
-    # Create configuration files
-    console.print("📝 Creating configuration files...")
+    # Create config directory and files
+    config_dir = scenario_path / CONFIG_DIRECTORY_NAME
     config_dir.mkdir(exist_ok=True)
-
-    section_writers = {
-        "project": lambda: create_project_config(project_name),
-        "input": create_input_config,
-        "simulation": lambda: create_simulation_config(project_name),
-        "evaluation": create_evaluation_config,
-    }
-
-    for key in CONFIG_SECTION_ORDER:
-        content = section_writers[key]()  # type: ignore[operator]
-        section_path = section_paths[key]
-        section_path.write_text(content)
     
-    # Create project .env (single source of truth)
-    console.print("🔐 Creating project .env...")
-    recordings_dir = project_path / "recordings"
-    recordings_dir.mkdir(exist_ok=True)
+    console.print("\n📝 Creating configuration files...")
+    
+    # Create scenario.yaml
+    scenario_config_path = config_dir / SCENARIO_CONFIG_FILENAME
+    scenario_config_content = _create_scenario_config(name)
+    scenario_config_path.write_text(scenario_config_content)
+    console.print(f"  [green]✓[/green] {SCENARIO_CONFIG_FILENAME}")
+    
+    # Create other config files
+    (config_dir / "input.yaml").write_text(create_input_config())
+    console.print("  [green]✓[/green] input.yaml")
+    
+    (config_dir / "simulation.yaml").write_text(create_simulation_config(name))
+    console.print("  [green]✓[/green] simulation.yaml")
+    
+    (config_dir / "evaluation.yaml").write_text(create_evaluation_config())
+    console.print("  [green]✓[/green] evaluation.yaml")
+    
+    # Create .env
+    env_file = scenario_path / ".env"
     env_file.write_text(create_env_file())
+    console.print("  [green]✓[/green] .env")
     
-    # Update .gitignore
-    if not gitignore_file.exists():
-        console.print("📄 Creating .gitignore...")
-        gitignore_content = create_gitignore()
-        gitignore_file.write_text(gitignore_content)
-    
-    # Create agents directory with wrapper template
-    console.print("🔌 Creating agents directory with wrapper template...")
-    agents_dir = project_path / "agents"
+    # Create agents directory
+    agents_dir = scenario_path / "agents"
     agents_dir.mkdir(exist_ok=True)
+    (agents_dir / "__init__.py").write_text('"""FluxLoop agent wrappers."""\n')
+    (agents_dir / "_template_wrapper.py").write_text(create_agent_wrapper_template())
+    (agents_dir / "README.md").write_text(create_agents_readme())
+    console.print("  [green]✓[/green] agents/")
     
-    # Create __init__.py for the agents package
-    agents_init = agents_dir / "__init__.py"
-    if not agents_init.exists():
-        agents_init.write_text('"""FluxLoop agent wrappers."""\n')
+    # Create other directories
+    (scenario_path / "inputs").mkdir(exist_ok=True)
+    (scenario_path / "experiments").mkdir(exist_ok=True)
+    # Note: recordings/ is created on-demand when recording is enabled
     
-    # Create wrapper template
-    wrapper_template = agents_dir / "_template_wrapper.py"
-    wrapper_template.write_text(create_agent_wrapper_template())
-    
-    # Create README
-    agents_readme = agents_dir / "README.md"
-    agents_readme.write_text(create_agents_readme())
-    
-    # Create example agent if requested
-    if with_example:
-        console.print("🤖 Creating example agent...")
-        examples_dir = project_path / "examples"
-        examples_dir.mkdir(exist_ok=True)
-        
-        agent_file = examples_dir / "simple_agent.py"
-        agent_content = create_sample_agent()
-        agent_file.write_text(agent_content)
+    # Handle Web Scenario linking/creation
+    scenario_id = None
+    if link:
+        # Link to existing Web Scenario
+        scenario_id = link
+        set_scenario(scenario_id, name, f"{SCENARIOS_DIR_NAME}/{name}")
+        console.print(f"\n[green]✓[/green] Linked to Web Scenario: {scenario_id}")
+        print(f"SCENARIO_LINKED: {scenario_id}")
+    elif create_remote:
+        # Create Web Scenario (requires login and project selection)
+        project_conn = load_project_connection()
+        if not project_conn:
+            console.print("\n[yellow]Warning:[/yellow] No Web Project selected.")
+            console.print("[dim]Run 'fluxloop projects select' first to create remote scenario.[/dim]")
+        else:
+            console.print(f"\n[dim]Creating Web Scenario in project: {project_conn.project_name}...[/dim]")
+            console.print("[yellow]Note:[/yellow] Remote creation not yet implemented.")
+            console.print(f"[dim]Run 'fluxloop scenarios create --name {name}' manually.[/dim]")
     
     # Display created structure
-    console.print("\n[bold green]✓ Project initialized successfully![/bold green]\n")
+    console.print("\n[bold green]✓ Scenario initialized successfully![/bold green]")
+    print(f"SCENARIO_CREATED: {name}")
     
-    tree = Tree(f"[bold]{project_name}/[/bold]")
-    configs_node = tree.add(f"📁 {CONFIG_DIRECTORY_NAME}/")
-    for key in CONFIG_SECTION_ORDER:
-        configs_node.add(f"📄 {CONFIG_SECTION_FILENAMES[key]}")
+    tree = Tree(f"[bold].fluxloop/scenarios/{name}/[/bold]")
+    configs_node = tree.add("📁 configs/")
+    configs_node.add(f"📄 {SCENARIO_CONFIG_FILENAME}")
+    configs_node.add("📄 input.yaml")
+    configs_node.add("📄 simulation.yaml")
+    configs_node.add("📄 evaluation.yaml")
+    
     agents_node = tree.add("📁 agents/")
     agents_node.add("📄 _template_wrapper.py")
-    agents_node.add("📄 README.md")
-    tree.add("🔐 .env")
-    tree.add("📄 .gitignore")
-    tree.add("📁 recordings/")
     
-    if with_example:
-        examples_tree = tree.add("📁 examples/")
-        examples_tree.add("🐍 simple_agent.py")
+    tree.add("📁 inputs/")
+    tree.add("📁 experiments/")
+    tree.add("🔐 .env")
     
     console.print(tree)
     
     # Show next steps
     console.print("\n[bold]Next steps:[/bold]")
-    console.print("1. Review configs in [cyan]configs/[/cyan] (project/input/simulation/evaluation)")
-    console.print("2. Configure secrets via [cyan].env[/cyan] or [green]fluxloop config set-llm[/green]")
-    if with_example:
-        console.print("3. Customize the sample agent in [cyan]examples/simple_agent.py[/cyan]")
-    else:
-        console.print("3. Create your agent: [green]fluxloop init agent <name>[/green]")
-    console.print("4. Generate inputs: [green]fluxloop generate inputs[/green]")
-    console.print("5. Run the experiment: [green]fluxloop run experiment[/green]")
-    console.print("6. Parse outputs: [green]fluxloop parse experiment[/green]")
-    console.print("7. Generate the interactive report (optional): [green]fluxloop evaluate experiment[/green]")
-    console.print("8. Diagnose environment anytime: [green]fluxloop doctor[/green]")
+    console.print(f"1. cd [cyan].fluxloop/scenarios/{name}[/cyan]")
+    console.print("2. Configure your agent in [cyan]configs/simulation.yaml[/cyan]")
+    console.print("3. Add test inputs: [green]fluxloop sync pull[/green] or edit [cyan]inputs/[/cyan]")
+    console.print("4. Run tests: [green]fluxloop test[/green]")
+    
+    if not link and not create_remote:
+        console.print("\n[dim]To connect to Web:[/dim]")
+        console.print("  • [green]fluxloop projects select[/green] - Select a Web Project")
+        console.print(f"  • [green]fluxloop scenarios create --name {name}[/green] - Create Web Scenario")
+
+
+def _create_scenario_config(scenario_name: str) -> str:
+    """Create scenario.yaml content."""
+    return f'''# FluxLoop Scenario Configuration
+# ------------------------------------------------------------
+# Describes this scenario's metadata and settings.
+# Maps to a Web Scenario in FluxLoop.
+name: {scenario_name}
+description: AI agent test scenario
+version: 1.0.0
+
+# Source root for the agent code (relative to this scenario)
+source_root: ""
+
+# Optional collector settings (leave null if using offline mode only)
+collector_url: null
+collector_api_key: null
+
+# Tags and metadata for categorization
+tags:
+  - simulation
+  - testing
+
+metadata:
+  team: development
+  environment: local
+  service_context: ""
+'''
 
 
 @app.command("pytest-template")
 def pytest_template(
-    project_root: Path = typer.Argument(
+    scenario_root: Path = typer.Argument(
         Path.cwd(),
-        help="Project root containing configs/ or setting.yaml",
+        help="Scenario root containing configs/",
     ),
     tests_dir: str = typer.Option(
         "tests",
         "--tests-dir",
-        help="Directory (relative to project root) where tests live",
+        help="Directory (relative to scenario root) where tests live",
     ),
     filename: str = typer.Option(
         "test_fluxloop_smoke.py",
@@ -237,13 +243,10 @@ def pytest_template(
         help="Overwrite existing template without confirmation",
     ),
 ) -> None:
-    """
-    Scaffold a pytest smoke test that uses the FluxLoop runner fixtures.
-    """
-
-    root_path = project_root.expanduser().resolve()
+    """Scaffold a pytest smoke test that uses the FluxLoop runner fixtures."""
+    root_path = scenario_root.expanduser().resolve()
     if not root_path.exists():
-        console.print(f"[red]Error:[/red] Project root {root_path} does not exist.")
+        console.print(f"[red]Error:[/red] Scenario root {root_path} does not exist.")
         raise typer.Exit(1)
 
     tests_path = (root_path / tests_dir).resolve()
@@ -252,24 +255,17 @@ def pytest_template(
     target_file = tests_path / filename
 
     if target_file.exists() and not force:
-        if not Confirm.ask(
-            f"{target_file} already exists. Overwrite?",
-            default=False,
-        ):
+        if not Confirm.ask(f"{target_file} already exists. Overwrite?", default=False):
             raise typer.Abort()
 
     configs_sim = root_path / CONFIG_DIRECTORY_NAME / CONFIG_SECTION_FILENAMES["simulation"]
-    legacy_config = root_path / "setting.yaml"
 
     if configs_sim.exists():
         relative_config = configs_sim.relative_to(root_path).as_posix()
-    elif legacy_config.exists():
-        relative_config = legacy_config.relative_to(root_path).as_posix()
     else:
-        # Fall back to configs/simulation.yaml even if it does not exist yet
-        relative_config = (CONFIG_DIRECTORY_NAME + "/" + CONFIG_SECTION_FILENAMES["simulation"])
+        relative_config = f"{CONFIG_DIRECTORY_NAME}/{CONFIG_SECTION_FILENAMES['simulation']}"
         console.print(
-            "[yellow]Warning:[/yellow] Could not find configs/simulation.yaml or setting.yaml. "
+            "[yellow]Warning:[/yellow] Could not find configs/simulation.yaml. "
             "Template will reference the default simulation path."
         )
 
@@ -282,80 +278,3 @@ def pytest_template(
     )
 
 
-@app.command()
-def agent(
-    name: str = typer.Argument(
-        ...,
-        help="Name of the agent module",
-    ),
-    path: Path = typer.Option(
-        Path.cwd(),
-        "--path",
-        "-p",
-        help="Directory to create the agent in",
-    ),
-    template: str = typer.Option(
-        "simple",
-        "--template",
-        "-t",
-        help="Agent template to use (simple, wrapper, langchain, langgraph)",
-    ),
-):
-    """
-    Create a new agent from a template.
-    
-    Templates:
-    - simple: Basic agent with sample logic (for demos)
-    - wrapper: External agent wrapper (for connecting existing agents)
-    - langchain: LangChain-based agent (coming soon)
-    - langgraph: LangGraph-based agent (coming soon)
-    """
-    # Validate template
-    valid_templates = ["simple", "wrapper", "langchain", "langgraph"]
-    if template not in valid_templates:
-        console.print(
-            f"[red]Error:[/red] Invalid template '{template}'. "
-            f"Choose from: {', '.join(valid_templates)}"
-        )
-        raise typer.Exit(1)
-    
-    # Create agent file
-    agent_dir = path / "agents"
-    agent_dir.mkdir(exist_ok=True)
-    
-    agent_file = agent_dir / f"{name}.py"
-    
-    if agent_file.exists():
-        if not Confirm.ask(f"Agent {name}.py already exists. Overwrite?", default=False):
-            raise typer.Abort()
-    
-    # Create agent based on template
-    console.print(f"🤖 Creating {template} agent: {name}")
-    
-    if template == "wrapper":
-        content = create_agent_wrapper_template(name)
-    elif template == "simple":
-        content = create_sample_agent()
-    else:
-        # TODO: Add langchain/langgraph templates
-        content = create_sample_agent()
-    
-    agent_file.write_text(content)
-    
-    console.print(f"[green]✓[/green] Agent created: {agent_file}")
-    console.print("\n[bold]Next steps:[/bold]")
-    
-    if template == "wrapper":
-        console.print("1. Edit the wrapper file to connect your external agent:")
-        console.print(f"   [cyan]{agent_file}[/cyan]")
-        console.print("2. Set ORIGINAL_AGENT_PATH to your agent's location")
-        console.print("3. Implement _call_original_agent() function")
-        console.print("4. Test manually: [green]python {agent_file}[/green]")
-    else:
-        console.print("1. Customize the agent logic in:")
-        console.print(f"   [cyan]{agent_file}[/cyan]")
-    
-    console.print(f"\n5. Update [cyan]configs/simulation.yaml[/cyan]:")
-    console.print(f"   runner:")
-    console.print(f"     module_path: \"agents.{name}\"")
-    console.print(f"     function_name: \"run\"")

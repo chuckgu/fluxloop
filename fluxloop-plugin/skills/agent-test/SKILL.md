@@ -73,52 +73,51 @@ Please select or create a project:
 
 ---
 
-## Phase 1.5: Local Project Initialization (If Needed)
+## Phase 1.5: Local Scenario Initialization (If Needed)
 
-Make sure you're inside a FluxLoop project directory before any sync operations.
+Make sure you're inside a FluxLoop scenario directory before any sync operations.
 
 Check for local config files:
 ```bash
 ls configs/simulation.yaml
 ```
 
-If missing, initialize a local project scaffold and enter it:
+If missing, initialize a local scenario scaffold and enter it:
 ```bash
-# Create local project skeleton (creates ./fluxloop/<name>/)
-fluxloop init project --name "order-bot"
+# Create local scenario (creates .fluxloop/scenarios/<name>/)
+fluxloop init scenario --name "order-bot"
 
-# Move into the project directory
-cd fluxloop/order-bot
+# Move into the scenario directory
+cd .fluxloop/scenarios/order-bot
 ```
 
-> **Note:** `sync pull` writes to local `.fluxloop/` and `inputs/` under the current directory.
-> If you want to pull into a different project directory, use `--project` and `--root`.
+> **Note:** `sync pull` writes to local `.state/` and `inputs/` under the current scenario directory.
 
 ---
 
 ## Phase 2: Resource Setup (Auto-Configuration)
 
-### 2.1 Project Setup
+### 2.1 Web Project Setup
 
-**If no project in context:**
+**If no Web Project selected:**
 ```
 No project found. What would you like to test?
-→ Parse intent and create project
+→ Parse intent and select/create Web Project
 ```
 
 ```bash
-# Create project (auto-selects after creation)
+# List available Web Projects
+fluxloop projects list
+
+# Select a Web Project (creates .fluxloop/project.json)
+fluxloop projects select <project-id>
+
+# Or create new Web Project (auto-selects after creation)
 fluxloop projects create --name "order-bot"
-# → context.json updated with project_id
+# → .fluxloop/project.json created with project_id
 
 # Note: If user has multiple workspaces, --workspace-id is required
 # fluxloop projects create --name "order-bot" --workspace-id <workspace_id>
-
-# Note: Run from the local project directory created by `fluxloop init project`
-
-# Or select existing
-fluxloop projects list
-fluxloop context set-project <id>
 ```
 
 ### 2.2 Scenario Setup
@@ -274,7 +273,7 @@ fluxloop test
 Read and summarize results:
 
 ```bash
-cat .fluxloop/latest_result.md
+cat .state/latest_result.md
 ```
 
 **Present summary:**
@@ -310,7 +309,7 @@ cat .fluxloop/latest_result.md
 "Test my agent"
     │
     ▼
-[Local Context Check] .fluxloop/context.json
+[Local Context Check] .fluxloop/context.json + project.json
     │
     ├─ Context exists (project + scenario)
     │   └─ "Current settings: order-bot / order-cancel
@@ -321,18 +320,21 @@ cat .fluxloop/latest_result.md
     │
     └─ No context
         │
-        ├─ Logged in? ──❌──→ fluxloop login (browser)
-        │   ✅                 → no project selection
+        ├─ Logged in? ──❌──→ fluxloop auth login (browser)
+        │   ✅
         │   │
         │   ▼
-        ├─ Local project? ──❌──→ fluxloop init project --name <name>
-        │   │                      cd fluxloop/<name>
+        ├─ Web Project? ──❌──→ fluxloop projects select <id>
+        │   ✅                   (creates .fluxloop/project.json)
+        │   │
         │   ▼
-        ├─ Create project? ──Y──→ fluxloop projects create --name <name>
-        │   │                      (auto-select)
+        ├─ Local scenario? ──❌──→ fluxloop init scenario --name <name>
+        │   ✅                      cd .fluxloop/scenarios/<name>
+        │   │
         │   ▼
-        ├─ Create scenario? ──Y──→ fluxloop scenarios create --name <name>
-        │   │                       (auto-select)
+        ├─ Web Scenario? ──❌──→ fluxloop scenarios create --name <name>
+        │   ✅                     (auto-select)
+        │   │
         │   ▼
         ├─ API Key set? ──❌──→ fluxloop apikeys create
         │   ✅                   (auto-save to .env)
@@ -360,9 +362,9 @@ cat .fluxloop/latest_result.md
 "Run test"
     │
     ▼
-[Check context.json]
+[Check project.json + context.json]
     │
-    ├─ Has project & scenario
+    ├─ Has Web Project & scenario
     │   └─ "Current settings: order-bot / order-cancel
     │       Proceed with these?" (Y/n)
     │       │
@@ -370,17 +372,19 @@ cat .fluxloop/latest_result.md
     │       │       └─ If missing: fluxloop apikeys create
     │       └─ n → "Create new or select different?"
     │
-    ├─ Has project only
+    ├─ Has Web Project only
     │   └─ "No scenario found. Would you like to create one?"
-    │       → Intent-based scenario creation
+    │       → fluxloop init scenario --name <name>
+    │       → fluxloop scenarios create --name <name>
     │       → [Check API Key] → fluxloop apikeys create (if needed)
     │
     └─ No context
-        └─ "No project found. Would you like to create one?"
+        └─ "No Web Project selected."
             │
-            ├─ Y → Intent-based project/scenario creation
+            ├─ Y → fluxloop projects select <id>
+            │      → Intent-based scenario creation
             │      → [Check API Key] → fluxloop apikeys create (if needed)
-            └─ n → "Show existing projects?"
+            └─ n → "Show available projects?"
                    → fluxloop projects list
 ```
 
@@ -392,13 +396,11 @@ cat .fluxloop/latest_result.md
 # Show current context
 fluxloop context show
 
-# Set project
-fluxloop context set-project <project_id>
-# Or shortcut:
+# Select Web Project (creates .fluxloop/project.json)
 fluxloop projects select <project_id>
 
-# Set scenario
-fluxloop context set-scenario <scenario_id>
+# Select scenario
+fluxloop scenarios select <scenario_id>
 
 # Clear context
 fluxloop context clear
@@ -406,6 +408,9 @@ fluxloop context clear
 # List resources
 fluxloop projects list
 fluxloop scenarios list
+
+# Initialize local scenario
+fluxloop init scenario --name <name>
 ```
 
 ## API Key Commands Reference
@@ -437,13 +442,13 @@ Browser will open for authentication.
 Please complete login and let me know when done.
 ```
 
-**No Project:**
+**No Web Project:**
 ```
-❌ No project selected.
+❌ No Web Project selected.
 
 Options:
-  1. Create new: fluxloop projects create --name <name>
-  2. Select existing: fluxloop projects list
+  1. Select existing: fluxloop projects list → fluxloop projects select <id>
+  2. Create new: fluxloop projects create --name <name>
 ```
 
 **Agent Loader Failed:**
@@ -501,15 +506,16 @@ User: "I'm logged in"
 
 Skill: ✅ Logged in: user@example.com
        
-       No project found. What would you like to test?
+       No Web Project selected. What would you like to test?
 
 User: "My chatbot. Order cancellation with angry customers."
 
 Skill: Got it! Should I create this setup?
        
        📋 Creating:
-       - Project: chatbot-test
-       - Scenario: Order cancellation handling
+       - Web Project: chatbot-test
+       - Local Scenario: order-cancel
+       - Web Scenario: Order cancellation handling
        - Personas: Regular customer, Angry customer, VIP
        - Inputs: 10 (40% hard)
        
@@ -519,11 +525,12 @@ User: "Yes"
 
 Skill: ⏳ Setting up environment...
        
-       [1/5] Creating project... ✓ proj-abc123
-       [2/5] Creating scenario... ✓ scn-xyz789
-       [3/5] Creating API Key... ✓ saved to .env
-       [4/5] Creating personas... ✓ 3 created
-       [5/5] Synthesizing inputs... ✓ 10 generated
+       [1/6] Creating Web Project... ✓ proj-abc123
+       [2/6] Initializing local scenario... ✓ .fluxloop/scenarios/order-cancel
+       [3/6] Creating Web Scenario... ✓ scn-xyz789
+       [4/6] Creating API Key... ✓ saved to .env
+       [5/6] Creating personas... ✓ 3 created
+       [6/6] Synthesizing inputs... ✓ 10 generated
        
        ❓ Where is your agent located?
 

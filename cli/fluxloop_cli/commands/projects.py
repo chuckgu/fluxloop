@@ -1,7 +1,9 @@
 """
 Project management commands for FluxLoop CLI.
 
-User-scoped JWT allows managing projects via CLI.
+Architecture:
+- Web Project ↔ .fluxloop/ workspace
+- 'projects select' creates .fluxloop/project.json to link workspace to Web Project
 """
 
 from typing import Optional
@@ -13,9 +15,9 @@ from rich.table import Table
 from ..http_client import create_authenticated_client, post_with_retry
 from ..api_utils import handle_api_error, resolve_api_url
 from ..context_manager import (
-    set_project,
-    load_context,
-    get_current_project_id,
+    select_web_project,
+    load_project_connection,
+    get_current_web_project_id,
 )
 
 app = typer.Typer(help="Manage FluxLoop projects")
@@ -54,7 +56,9 @@ def list_projects(
     ),
 ):
     """
-    List all projects you have access to.
+    List all Web Projects you have access to.
+    
+    Shows which project is currently selected for this workspace.
     """
     api_url = resolve_api_url(api_url)
     
@@ -71,11 +75,11 @@ def list_projects(
             console.print("[dim]Create one with: fluxloop projects create --name <name>[/dim]")
             return
         
-        # Get current context to mark selected project
-        current_project_id = get_current_project_id()
+        # Get current workspace project
+        workspace_project_id = get_current_web_project_id()
         
         # Display as table
-        table = Table(title="Your Projects")
+        table = Table(title="Web Projects")
         table.add_column("ID", style="dim")
         table.add_column("Name", style="bold")
         table.add_column("Status", style="cyan")
@@ -85,13 +89,17 @@ def list_projects(
             project_id = project.get("id", project.get("project_id", ""))
             project_name = project.get("name", project.get("project_name", ""))
             status = project.get("status", "-")
-            is_selected = "✓" if project_id == current_project_id else ""
+            is_selected = "✓" if project_id == workspace_project_id else ""
             
             table.add_row(project_id, project_name, status, is_selected)
         
         console.print(table)
         console.print()
-        console.print("[dim]Select a project: fluxloop context set-project <id>[/dim]")
+        
+        if workspace_project_id:
+            console.print(f"[green]✓[/green] Workspace linked to: {workspace_project_id}")
+        else:
+            console.print("[dim]No workspace link. Select with: fluxloop projects select <id>[/dim]")
         
     except Exception as e:
         console.print(f"[red]✗[/red] Failed to list projects: {e}", style="bold red")
@@ -117,7 +125,7 @@ def create_project(
     ),
 ):
     """
-    Create a new project.
+    Create a new Web Project.
     """
     api_url = resolve_api_url(api_url)
     
@@ -139,11 +147,12 @@ def create_project(
         project_name = data.get("name", data.get("project_name", name))
         
         console.print(f"[green]✓[/green] Project created: {project_name} ([dim]{project_id}[/dim])")
+        print(f"PROJECT_CREATED: {project_id}")
         
         # Automatically select if requested
         if select:
-            set_project(project_id, project_name)
-            console.print(f"[green]✓[/green] Project selected as current context")
+            select_web_project(project_id, project_name, api_url)
+            console.print(f"[green]✓[/green] Project selected for this workspace")
         
     except Exception as e:
         console.print(f"[red]✗[/red] Failed to create project: {e}", style="bold red")
@@ -158,9 +167,14 @@ def select_project(
     ),
 ):
     """
-    Select a project as the current working context.
+    Select a Web Project for this workspace.
     
-    Shortcut for: fluxloop context set-project <id>
+    This command:
+    1. Verifies the project exists on the Web
+    2. Creates/updates .fluxloop/project.json (workspace ↔ Web Project link)
+    
+    Use this to connect your local workspace to a Web Project before
+    creating scenarios with 'fluxloop init scenario'.
     """
     api_url = resolve_api_url(api_url)
     
@@ -173,10 +187,17 @@ def select_project(
         data = resp.json()
         project_name = data.get("name", data.get("project_name", project_id))
         
-        # Set context
-        set_project(project_id, project_name)
+        # Create/update project.json (workspace ↔ Web Project link)
+        select_web_project(project_id, project_name, api_url)
         
-        console.print(f"[green]✓[/green] Selected project: {project_name} ([dim]{project_id}[/dim])")
+        console.print(f"[green]✓[/green] Selected Web Project: {project_name}")
+        console.print(f"  Project ID: [dim]{project_id}[/dim]")
+        console.print(f"  Workspace linked: [dim].fluxloop/project.json[/dim]")
+        print(f"PROJECT_SELECTED: {project_id}")
+        print(f"PROJECT_NAME: {project_name}")
+        
+        console.print()
+        console.print("[dim]Next: Create a scenario with 'fluxloop init scenario --name <name>'[/dim]")
         
     except Exception as e:
         console.print(f"[red]✗[/red] Failed to select project: {e}", style="bold red")

@@ -49,6 +49,6 @@ You can now use:
 ## Notes
 
 - Requires login first (`fluxloop auth login`)
-- Requires project selected (`fluxloop context set-project <id>`)
+- Requires Web Project selected (`fluxloop projects select <id>`)
 - Key is automatically saved to `.env` for immediate use
 - Use `--overwrite-env` to replace existing key
