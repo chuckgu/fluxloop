@@ -266,7 +266,7 @@ def poll_device_code(
             if status == "denied":
                 raise ValueError("User denied authentication")
             if status == "expired":
-                    raise ValueError("Authentication code has expired")
+                raise ValueError("Authentication code has expired")
             if status not in {"approved", "pending"}:
                 raise ValueError(f"Authentication error: {status}")
 

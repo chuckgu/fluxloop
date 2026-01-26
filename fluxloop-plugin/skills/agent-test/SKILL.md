@@ -73,6 +73,29 @@ Please select or create a project:
 
 ---
 
+## Phase 1.5: Local Project Initialization (If Needed)
+
+Make sure you're inside a FluxLoop project directory before any sync operations.
+
+Check for local config files:
+```bash
+ls configs/simulation.yaml
+```
+
+If missing, initialize a local project scaffold and enter it:
+```bash
+# Create local project skeleton (creates ./fluxloop/<name>/)
+fluxloop init project --name "order-bot"
+
+# Move into the project directory
+cd fluxloop/order-bot
+```
+
+> **Note:** `sync pull` writes to local `.fluxloop/` and `inputs/` under the current directory.
+> If you want to pull into a different project directory, use `--project` and `--root`.
+
+---
+
 ## Phase 2: Resource Setup (Auto-Configuration)
 
 ### 2.1 Project Setup
@@ -90,6 +113,8 @@ fluxloop projects create --name "order-bot"
 
 # Note: If user has multiple workspaces, --workspace-id is required
 # fluxloop projects create --name "order-bot" --workspace-id <workspace_id>
+
+# Note: Run from the local project directory created by `fluxloop init project`
 
 # Or select existing
 fluxloop projects list
@@ -140,6 +165,8 @@ You can now use:
   fluxloop sync upload
   fluxloop test
 ```
+
+> **Note:** Run sync commands from the local project directory, or pass `--project`/`--root`.
 
 ---
 
@@ -228,6 +255,7 @@ fluxloop apikeys check
 
 # Uses current project/scenario from context
 fluxloop inputs synthesize --total-count 10
+# Run from the local project directory (or pass --project/--root)
 fluxloop sync pull
 ```
 
@@ -296,6 +324,9 @@ cat .fluxloop/latest_result.md
         ├─ Logged in? ──❌──→ fluxloop login (browser)
         │   ✅                 → no project selection
         │   │
+        │   ▼
+        ├─ Local project? ──❌──→ fluxloop init project --name <name>
+        │   │                      cd fluxloop/<name>
         │   ▼
         ├─ Create project? ──Y──→ fluxloop projects create --name <name>
         │   │                      (auto-select)
