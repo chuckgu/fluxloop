@@ -27,16 +27,15 @@ from fluxloop.schemas import ExperimentConfig, VariationStrategy
 def load_experiment_config(
     config_file: Path,
     *,
-    project: Optional[str] = None,
-    root: Optional[Path] = None,
+    scenario: Optional[str] = None,
     require_inputs_file: bool = True,
 ) -> ExperimentConfig:
     """
     Load and validate experiment configuration from YAML file.
     """
-    resolved_path = resolve_config_path(config_file, project, root)
+    resolved_path = resolve_config_path(config_file, scenario)
 
-    structure, project_root, config_dir = _detect_config_context(resolved_path)
+    structure, scenario_root, config_dir = _detect_config_context(resolved_path)
 
     if structure == "legacy":
         if not resolved_path.exists():
@@ -49,7 +48,7 @@ def load_experiment_config(
         merged: Dict[str, Any] = {}
         missing_required = []
 
-        for section_path in iter_section_paths(project_root):
+        for section_path in iter_section_paths(scenario_root):
             if not section_path.exists():
                 logical_key = _section_key_from_filename(section_path.name)
                 if logical_key in CONFIG_REQUIRED_KEYS:
@@ -71,7 +70,7 @@ def load_experiment_config(
             )
 
         data = merged
-        source_dir = project_root
+        source_dir = scenario_root
 
     _normalize_variation_strategies(data)
     _normalize_runner_target(data)
@@ -102,30 +101,29 @@ def load_experiment_config(
 def load_project_config(
     config_file: Path,
     *,
-    project: Optional[str] = None,
-    root: Optional[Path] = None,
+    scenario: Optional[str] = None,
 ) -> tuple[Dict[str, Any], Path]:
     """
     Load the raw project configuration as a dictionary.
 
     Returns:
-        (config_dict, project_root)
+        (config_dict, scenario_root)
     """
-    resolved_path = resolve_config_path(config_file, project, root)
-    structure, project_root, config_dir = _detect_config_context(resolved_path)
+    resolved_path = resolve_config_path(config_file, scenario)
+    structure, scenario_root, config_dir = _detect_config_context(resolved_path)
 
     if structure == "legacy":
         data = _load_yaml_mapping(resolved_path) if resolved_path.exists() else {}
-        return data, project_root
+        return data, scenario_root
 
     merged: Dict[str, Any] = {}
-    for section_path in iter_section_paths(project_root):
+    for section_path in iter_section_paths(scenario_root):
         if not section_path.exists():
             continue
         section_data = _load_yaml_mapping(section_path)
         _deep_merge(merged, section_data)
 
-    return merged, project_root
+    return merged, scenario_root
 
 
 def _resolve_input_count(

@@ -17,13 +17,9 @@ import yaml
 from rich.console import Console
 
 from ..config_loader import load_experiment_config
-from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..constants import DEFAULT_CONFIG_PATH, FLUXLOOP_DIR_NAME, SCENARIOS_DIR_NAME
 from ..environment import load_env_chain
-from ..project_paths import (
-    resolve_config_path,
-    resolve_project_dir,
-    resolve_project_relative,
-)
+from ..project_paths import resolve_config_path
 from ..turns import load_turns, summarize_turns, utc_now_iso
 
 
@@ -31,14 +27,27 @@ app = typer.Typer(help="Sync bundle inputs and upload run results.")
 console = Console()
 
 
-def _resolve_source_dir(project: Optional[str], root: Path) -> Path:
-    if project:
-        return resolve_project_dir(project, root)
+def _resolve_scenario_dir(scenario: Optional[str], base_dir: Optional[Path] = None) -> Path:
+    """Resolve the scenario directory path.
+    
+    v2 structure: .fluxloop/scenarios/{scenario}/
+    """
+    if scenario:
+        base = (base_dir or Path.cwd()).resolve()
+        return base / FLUXLOOP_DIR_NAME / SCENARIOS_DIR_NAME / scenario
     return Path.cwd().resolve()
 
 
-def _load_env(project: Optional[str], root: Path) -> None:
-    source_dir = _resolve_source_dir(project, root)
+def _resolve_relative_path(path: Path, scenario: Optional[str], base_dir: Optional[Path] = None) -> Path:
+    """Resolve a path relative to the scenario directory."""
+    if path.is_absolute():
+        return path.expanduser().resolve()
+    scenario_dir = _resolve_scenario_dir(scenario, base_dir)
+    return (scenario_dir / path).resolve()
+
+
+def _load_env(scenario: Optional[str], base_dir: Optional[Path] = None) -> None:
+    source_dir = _resolve_scenario_dir(scenario, base_dir)
     load_env_chain(source_dir, refresh_config=False)
 
 
@@ -98,8 +107,8 @@ def precreate_runs(
     *,
     runs: List[Dict[str, Any]],
     experiment_id: str,
-    project: Optional[str] = None,
-    root: Optional[Path] = None,
+    scenario: Optional[str] = None,
+    base_dir: Optional[Path] = None,
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     bundle_version_id: Optional[str] = None,
@@ -108,11 +117,11 @@ def precreate_runs(
     """
     Precreate runs via /api/sync/upload so streaming can reference existing runs.
     """
-    _load_env(project, root or Path(DEFAULT_ROOT_DIR_NAME))
+    _load_env(scenario, base_dir)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)
-    project_root = _resolve_source_dir(project, root or Path(DEFAULT_ROOT_DIR_NAME))
-    sync_state = _read_sync_state(project_root)
+    scenario_root = _resolve_scenario_dir(scenario, base_dir)
+    sync_state = _read_sync_state(scenario_root)
 
     bundle_version_id = bundle_version_id or sync_state.get("bundle_version_id")
     if not bundle_version_id:
@@ -147,7 +156,7 @@ def precreate_runs(
     if run_batch_id:
         sync_state["last_run_batch_id"] = run_batch_id
         sync_state["last_experiment_id"] = experiment_id
-        _write_sync_state(project_root, sync_state)
+        _write_sync_state(scenario_root, sync_state)
 
     if not quiet:
         console.print(
@@ -160,7 +169,7 @@ def stream_turn(
     *,
     turn: Dict[str, Any],
     experiment_id: str,
-    project_root: Path,
+    scenario_root: Path,
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
     endpoint: Optional[str] = None,
@@ -329,23 +338,23 @@ def _extract_input_text(messages: Any) -> str:
 
 
 def _resolve_inputs_path(
-    project: Optional[str], root: Path, config_file: Path
+    scenario: Optional[str], base_dir: Optional[Path], config_file: Path
 ) -> Tuple[Path, Optional[str]]:
-    resolved = resolve_config_path(config_file, project, root)
+    resolved = resolve_config_path(config_file, scenario)
     if resolved.exists():
         try:
             config = load_experiment_config(
-                resolved, project=project, root=root, require_inputs_file=False
+                resolved, scenario=scenario, require_inputs_file=False
             )
             inputs_file = config.inputs_file or "inputs/generated.yaml"
             return (
-                resolve_project_relative(Path(inputs_file), project, root),
+                _resolve_relative_path(Path(inputs_file), scenario, base_dir),
                 inputs_file,
             )
         except Exception:
             pass
     inputs_file = "inputs/generated.yaml"
-    return resolve_project_relative(Path(inputs_file), project, root), inputs_file
+    return _resolve_relative_path(Path(inputs_file), scenario, base_dir), inputs_file
 
 
 def _load_inputs_mapping(inputs_path: Path) -> Dict[Tuple[str, Optional[str]], List[str]]:
@@ -435,23 +444,25 @@ def _guess_content_type(path: Path) -> str:
 
 @app.command()
 def pull(
-    project_id: Optional[str] = typer.Option(None, "--project-id", help="Project id"),
+    project_id: Optional[str] = typer.Option(None, "--project-id", help="Web Project ID"),
     bundle_version_id: Optional[str] = typer.Option(
-        None, "--bundle-version-id", help="Bundle version id"
+        None, "--bundle-version-id", help="Bundle version ID"
     ),
     config_file: Path = typer.Option(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Config file to resolve inputs path"
     ),
-    project: Optional[str] = typer.Option(None, "--project", help="Project name"),
-    root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="Root dir"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
     api_url: Optional[str] = typer.Option(None, "--api-url", help="Sync API base URL"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Sync API key"),
     quiet: bool = typer.Option(False, "--quiet", help="Minimal output"),
 ):
     """
     Pull bundle inputs/personas/criteria for local execution.
+    
+    Data is saved to .fluxloop/scenarios/{scenario}/ if --scenario is specified,
+    or the current directory otherwise.
     """
-    _load_env(project, root)
+    _load_env(scenario)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)
 
@@ -472,14 +483,14 @@ def pull(
         resp.raise_for_status()
         data = resp.json()
 
-    project_root = _resolve_source_dir(project, root)
-    fluxloop_dir = _ensure_fluxloop_dir(project_root)
-    sync_dir = _ensure_sync_dir(project_root)
+    scenario_root = _resolve_scenario_dir(scenario)
+    state_dir = _ensure_state_dir(scenario_root)
+    sync_dir = _ensure_sync_dir(scenario_root)
 
     personas = data.get("personas") or []
     persona_map = {item.get("id"): item.get("name") for item in personas if item.get("id")}
 
-    inputs_path, inputs_file = _resolve_inputs_path(project, root, config_file)
+    inputs_path, inputs_file = _resolve_inputs_path(scenario, None, config_file)
     inputs_payload = {"inputs": []}
     for item in data.get("input_items") or []:
         input_text = _extract_input_text(item.get("messages"))
@@ -506,7 +517,7 @@ def pull(
     criteria_pack = data.get("criteria_pack") or []
     _write_json(sync_dir / "personas.json", {"items": personas})
     _write_json(sync_dir / "criteria.json", {"items": criteria_pack})
-    _write_criteria(fluxloop_dir / "criteria", criteria_pack if isinstance(criteria_pack, list) else [])
+    _write_criteria(state_dir / "criteria", criteria_pack if isinstance(criteria_pack, list) else [])
 
     sync_state = {
         "project_id": data.get("bundle_version", {}).get("project_id") or project_id,
@@ -515,12 +526,12 @@ def pull(
         "pulled_at": data.get("sync_meta", {}).get("pulled_at"),
         "api_url": api_url,
     }
-    _write_sync_state(project_root, sync_state)
+    _write_sync_state(scenario_root, sync_state)
 
     if not quiet:
         console.print(f"[green]✓[/green] Pulled {len(inputs_payload['inputs'])} inputs")
         console.print(f"[green]✓[/green] Saved inputs to {inputs_path}")
-        console.print(f"[green]✓[/green] Saved sync metadata to {_sync_state_paths(project_root)[0]}")
+        console.print(f"[green]✓[/green] Saved sync metadata to {_sync_state_paths(scenario_root)[0]}")
 
 
 @app.command()
@@ -531,34 +542,33 @@ def upload(
     config_file: Path = typer.Option(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Config file to resolve output dir"
     ),
-    project: Optional[str] = typer.Option(None, "--project", help="Project name"),
-    root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="Root dir"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
     api_url: Optional[str] = typer.Option(None, "--api-url", help="Sync API base URL"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Sync API key"),
     bundle_version_id: Optional[str] = typer.Option(
-        None, "--bundle-version-id", help="Bundle version id"
+        None, "--bundle-version-id", help="Bundle version ID"
     ),
     quiet: bool = typer.Option(False, "--quiet", help="Minimal output"),
 ):
     """
     Upload run results and artifacts to the sync API.
     """
-    _load_env(project, root)
+    _load_env(scenario)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)
 
-    project_root = _resolve_source_dir(project, root)
-    sync_state = _read_sync_state(project_root)
+    scenario_root = _resolve_scenario_dir(scenario)
+    sync_state = _read_sync_state(scenario_root)
 
     bundle_version_id = bundle_version_id or sync_state.get("bundle_version_id")
     if not bundle_version_id:
         raise typer.BadParameter("bundle_version_id is required. Run sync pull first.")
 
-    resolved_config = resolve_config_path(config_file, project, root)
+    resolved_config = resolve_config_path(config_file, scenario)
     config = load_experiment_config(
-        resolved_config, project=project, root=root, require_inputs_file=False
+        resolved_config, scenario=scenario, require_inputs_file=False
     )
-    output_base = resolve_project_relative(Path(config.output_directory), project, root)
+    output_base = _resolve_relative_path(Path(config.output_directory), scenario)
 
     if experiment_dir is None:
         if not output_base.exists():
@@ -581,7 +591,7 @@ def upload(
     # Generate experiment_id from directory name for idempotent upload
     experiment_id = experiment_dir.name
 
-    inputs_path, _ = _resolve_inputs_path(project, root, config_file)
+    inputs_path, _ = _resolve_inputs_path(scenario, None, config_file)
     input_map = _load_inputs_mapping(inputs_path)
 
     traces = list(_iter_jsonl(trace_summary_path))
@@ -759,7 +769,7 @@ def upload(
     if run_batch_id:
         sync_state["last_run_batch_id"] = run_batch_id
         sync_state["last_experiment_id"] = experiment_id
-        _write_sync_state(project_root, sync_state)
+        _write_sync_state(scenario_root, sync_state)
 
     if not quiet:
         console.print(

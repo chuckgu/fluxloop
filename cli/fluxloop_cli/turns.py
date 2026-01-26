@@ -14,6 +14,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import yaml
 
+from .constants import STATE_DIR_NAME
+
 
 DEFAULT_FORBIDDEN_WORDS = ["죄송", "sorry"]
 DEFAULT_MAX_RESPONSE_LENGTH = 2000
@@ -245,9 +247,9 @@ def render_result_markdown(
 
 
 def write_latest_result_link(project_root: Path, result_path: Path) -> Path:
-    fluxloop_dir = project_root / ".fluxloop"
-    fluxloop_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = fluxloop_dir / "latest_result.md"
+    state_dir = project_root / STATE_DIR_NAME
+    state_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = state_dir / "latest_result.md"
     try:
         if latest_path.exists() or latest_path.is_symlink():
             latest_path.unlink()

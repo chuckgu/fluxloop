@@ -304,10 +304,40 @@ def list_scenarios(
 
         console.print(table)
         console.print()
-        console.print("[dim]Select a scenario: fluxloop context set-scenario <id>[/dim]")
+        console.print("[dim]Select a scenario: fluxloop scenarios select <id>[/dim]")
 
     except Exception as e:
         console.print(f"[red]✗[/red] List failed: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def select(
+    scenario_id: str = typer.Argument(..., help="Scenario ID to select"),
+    api_url: Optional[str] = typer.Option(
+        None, "--api-url", help="FluxLoop API base URL"
+    ),
+):
+    """
+    Select a scenario as the current working scenario.
+    """
+    api_url = resolve_api_url(api_url)
+
+    try:
+        # Fetch scenario details to get the name
+        client = create_authenticated_client(api_url, use_jwt=True)
+        resp = client.get(f"/api/scenarios/{scenario_id}")
+        handle_api_error(resp, "scenario fetch")
+        data = resp.json()
+
+        scenario_name = data.get("name", "Unknown")
+        set_scenario(scenario_id, scenario_name)
+
+        console.print(f"[green]✓[/green] Scenario selected: [bold]{scenario_name}[/bold]")
+        console.print(f"  ID: {scenario_id}")
+
+    except Exception as e:
+        console.print(f"[red]✗[/red] Selection failed: {e}", style="bold red")
         raise typer.Exit(1)
 
 

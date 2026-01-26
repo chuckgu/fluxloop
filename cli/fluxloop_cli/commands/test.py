@@ -15,7 +15,7 @@ import typer
 from rich.console import Console
 
 from ..config_loader import load_experiment_config, load_project_config
-from ..constants import DEFAULT_CONFIG_PATH, DEFAULT_ROOT_DIR_NAME
+from ..constants import DEFAULT_CONFIG_PATH, FLUXLOOP_DIR_NAME, SCENARIOS_DIR_NAME, STATE_DIR_NAME
 from ..project_paths import resolve_config_path
 from ..runner import ExperimentRunner
 from ..turns import (
@@ -33,13 +33,20 @@ app = typer.Typer(help="Run pull -> run -> upload test workflow.")
 console = Console()
 
 
+def _resolve_scenario_dir(scenario: Optional[str], base_dir: Optional[Path] = None) -> Path:
+    """Resolve the scenario directory path."""
+    if scenario:
+        base = (base_dir or Path.cwd()).resolve()
+        return base / FLUXLOOP_DIR_NAME / SCENARIOS_DIR_NAME / scenario
+    return Path.cwd().resolve()
+
+
 @app.callback(invoke_without_command=True)
 def main(
     config_file: Path = typer.Option(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Experiment configuration file"
     ),
-    project: Optional[str] = typer.Option(None, "--project", help="Project name"),
-    root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="Root dir"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
     skip_pull: Optional[bool] = typer.Option(
         None, "--skip-pull/--no-skip-pull", help="Skip sync pull step"
     ),
@@ -61,9 +68,13 @@ def main(
 ):
     """
     Run FluxLoop test workflow (pull -> run -> upload).
+    
+    Runs from .fluxloop/scenarios/{scenario}/ if --scenario is specified,
+    or the current directory otherwise.
     """
-    project_config, project_root = load_project_config(
-        config_file, project=project, root=root
+    scenario_root = _resolve_scenario_dir(scenario)
+    project_config, _ = load_project_config(
+        config_file, scenario=scenario
     )
     test_config = project_config.get("test", {}) if isinstance(project_config, dict) else {}
 
@@ -87,18 +98,16 @@ def main(
             project_id=None,
             bundle_version_id=None,
             config_file=config_file,
-            project=project,
-            root=root,
+            scenario=scenario,
             api_url=None,
             api_key=None,
             quiet=quiet,
         )
 
-    resolved_config = resolve_config_path(config_file, project, root)
+    resolved_config = resolve_config_path(config_file, scenario)
     config = load_experiment_config(
         resolved_config,
-        project=project,
-        root=root,
+        scenario=scenario,
         require_inputs_file=False,
     )
 
@@ -117,7 +126,8 @@ def main(
                     smoke_payload = (
                         {"inputs": entries[:1]} if isinstance(payload, dict) else entries[:1]
                     )
-                    smoke_path = project_root / ".fluxloop" / "smoke_inputs.yaml"
+                    state_dir = scenario_root / STATE_DIR_NAME
+                    smoke_path = state_dir / "smoke_inputs.yaml"
                     smoke_path.parent.mkdir(parents=True, exist_ok=True)
                     smoke_path.write_text(
                         yaml.safe_dump(smoke_payload, sort_keys=False, allow_unicode=True),
@@ -128,10 +138,11 @@ def main(
     guardrails = load_guardrails_from_config(project_config)
     runner = ExperimentRunner(config, no_collector=no_collector)
     recorder = TurnRecorder(runner.output_dir / "turns.jsonl", guardrails)
-    criteria_items = load_criteria_items(project_root / ".fluxloop" / "criteria")
+    state_dir = scenario_root / STATE_DIR_NAME
+    criteria_items = load_criteria_items(state_dir / "criteria")
     result_path = runner.output_dir / "result.md"
     result_path.write_text("", encoding="utf-8")
-    latest_path = write_latest_result_link(project_root, result_path)
+    latest_path = write_latest_result_link(scenario_root, result_path)
 
     stream_enabled = stream_turns
     if stream_enabled is None:
@@ -153,7 +164,7 @@ def main(
     stream_executor = ThreadPoolExecutor(max_workers=2) if stream_enabled else None
     stream_futures = []
     if stream_enabled:
-        sync._load_env(project, root)
+        sync._load_env(scenario)
 
     run_id_map = {}
     if stream_enabled and not stream_after_upload:
@@ -161,7 +172,7 @@ def main(
         persona_map = {p.name: p for p in (config.personas or [])}
         use_entry_persona = config.has_external_inputs()
 
-        inputs_path, _ = sync._resolve_inputs_path(project, root, config_file)
+        inputs_path, _ = sync._resolve_inputs_path(scenario, None, config_file)
         input_map = sync._load_inputs_mapping(inputs_path)
 
         def _lookup_input_item_id(entry: dict, persona_name: Optional[str]) -> Optional[str]:
@@ -245,8 +256,8 @@ def main(
         sync.precreate_runs(
             runs=runs_payload,
             experiment_id=runner.output_dir.name,
-            project=project,
-            root=root,
+            scenario=scenario,
+            base_dir=None,
             api_url=None,
             api_key=None,
             bundle_version_id=None,
@@ -264,7 +275,7 @@ def main(
                     sync.stream_turn,
                     turn=record,
                     experiment_id=runner.output_dir.name,
-                    project_root=project_root,
+                    scenario_root=scenario_root,
                     api_url=None,
                     api_key=None,
                     endpoint=stream_endpoint,
@@ -348,8 +359,7 @@ def main(
         sync.upload(
             experiment_dir=runner.output_dir,
             config_file=config_file,
-            project=project,
-            root=root,
+            scenario=scenario,
             api_url=None,
             api_key=None,
             bundle_version_id=None,
@@ -372,7 +382,7 @@ def main(
                             sync.stream_turn,
                             turn=turn,
                             experiment_id=runner.output_dir.name,
-                            project_root=project_root,
+                            scenario_root=scenario_root,
                             api_url=None,
                             api_key=None,
                             endpoint=stream_endpoint,
@@ -386,7 +396,7 @@ def main(
                     sync.stream_turn(
                         turn=turn,
                         experiment_id=runner.output_dir.name,
-                        project_root=project_root,
+                        scenario_root=scenario_root,
                         api_url=None,
                         api_key=None,
                         endpoint=stream_endpoint,

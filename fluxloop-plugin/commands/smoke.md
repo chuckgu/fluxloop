@@ -9,5 +9,7 @@ Run a quick smoke test
 
 ## Run
 ```bash
-fluxloop test --smoke
+fluxloop test --scenario <scenario_name> --smoke
 ```
+
+> `--scenario` specifies the folder name in `.fluxloop/scenarios/`.

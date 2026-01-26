@@ -21,8 +21,10 @@ fluxloop apikeys create
 
 ## Run
 ```bash
-fluxloop sync pull
+fluxloop sync pull --scenario <scenario_name>
 ```
+
+> `--scenario` specifies the folder name in `.fluxloop/scenarios/`.
 
 ## Troubleshooting
 
@@ -32,5 +34,5 @@ fluxloop sync pull
 fluxloop apikeys create
 
 # Then retry
-fluxloop sync pull
+fluxloop sync pull --scenario <scenario_name>
 ```

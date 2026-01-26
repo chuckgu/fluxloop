@@ -32,9 +32,9 @@ class ConfigSection:
 
 CONFIG_SECTIONS: Tuple[ConfigSection, ...] = (
     ConfigSection(
-        key="project",
-        filename=CONFIG_SECTION_FILENAMES["project"],
-        description="Project metadata, collector configuration, and shared defaults.",
+        key="scenario",
+        filename=CONFIG_SECTION_FILENAMES["scenario"],
+        description="Scenario metadata, collector configuration, and shared defaults.",
         required=True,
     ),
     ConfigSection(

@@ -19,8 +19,10 @@ fluxloop apikeys create
 
 ## Run
 ```bash
-fluxloop test
+fluxloop test --scenario <scenario_name>
 ```
+
+> `--scenario` specifies the folder name in `.fluxloop/scenarios/`.
 
 ## Description
 1. Pull criteria/inputs from Web (requires API Key)
@@ -29,6 +31,7 @@ fluxloop test
 4. Print summary + evaluation criteria
 
 ## Options
+- `--scenario <name>`: Scenario folder name (in `.fluxloop/scenarios/`)
 - `--skip-pull`: Skip pull (use local data only)
 - `--skip-upload`: Skip upload
 - `--smoke`: Smoke test only
@@ -39,7 +42,7 @@ fluxloop test
 
 If you only want to test locally without sync:
 ```bash
-fluxloop test --skip-pull --skip-upload
+fluxloop test --scenario <scenario_name> --skip-pull --skip-upload
 ```
 
 ## Troubleshooting
@@ -50,5 +53,5 @@ fluxloop test --skip-pull --skip-upload
 fluxloop apikeys create
 
 # Then retry
-fluxloop test
+fluxloop test --scenario <scenario_name>
 ```

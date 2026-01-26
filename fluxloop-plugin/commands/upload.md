@@ -9,5 +9,7 @@ Upload local results to Web
 
 ## Run
 ```bash
-fluxloop sync upload
+fluxloop sync upload --scenario <scenario_name>
 ```
+
+> `--scenario` specifies the folder name in `.fluxloop/scenarios/`.
