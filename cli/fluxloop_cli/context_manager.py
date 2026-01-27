@@ -13,10 +13,10 @@ Server is the Single Source of Truth.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from .constants import (
     FLUXLOOP_DIR_NAME,
@@ -102,14 +102,114 @@ class BundleContext:
 
 
 @dataclass
+class WorkflowState:
+    """
+    Tracks workflow progress for agent context awareness.
+    
+    Phases: init → setup → data → ready
+    """
+    phase: str = "init"  # init, setup, data, ready
+    completed_steps: List[str] = field(default_factory=list)
+    last_action: Optional[str] = None
+    last_action_at: Optional[str] = None
+    
+    def to_dict(self) -> dict:
+        return {
+            "phase": self.phase,
+            "completed_steps": self.completed_steps,
+            "last_action": self.last_action,
+            "last_action_at": self.last_action_at,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> WorkflowState:
+        return cls(
+            phase=data.get("phase", "init"),
+            completed_steps=data.get("completed_steps", []),
+            last_action=data.get("last_action"),
+            last_action_at=data.get("last_action_at"),
+        )
+    
+    def record_action(self, action: str, step: Optional[str] = None) -> None:
+        """Record an action and optionally mark a step as completed."""
+        self.last_action = action
+        self.last_action_at = datetime.now(timezone.utc).isoformat()
+        if step and step not in self.completed_steps:
+            self.completed_steps.append(step)
+
+
+@dataclass
+class ResourceInfo:
+    """Generic resource info with optional metadata."""
+    id: str
+    name: str
+    description: Optional[str] = None
+    tag: Optional[str] = None
+    count: Optional[int] = None  # For input_set
+    
+    def to_dict(self) -> dict:
+        data = {"id": self.id, "name": self.name}
+        if self.description:
+            data["description"] = self.description
+        if self.tag:
+            data["tag"] = self.tag
+        if self.count is not None:
+            data["count"] = self.count
+        return data
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> ResourceInfo:
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description"),
+            tag=data.get("tag"),
+            count=data.get("count"),
+        )
+
+
+@dataclass
+class Resources:
+    """Collection of resource references with metadata."""
+    project: Optional[ResourceInfo] = None
+    scenario: Optional[ResourceInfo] = None
+    input_set: Optional[ResourceInfo] = None
+    bundle: Optional[ResourceInfo] = None
+    
+    def to_dict(self) -> dict:
+        data = {}
+        if self.project:
+            data["project"] = self.project.to_dict()
+        if self.scenario:
+            data["scenario"] = self.scenario.to_dict()
+        if self.input_set:
+            data["input_set"] = self.input_set.to_dict()
+        if self.bundle:
+            data["bundle"] = self.bundle.to_dict()
+        return data
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> Resources:
+        return cls(
+            project=ResourceInfo.from_dict(data["project"]) if data.get("project") else None,
+            scenario=ResourceInfo.from_dict(data["scenario"]) if data.get("scenario") else None,
+            input_set=ResourceInfo.from_dict(data["input_set"]) if data.get("input_set") else None,
+            bundle=ResourceInfo.from_dict(data["bundle"]) if data.get("bundle") else None,
+        )
+
+
+@dataclass
 class LocalContext:
     """
     Local context state stored in .fluxloop/context.json.
     
     This is a pointer to server resources, not a cache.
+    Extended with workflow_state and resources for agent context awareness.
     """
     current_scenario: Optional[ScenarioContext] = None
     current_bundle: Optional[BundleContext] = None
+    workflow_state: Optional[WorkflowState] = None
+    resources: Optional[Resources] = None
     last_updated: Optional[str] = None
     
     def to_dict(self) -> dict:
@@ -118,6 +218,10 @@ class LocalContext:
             data["current_scenario"] = self.current_scenario.to_dict()
         if self.current_bundle:
             data["current_bundle"] = self.current_bundle.to_dict()
+        if self.workflow_state:
+            data["workflow_state"] = self.workflow_state.to_dict()
+        if self.resources:
+            data["resources"] = self.resources.to_dict()
         data["last_updated"] = self.last_updated or datetime.now(timezone.utc).isoformat()
         return data
     
@@ -128,8 +232,24 @@ class LocalContext:
                 if data.get("current_scenario") else None,
             current_bundle=BundleContext.from_dict(data["current_bundle"]) 
                 if data.get("current_bundle") else None,
+            workflow_state=WorkflowState.from_dict(data["workflow_state"])
+                if data.get("workflow_state") else None,
+            resources=Resources.from_dict(data["resources"])
+                if data.get("resources") else None,
             last_updated=data.get("last_updated"),
         )
+    
+    def ensure_workflow_state(self) -> WorkflowState:
+        """Get or create workflow state."""
+        if not self.workflow_state:
+            self.workflow_state = WorkflowState()
+        return self.workflow_state
+    
+    def ensure_resources(self) -> Resources:
+        """Get or create resources."""
+        if not self.resources:
+            self.resources = Resources()
+        return self.resources
 
 
 # =============================================================================
@@ -316,6 +436,93 @@ def get_current_scenario(base_dir: Optional[Path] = None) -> Optional[ScenarioCo
     """Get current scenario from context."""
     context = load_context(base_dir)
     return context.current_scenario if context else None
+
+
+# =============================================================================
+# Workflow & Resource Helpers
+# =============================================================================
+
+def record_action(
+    action: str,
+    step: Optional[str] = None,
+    phase: Optional[str] = None,
+    base_dir: Optional[Path] = None
+) -> LocalContext:
+    """Record an action in workflow state."""
+    context = load_context(base_dir) or LocalContext()
+    workflow = context.ensure_workflow_state()
+    workflow.record_action(action, step)
+    if phase:
+        workflow.phase = phase
+    save_context(context, base_dir)
+    return context
+
+
+def set_resource_project(
+    project_id: str,
+    name: str,
+    description: Optional[str] = None,
+    base_dir: Optional[Path] = None
+) -> LocalContext:
+    """Set project in resources."""
+    context = load_context(base_dir) or LocalContext()
+    resources = context.ensure_resources()
+    resources.project = ResourceInfo(id=project_id, name=name, description=description)
+    save_context(context, base_dir)
+    return context
+
+
+def set_resource_scenario(
+    scenario_id: str,
+    name: str,
+    description: Optional[str] = None,
+    base_dir: Optional[Path] = None
+) -> LocalContext:
+    """Set scenario in resources."""
+    context = load_context(base_dir) or LocalContext()
+    resources = context.ensure_resources()
+    resources.scenario = ResourceInfo(id=scenario_id, name=name, description=description)
+    save_context(context, base_dir)
+    return context
+
+
+def set_resource_input_set(
+    input_set_id: str,
+    name: str,
+    count: Optional[int] = None,
+    tag: Optional[str] = None,
+    base_dir: Optional[Path] = None
+) -> LocalContext:
+    """Set input_set in resources."""
+    context = load_context(base_dir) or LocalContext()
+    resources = context.ensure_resources()
+    resources.input_set = ResourceInfo(
+        id=input_set_id, name=name, count=count, tag=tag
+    )
+    save_context(context, base_dir)
+    return context
+
+
+def set_resource_bundle(
+    bundle_id: str,
+    version: str,
+    description: Optional[str] = None,
+    base_dir: Optional[Path] = None
+) -> LocalContext:
+    """Set bundle in resources."""
+    context = load_context(base_dir) or LocalContext()
+    resources = context.ensure_resources()
+    resources.bundle = ResourceInfo(id=bundle_id, name=version, description=description)
+    save_context(context, base_dir)
+    return context
+
+
+def get_workflow_phase(base_dir: Optional[Path] = None) -> str:
+    """Get current workflow phase."""
+    context = load_context(base_dir)
+    if context and context.workflow_state:
+        return context.workflow_state.phase
+    return "init"
 
 
 # =============================================================================

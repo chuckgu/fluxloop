@@ -1,38 +1,57 @@
 ---
-description: Execute synthesis workflow from scenario creation to bundle publication
+description: Generate test data (personas → inputs → bundle)
 allowed-tools: [Bash]
 ---
 
 # FluxLoop Synthesis
 
-Execute synthesis workflow from scenario creation to bundle publication (excludes testing).
+Generate test data (personas → inputs → bundle)
 
-## Run
+## Pre-check (First!)
 
-Run 8 CLI commands sequentially (synthesis only, no testing):
-1. `fluxloop scenarios create`
-2. `fluxloop intent refine`
-3. `fluxloop scenarios refine`
-4. `fluxloop personas suggest`
-5. `fluxloop inputs synthesize`
-6. `fluxloop inputs qc`
-7. (if needed) `fluxloop inputs refine`
-8. `fluxloop bundles publish`
+Check existing data before proceeding:
+```bash
+fluxloop bundles list --scenario-id <scenario_id>
+fluxloop inputs list --scenario-id <scenario_id>
+```
+
+## Decision Logic
+
+| Situation | Action |
+|-----------|--------|
+| Existing bundle | `sync pull` → `test` (2 commands) |
+| Existing input set | `bundles publish` → `sync pull` → `test` (3 commands) |
+| None | Full generation (see below) |
+
+## Full Generation (5 commands)
+
+```bash
+# 1. Generate personas
+fluxloop personas suggest --scenario-id <id>
+
+# 2. Synthesize inputs
+fluxloop inputs synthesize --scenario-id <id>
+
+# 3. Publish bundle
+fluxloop bundles publish --scenario-id <id> --input-set-id <input_set_id>
+
+# 4. Pull
+fluxloop sync pull --bundle-version-id <bundle_version_id>
+
+# 5. Test
+fluxloop test --scenario <name>
+```
 
 ## Notes
 
-- `fluxloop scenarios create` requires a `config_snapshot` payload (use `--config-file` or `--file`).
-- `fluxloop intent refine` saves to project context by default (use `--no-apply` for preview).
-- `fluxloop scenarios refine` saves to scenario snapshot by default (use `--no-apply` for preview).
-- `fluxloop inputs synthesize` auto-uses the latest suggested `persona_ids` if `--persona-ids` is omitted.
-
-## Description
-
-Proceeds **only to bundle publication**, without testing.
-- Use when you want to prepare data and test later
-- For full test cycle, use the Skill instead
+- `personas suggest`: Generate personas for scenario (required before synthesize)
+- `inputs synthesize`: Generate inputs based on personas → outputs `input_set_id`
+- `bundles publish`: Publish input set as bundle → outputs `bundle_version_id`
+- Use output IDs from each command in subsequent commands
 
 ## Options
 
-- `--add-inputs --bundle-id <ID>`: Add inputs to existing bundle
-- `--dry-run`: Preview plan without actual synthesis
+| Option | Description |
+|--------|-------------|
+| `--total-count N` | Number of inputs to generate |
+| `--scenario-id` | Target scenario ID |

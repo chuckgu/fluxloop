@@ -47,9 +47,6 @@ def main(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Experiment configuration file"
     ),
     scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
-    skip_pull: Optional[bool] = typer.Option(
-        None, "--skip-pull/--no-skip-pull", help="Skip sync pull step"
-    ),
     skip_upload: Optional[bool] = typer.Option(
         None, "--skip-upload/--no-skip-upload", help="Skip sync upload step"
     ),
@@ -67,10 +64,12 @@ def main(
     no_collector: bool = typer.Option(False, "--no-collector", help="Disable collector"),
 ):
     """
-    Run FluxLoop test workflow (pull -> run -> upload).
+    Run FluxLoop test workflow (run -> upload).
     
     Runs from .fluxloop/scenarios/{scenario}/ if --scenario is specified,
     or the current directory otherwise.
+    
+    Inputs must be pulled first with 'fluxloop sync pull --bundle-version-id <id>'.
     """
     scenario_root = _resolve_scenario_dir(scenario)
     project_config, _ = load_project_config(
@@ -82,26 +81,10 @@ def main(
         raise typer.BadParameter("Choose only one of --smoke or --full.")
 
     mode = "smoke" if smoke else ("full" if full else test_config.get("default_mode", "full"))
-    do_pull = (
-        not skip_pull if skip_pull is not None else bool(test_config.get("auto_pull", True))
-    )
     do_upload = (
         not skip_upload
         if skip_upload is not None
         else bool(test_config.get("auto_upload", True))
-    )
-
-    if do_pull:
-        if not quiet:
-            console.print("[Sync] Pulling from Web...")
-        sync.pull(
-            project_id=None,
-            bundle_version_id=None,
-            config_file=config_file,
-            scenario=scenario,
-            api_url=None,
-            api_key=None,
-            quiet=quiet,
         )
 
     resolved_config = resolve_config_path(config_file, scenario)
@@ -110,6 +93,24 @@ def main(
         scenario=scenario,
         require_inputs_file=False,
     )
+
+    # Check if inputs file exists
+    if config.inputs_file:
+        source_dir = config.get_source_dir()
+        inputs_path = Path(config.inputs_file)
+        resolved_inputs = (
+            (source_dir / inputs_path).resolve() if source_dir and not inputs_path.is_absolute() else inputs_path
+        )
+        if not resolved_inputs.exists():
+            console.print(f"[red]✗[/red] Inputs file not found: {resolved_inputs}")
+            console.print()
+            console.print("[bold]Run sync pull first:[/bold]")
+            console.print("  [dim]fluxloop bundles list --scenario-id <scenario_id>[/dim]")
+            console.print("  [dim]fluxloop sync pull --bundle-version-id <bundle_version_id>[/dim]")
+            console.print()
+            console.print("[dim]Then run test:[/dim]")
+            console.print(f"  [dim]fluxloop test --scenario {scenario or '<name>'}[/dim]")
+            raise typer.Exit(1)
 
     if mode == "smoke":
         config.iterations = 1

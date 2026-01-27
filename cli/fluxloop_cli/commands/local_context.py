@@ -30,7 +30,7 @@ console = Console()
 @app.command("show")
 def show_context():
     """
-    Show current local context (Web Project, scenario, bundle).
+    Show current local context (Web Project, scenario, bundle, workflow state).
     """
     project_conn = load_project_connection()
     context = load_context()
@@ -48,22 +48,58 @@ def show_context():
     # Build display
     content_lines = []
     
+    # Workflow State (if exists)
+    if context and context.workflow_state:
+        ws = context.workflow_state
+        content_lines.append(f"[bold magenta]Workflow State:[/bold magenta]")
+        content_lines.append(f"  Phase: [bold]{ws.phase}[/bold]")
+        if ws.completed_steps:
+            content_lines.append(f"  Completed: {', '.join(ws.completed_steps)}")
+        if ws.last_action:
+            content_lines.append(f"  Last action: [dim]{ws.last_action}[/dim]")
+        content_lines.append("")
+    
+    # Web Project
     if project_conn:
         content_lines.append(f"[bold cyan]Web Project:[/bold cyan]")
         content_lines.append(f"  ID: [dim]{project_conn.project_id}[/dim]")
         content_lines.append(f"  Name: [bold]{project_conn.project_name}[/bold]")
+        # Show description from resources if available
+        if context and context.resources and context.resources.project:
+            if context.resources.project.description:
+                content_lines.append(f"  Desc: {context.resources.project.description}")
     
+    # Scenario
     if context and context.current_scenario:
         content_lines.append(f"\n[bold cyan]Scenario:[/bold cyan]")
         content_lines.append(f"  ID: [dim]{context.current_scenario.id}[/dim]")
         content_lines.append(f"  Name: [bold]{context.current_scenario.name}[/bold]")
         if context.current_scenario.local_path:
             content_lines.append(f"  Local: [dim]{context.current_scenario.local_path}[/dim]")
+        # Show description from resources if available
+        if context.resources and context.resources.scenario:
+            if context.resources.scenario.description:
+                content_lines.append(f"  Desc: {context.resources.scenario.description}")
     
+    # Input Set (from resources)
+    if context and context.resources and context.resources.input_set:
+        inp = context.resources.input_set
+        content_lines.append(f"\n[bold cyan]Input Set:[/bold cyan]")
+        content_lines.append(f"  ID: [dim]{inp.id}[/dim]")
+        if inp.count is not None:
+            content_lines.append(f"  Count: {inp.count}")
+        if inp.tag:
+            content_lines.append(f"  Tag: {inp.tag}")
+    
+    # Bundle
     if context and context.current_bundle:
         content_lines.append(f"\n[bold cyan]Bundle:[/bold cyan]")
         content_lines.append(f"  ID: [dim]{context.current_bundle.id}[/dim]")
         content_lines.append(f"  Version: {context.current_bundle.version}")
+        # Show description from resources if available
+        if context.resources and context.resources.bundle:
+            if context.resources.bundle.description:
+                content_lines.append(f"  Desc: {context.resources.bundle.description}")
     
     if context and context.last_updated:
         content_lines.append(f"\n[dim]Last updated: {context.last_updated}[/dim]")

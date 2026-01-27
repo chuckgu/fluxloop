@@ -1,57 +1,75 @@
 ---
-description: Run the full FluxLoop test workflow (pull → run → upload)
+description: Run FluxLoop test (after sync pull)
 allowed-tools: [Bash]
 ---
 
 # FluxLoop Test
 
-Run the full FluxLoop test workflow (pull → run → upload)
+Run test (inputs must be pulled first)
 
 ## Prerequisites
 
 1. Project selected: `fluxloop context show`
-2. API Key configured (for sync): `fluxloop apikeys check`
+2. API Key configured: `fluxloop apikeys check`
+3. **Inputs pulled**: `fluxloop sync pull --bundle-version-id <id>`
 
-If API Key not set:
+## Recommended Flow
+
 ```bash
-fluxloop apikeys create
+# 1. Pull first
+fluxloop sync pull --bundle-version-id <bundle_version_id>
+
+# 2. Then test
+fluxloop test --scenario <scenario_name>
 ```
 
+> ⚠️ Always run `sync pull` and `test` separately
+
 ## Run
+
 ```bash
 fluxloop test --scenario <scenario_name>
 ```
 
-> `--scenario` specifies the folder name in `.fluxloop/scenarios/`.
+> `--scenario` is the folder name in `.fluxloop/scenarios/`
 
 ## Description
-1. Pull criteria/inputs from Web (requires API Key)
-2. Run the test (turn recording)
-3. Upload results to Web (requires API Key)
-4. Print summary + evaluation criteria
+
+1. Load inputs from `inputs/` (must be pulled first)
+2. Run agent
+3. Upload results to Web
 
 ## Options
-- `--scenario <name>`: Scenario folder name (in `.fluxloop/scenarios/`)
-- `--skip-pull`: Skip pull (use local data only)
-- `--skip-upload`: Skip upload
-- `--smoke`: Smoke test only
-- `--full`: Full test run
-- `--quiet`: Minimal output (for hooks)
 
-## No API Key Mode
+| Option | Description |
+|--------|-------------|
+| `--scenario <name>` | Scenario folder name |
+| `--skip-upload` | Skip upload |
+| `--smoke` | Smoke test only |
+| `--full` | Full test run |
+| `--quiet` | Minimal output |
 
-If you only want to test locally without sync:
+## Local Only (No API Key)
+
 ```bash
-fluxloop test --scenario <scenario_name> --skip-pull --skip-upload
+fluxloop test --scenario <name> --skip-upload
 ```
 
 ## Troubleshooting
 
-**"Sync API key is not set" error:**
+**"Inputs file not found":**
 ```bash
-# Create and save API Key
-fluxloop apikeys create
+# Check bundles
+fluxloop bundles list --scenario-id <scenario_id>
 
-# Then retry
-fluxloop test --scenario <scenario_name>
+# Pull first
+fluxloop sync pull --bundle-version-id <bundle_version_id>
+
+# Retry
+fluxloop test --scenario <name>
+```
+
+**"Sync API key not set":**
+```bash
+fluxloop apikeys create
 ```

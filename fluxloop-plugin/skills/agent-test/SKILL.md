@@ -13,12 +13,19 @@ description: |
 
 # FluxLoop Agent Test Skill
 
-Manages the complete test cycle for AI agents — from initial setup to test execution.
+Manages the complete test cycle for AI agents.
 
-## Role
+## Core Principle
 
-**Agent-First Approach:** Understands user intent, automatically configures the environment, 
-and executes the full workflow without requiring web visits (after initial login).
+**Context-First:** Always read context first → understand state → ask user → execute after confirmation
+
+```
+1. Check context (fluxloop context show)
+2. Summarize current state
+3. Present options (NO auto-execution)
+4. Execute after user confirmation
+5. Save results to context
+```
 
 ---
 
@@ -26,505 +33,326 @@ and executes the full workflow without requiring web visits (after initial login
 
 | Term | Description |
 |------|-------------|
-| **Web Project** | Remote project on FluxLoop cloud (has `project_id`) |
-| **Web Scenario** | Remote scenario on FluxLoop cloud (has `scenario_id`) |
+| **Web Project** | Remote project on FluxLoop cloud (`project_id`) |
+| **Web Scenario** | Remote scenario on FluxLoop cloud (`scenario_id`) |
 | **Local Scenario** | Local folder at `.fluxloop/scenarios/<name>/` |
-| `--scenario <name>` | Local folder name (e.g., `order-bot`) |
-| `--scenario-id <id>` | Remote scenario UUID |
+| **Input Set** | Generated test inputs (`input_set_id`) |
+| **Bundle** | Published snapshot of inputs + personas (`bundle_version_id`) |
 
 ---
 
-## Quick Reference: Setup Flow
-
-```
-1. fluxloop auth login                                        # Login
-
-# Project: Choose ONE
-   fluxloop projects select <id>                              # Use existing (intent already set)
-   fluxloop projects create --name "X" && fluxloop intent refine --intent "..."  # Create new + set intent
-
-2. fluxloop init scenario X && cd .fluxloop/scenarios/X       # Create local folder
-
-# Scenario: Choose ONE
-   fluxloop scenarios select <id>                             # Use existing (goal already set)
-   fluxloop scenarios create --name "X" --goal "..." --constraint "..."  # Create new with goal
-
-3. fluxloop apikeys create                                    # API Key (for sync)
-4. fluxloop personas suggest --scenario-id <id>               # Generate personas
-5. fluxloop inputs synthesize --scenario-id <id>              # Generate test inputs
-6. fluxloop test                                              # Run test
-```
-
-| Resource | New | Existing |
-|----------|-----|----------|
-| **Project** | `projects create` → `intent refine` | `projects select` |
-| **Scenario** | `scenarios create --goal "..."` | `scenarios select` |
-
----
-
-## Prerequisites (First-Time Only)
-
-If `fluxloop` command is not found, install first:
+## Phase 0: Context Check (Always First!)
 
 ```bash
-# Check if installed
+fluxloop context show    # Check current state
+fluxloop auth status     # Check login status
+ls .fluxloop/scenarios   # Check local scenario folders (from workspace root)
+```
+
+### State-Based Actions
+
+| Context State | Next Action |
+|---------------|-------------|
+| None (no context.json) | → Phase 1: Setup |
+| Project only | → Phase 2: Create Scenario |
+| Scenario exists, no data | → Phase 3: Generate Data |
+| Bundle exists | → Phase 4: Run Test |
+
+---
+
+## Phase 1: Setup (One-time)
+
+```bash
+# 0. Check if installed
 fluxloop --version
 
 # If not installed:
 uv tool install fluxloop-cli
 # OR: pip install fluxloop-cli
-```
 
-> For detailed setup, run `/fluxloop:setup`
-
----
-
-## Phase 0: Context Check
-
-```bash
-# Check login and context
-fluxloop auth status
-fluxloop context show
-
-# Check local scenario folders (from workspace root)
-ls .fluxloop/scenarios
-```
-
-| State | Action |
-|-------|--------|
-| **Not logged in** | → Phase 1 |
-| **No Web Project** | → Phase 2 |
-| **No Local Scenario folder** | → Phase 3 |
-| **Ready** | → Phase 7 (Test Execution) |
-
----
-
-## Phase 1: Authentication
-
-```bash
-# Check status
-fluxloop auth status
-
-# Login if needed
+# 1. Login
 fluxloop auth login
-```
 
-After login:
-```bash
-# List available projects
+# 2. Select or create project
 fluxloop projects list
-```
-
----
-
-## Phase 2: Web Project Setup
-
-```bash
-# List projects
-fluxloop projects list
-
-# Select existing project (creates .fluxloop/project.json)
 fluxloop projects select <project_id>
-
-# Or create new project (new projects should set intent)
+# OR
 fluxloop projects create --name "my-agent"
-fluxloop intent refine --intent "Order cancellation flows"
+fluxloop intent refine --intent "..."
 ```
+
+> For detailed setup instructions, run `/fluxloop:setup`
 
 ---
 
-## Phase 3: Local Scenario Initialization
-
-Create local scenario folder structure:
+## Phase 2: Create Scenario (Once per scenario)
 
 ```bash
-# Create scenario (from workspace root)
+# 1. Initialize local folder
 fluxloop init scenario order-bot
-
-# Enter scenario directory
 cd .fluxloop/scenarios/order-bot
-```
 
-This creates:
-```
-.fluxloop/scenarios/order-bot/
-├── configs/
-│   ├── scenario.yaml
-│   ├── simulation.yaml
-│   ├── input.yaml
-│   └── evaluation.yaml
-├── agents/
-│   └── _template_wrapper.py
-├── inputs/
-└── experiments/
-```
+# 2. Create and refine web scenario
+fluxloop scenarios create --name "Order Bot" --goal "..."
+fluxloop scenarios refine --scenario-id <id>
 
----
-
-## Phase 4: Web Scenario Setup
-
-```bash
-# Create Web Scenario with inline options (recommended)
-# Fill each option based on the user's request:
-fluxloop scenarios create --name "Order Cancellation" \
-  --description "Angry customer handling" \
-  --goal "Test order cancellation handling for frustrated customers" \
-  --constraint "Response must be polite and empathetic" \
-  --constraint "Refund policy must be clearly explained" \
-  --assumption "Customer has valid order in system" \
-  --success-criteria "Customer receives cancellation confirmation"
-
-# Options:
-#   --goal: one sentence describing the test objective
-#   --constraint: hard requirement (can be repeated)
-#   --assumption: environment or data assumption (can be repeated)
-#   --success-criteria: how to judge success (can be repeated)
-#
-# Minimal version (uses name as goal):
-#   fluxloop scenarios create --name "Order Cancellation"
-#
-# Alternative: use config file instead of inline options
-#   fluxloop scenarios create --name "X" --config-file configs/scenario_snapshot.json
-
-# List scenarios
-fluxloop scenarios list
-
-# Select existing scenario
-fluxloop scenarios select <scenario_id>
-```
-
----
-
-## Phase 5: API Key & Agent Setup
-
-### 5.1 API Key
-
-```bash
-# Check if set
-fluxloop apikeys check
-
-# Create if needed (auto-saves to .env)
+# 3. Create API key
 fluxloop apikeys create
 ```
 
-### 5.2 Agent Loader
+---
 
-Check `configs/simulation.yaml` for `runner.module_path`:
+## Phase 3: Generate Data (Decision Tree)
 
-```bash
-grep -A5 "runner:" configs/simulation.yaml
+**Always check existing data with list commands, then ask user:**
+
+```
+bundles list --scenario-id <id>
+  │
+  ├─ Multiple bundles found → Show list with details, ask "Which bundle?"
+  │   │
+  │   └─ User selects → Go to Phase 4 (2 commands)
+  │
+  ├─ One bundle found → "Use existing or create new?"
+  │   │
+  │   ├─ Use existing → Go to Phase 4 (2 commands)
+  │   │
+  │   └─ Create new → Check inputs list
+  │
+  └─ No bundle → inputs list --scenario-id <id>
+                   │
+                   ├─ Multiple input sets → Show list with details, ask "Which one?"
+                   │   │
+                   │   └─ User selects → Publish bundle only (3 commands)
+                   │
+                   ├─ One input set found → "Use existing or create new?"
+                   │   │
+                   │   ├─ Use existing → Publish bundle only (3 commands)
+                   │   │
+                   │   └─ Create new → Full generation (5 commands)
+                   │
+                   └─ No input set → Full generation
 ```
 
-If not configured, create wrapper:
+### When Multiple Resources Exist
 
-```bash
-cp agents/_template_wrapper.py agents/my_agent.py
+Show identifying information to help user choose:
+
+```
+Agent: Found 3 existing bundles:
+       1. v3 (stress-test, 20 inputs, 1 day ago)
+       2. v2 (happy-path, 5 inputs, 3 days ago)
+       3. v1 (edge-cases, 10 inputs, 7 days ago)
+       
+       Which bundle to use? Or create new?
 ```
 
-Update `configs/simulation.yaml`:
-```yaml
-runner:
-  module_path: "agents.my_agent"
-  function_name: "run"
-  target: "agents.my_agent:run"
-  timeout_seconds: 300
+Key info to display: **version/name, tag/description, count, created date**
+
+### Commands by Path
+
+**Use existing bundle (2 commands):**
+```bash
+fluxloop sync pull --bundle-version-id <id>
+fluxloop test --scenario <name>
+```
+
+**Use existing input set (3 commands):**
+```bash
+fluxloop bundles publish --scenario-id <id> --input-set-id <id>
+fluxloop sync pull --bundle-version-id <id>
+fluxloop test --scenario <name>
+```
+
+**Full generation (5 commands):**
+```bash
+fluxloop personas suggest --scenario-id <id>
+fluxloop inputs synthesize --scenario-id <id>
+fluxloop bundles publish --scenario-id <id> --input-set-id <id>
+fluxloop sync pull --bundle-version-id <id>
+fluxloop test --scenario <name>
 ```
 
 ---
 
-## Phase 6: Test Data Synthesis (If Needed)
+## Phase 4: Run Test
 
-Check if inputs exist:
 ```bash
-ls inputs/generated.yaml
+# Always run sync pull and test separately
+fluxloop sync pull --bundle-version-id <id>
+fluxloop test --scenario <name>
 ```
 
-If missing, synthesize:
+> ⚠️ Do NOT use `test --pull`. Always run `sync pull` + `test` separately.
 
+### View Results
 ```bash
-# 1. Get scenario_id
-fluxloop scenarios list
-
-# 2. Refine intent/context (auto-saves to project context)
-fluxloop intent refine --intent "Order cancellation flows"
-
-# 3. Refine scenario (auto-saves to scenario snapshot)
-fluxloop scenarios refine --scenario-id <scenario_id>
-
-# 4. Generate personas (REQUIRED)
-fluxloop personas suggest --scenario-id <scenario_id>
-
-# 5. Synthesize inputs (auto-uses suggested personas if --persona-ids not provided)
-fluxloop inputs synthesize --scenario-id <scenario_id> --total-count 10
-
-# 6. (Optional) Pull to local
-# `fluxloop test` already runs sync pull by default.
-fluxloop sync pull --scenario <scenario_name>
-```
-
-> ⚠️ **Important:**
-> - Web Project must be selected (`fluxloop projects select`)
-> - Personas must exist before synthesis. Without personas, `inputs synthesize` returns empty results.
-
----
-
-## Phase 7: Test Execution (includes sync pull)
-
-From workspace root:
-```bash
-fluxloop test --scenario <scenario_name>
-```
-
-Or from scenario directory:
-```bash
-cd .fluxloop/scenarios/<scenario_name>
-fluxloop test
+cat .fluxloop/scenarios/<name>/.state/latest_result.md
 ```
 
 ---
 
-## Phase 8: Result Analysis
+## Example Conversations
 
-```bash
-# From scenario directory
-cat .state/latest_result.md
-
-# Or specify scenario
-cat .fluxloop/scenarios/<scenario_name>/.state/latest_result.md
-```
-
-**Summary format:**
-```
-✅ Test Complete!
-
-📋 Summary:
-  - Total: 10, Passed: 8 (80%), Warnings: 2
-
-⚠️ Issues:
-  - Input #3: [analysis]
-  - Input #7: [analysis]
-
-🚀 Next:
-  - "show details" - view turns
-  - "test again" - rerun
-  - "add inputs" - more cases
-```
-
----
-
-## Flow Diagram
+### Example 1: "Run test"
 
 ```
-"Test my agent"
-       │
-       ▼
-[fluxloop auth status]
-       │
-       ├─ Not logged in ──→ fluxloop auth login
-       │
-       ▼
-[fluxloop context show]
-       │
-       ├─ No Web Project ──→ fluxloop projects select <id>
-       │
-       ├─ No Local Scenario ──→ fluxloop init scenario X
-       │                        cd .fluxloop/scenarios/X
-       │
-       ├─ No Web Scenario ──→ fluxloop scenarios create --name X
-       │
-       ├─ No API Key ──→ fluxloop apikeys create
-       │
-       ├─ No Agent Loader ──→ Setup wrapper
-       │
-       ├─ No Inputs ──→ Synthesis workflow
-       │
-       ▼
-┌──────────────────────────────────┐
-│  fluxloop test --scenario X      │
-│  → Result Summary                │
-│  → Web Dashboard Link            │
-└──────────────────────────────────┘
+User: "Run test"
+
+Agent: [Check context]
+       
+       📋 Current state:
+       - Project: order-bot
+       - Scenario: order-cancel
+       - Existing bundle: v2 (10 inputs, created 3 days ago)
+       
+       What would you like to do?
+       1. Run test with existing bundle (v2)
+       2. Generate new inputs and test
+       3. Select different scenario
+
+User: "1"
+
+Agent: [Execute]
+       → fluxloop sync pull --bundle-version-id <v2_id>
+       → fluxloop test --scenario order-cancel
+       
+       ✅ 8/10 passed (80%)
+```
+
+### Example 2: "Test with new inputs"
+
+```
+User: "Test with new inputs"
+
+Agent: [Check context - scenario exists, new generation requested]
+       
+       Generating new inputs and running test.
+       
+       [Execute]
+       → fluxloop personas suggest --scenario-id <id>
+       → fluxloop inputs synthesize --scenario-id <id>
+       → fluxloop bundles publish --scenario-id <id> --input-set-id <id>
+       → fluxloop sync pull --bundle-version-id <id>
+       → fluxloop test --scenario <name>
+       
+       ✅ 9/10 passed (90%)
+```
+
+### Example 3: First-time User
+
+```
+User: "I want to test my agent"
+
+Agent: [Check context - none]
+       
+       This is your first time! Let's set up first.
+       
+       Are you logged in?
+       
+User: "No"
+
+Agent: → fluxloop auth login
+       (Browser opens)
+       
+       Let me know when you're done.
+
+User: "Done"
+
+Agent: What agent are you testing?
+
+User: "Order cancellation chatbot"
+
+Agent: [Create project + scenario]
+       → fluxloop projects create --name "order-cancel-bot"
+       → fluxloop intent refine --intent "Order cancellation handling test"
+       → fluxloop init scenario order-cancel
+       → fluxloop scenarios create --name "Order Cancel" --goal "..."
+       → fluxloop scenarios refine --scenario-id <id>
+       → fluxloop apikeys create
+       
+       ✓ Setup complete
+       
+       Would you like to generate test data?
+
+User: "Yes"
+
+Agent: [Generate data + test]
+       ...
 ```
 
 ---
 
 ## Command Reference
 
-### Authentication
+### Context
 ```bash
-fluxloop auth login      # Login
-fluxloop auth logout     # Logout
-fluxloop auth status     # Check status
+fluxloop context show     # Current state
+fluxloop context clear    # Reset
+```
+
+### Auth
+```bash
+fluxloop auth login
+fluxloop auth status
 ```
 
 ### Projects
 ```bash
-fluxloop projects list              # List projects
-fluxloop projects select <id>       # Select project
-fluxloop projects create --name X   # Create project
+fluxloop projects list
+fluxloop projects select <id>
+fluxloop projects create --name X
+fluxloop intent refine --intent "..."
 ```
 
 ### Scenarios
 ```bash
-fluxloop scenarios list                    # List scenarios
-fluxloop scenarios select <id>             # Select scenario
-fluxloop scenarios create --name X         # Create scenario
-fluxloop scenarios refine --scenario-id X  # Refine with AI
+fluxloop scenarios list
+fluxloop scenarios select <id>
+fluxloop scenarios create --name X --goal "..."
+fluxloop scenarios refine --scenario-id <id>
+fluxloop init scenario <name>
 ```
 
-### Local
+### Data (Always check with list first!)
 ```bash
-fluxloop init scenario X           # Create local folder
-fluxloop context show              # Show context
-fluxloop context clear             # Clear context
+fluxloop bundles list --scenario-id <id>
+fluxloop inputs list --scenario-id <id>
+fluxloop personas suggest --scenario-id <id>
+fluxloop inputs synthesize --scenario-id <id>
+fluxloop bundles publish --scenario-id <id> --input-set-id <id>
 ```
 
-### Sync & Test
+### Sync & Test (Always separate!)
 ```bash
-fluxloop apikeys check                    # Check API key
-fluxloop apikeys create                   # Create API key
-fluxloop sync pull --scenario X           # Pull data
-fluxloop sync upload --scenario X         # Upload results
-fluxloop test --scenario X                # Run test
+fluxloop sync pull --bundle-version-id <id>
+fluxloop test --scenario <name>
 ```
 
-### Synthesis
+### API Keys
 ```bash
-fluxloop intent refine --intent "..." --apply      # Refine project intent
-fluxloop personas suggest --scenario-id X  # Generate personas
-fluxloop inputs synthesize --scenario-id X --total-count N # Synthesize inputs
-fluxloop inputs qc --scenario-id X         # Quality check
+fluxloop apikeys check
+fluxloop apikeys create
 ```
-
-### Bundles
-```bash
-fluxloop bundles list --scenario-id X          # List bundles
-fluxloop bundles publish --scenario-id X --input-set-id Y  # Create & publish
-fluxloop bundles show --bundle-version-id Z    # Show details
-```
-
-### Mid-Start Flow (Resuming from Existing Data)
-
-When starting from an existing scenario, check what already exists:
-
-```
-# 1. Check existing inputs
-fluxloop inputs list --scenario-id <scenario_id>
-  → If empty: fluxloop inputs synthesize --scenario-id <scenario_id>
-
-# 2. Check existing bundles
-fluxloop bundles list --scenario-id <scenario_id>
-  → If empty: fluxloop bundles publish --scenario-id <scenario_id> --input-set-id <input_set_id>
-
-# 3. Pull and test
-fluxloop sync pull --bundle-version-id <bundle_version_id>
-fluxloop test --scenario <scenario_name>
-```
-
-**Key IDs:**
-- `input_set_id`: Returned by `inputs synthesize` or listed in `inputs list`
-- `bundle_version_id`: Returned by `bundles publish` or listed in `bundles list`
 
 ---
 
 ## Error Handling
 
-**Not Logged In:**
-```
-❌ Login required.
-→ fluxloop auth login
-```
-
-**No Web Project:**
-```
-❌ No Web Project selected.
-→ fluxloop projects list
-→ fluxloop projects select <id>
-```
-
-**API Key Missing:**
-```
-❌ Sync API key is not set.
-→ fluxloop apikeys create
-```
-
-**No Personas (Synthesis Empty):**
-```
-❌ No personas found.
-→ fluxloop personas suggest --scenario-id <id>
-→ Then retry: fluxloop inputs synthesize --scenario-id <id>
-```
-
-**Agent Loader Failed:**
-```
-❌ ModuleNotFoundError
-→ Check module_path in configs/simulation.yaml
-→ Verify python_path includes agent directory
-```
+| Error | Solution |
+|-------|----------|
+| `Login required` | `fluxloop auth login` |
+| `No project selected` | `fluxloop projects select <id>` |
+| `Sync API key not set` | `fluxloop apikeys create` |
+| `Inputs file not found` | `fluxloop sync pull --bundle-version-id <id>` |
+| `No personas found` | `fluxloop personas suggest --scenario-id <id>` first |
 
 ---
 
-## Usage Examples
+## Key Takeaways
 
-### First-time User
-
-```
-User: "Test my agent"
-
-Agent: Checking environment...
-       ❌ Not logged in
-       
-       Running: fluxloop auth login
-       [Browser opens]
-
-User: "Done"
-
-Agent: ✅ Logged in: user@example.com
-       
-       No Web Project. What are you testing?
-
-User: "My order chatbot"
-
-Agent: Creating setup:
-       - Web Project: order-chatbot
-       - Local Scenario: order-test
-       - Web Scenario: Order handling
-       
-       Proceed? (Y/n)
-
-User: "Yes"
-
-Agent: [1/5] Creating Web Project... ✓
-       [2/5] Local scenario... ✓ .fluxloop/scenarios/order-test
-       [3/5] Web Scenario... ✓
-       [4/5] API Key... ✓
-       [5/5] Agent wrapper... ✓
-       
-       Where is your agent?
-
-User: "../chatbot/bot.py"
-
-Agent: Created agents/chatbot_agent.py ✓
-       
-       🚀 Running test...
-       ✅ 8/10 passed (80%)
-```
-
-### Returning User
-
-```
-User: "Run test"
-
-Agent: Current settings:
-       - Project: order-chatbot
-       - Scenario: order-test (10 inputs)
-       
-       Proceed? (Y/n)
-
-User: "Yes"
-
-Agent: 🚀 Running...
-       ✅ 9/10 passed (90%)
-       
-       [Improved from last run!]
-```
+1. **Always check context first** (`fluxloop context show`)
+2. **Check existing data with list** (`bundles list`, `inputs list`)
+3. **Ask user before executing** (NO auto-execution)
+4. **Run sync pull + test separately** (Do NOT use `--pull`)
+5. **Use explicit IDs** (`--bundle-version-id`, `--scenario-id`)

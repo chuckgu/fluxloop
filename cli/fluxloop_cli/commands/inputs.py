@@ -167,10 +167,10 @@ def synthesize(
         console.print()
         console.print(f"[bold]Synthesis complete: {total_generated} inputs generated[/bold]")
 
-        # Show input_set_id
-        if "input_set_id" in data:
-            input_set_id = data["input_set_id"]
-            console.print(f"  Input Set ID: [bold cyan]{input_set_id}[/bold cyan]")
+        # Show input_set_id (support both 'id' and 'input_set_id' field names)
+        result_input_set_id = data.get("input_set_id") or data.get("id")
+        if result_input_set_id:
+            console.print(f"  Input Set ID: [bold cyan]{result_input_set_id}[/bold cyan]")
 
         # Show preview
         if "samples" in data and data["samples"]:
@@ -193,14 +193,13 @@ def synthesize(
             console.print(f"\n[dim]Saved to: {cache_path}[/dim]")
 
         # Next steps
-        if "input_set_id" in data and not dry_run:
-            input_set_id = data["input_set_id"]
+        if result_input_set_id and not dry_run:
             console.print("\n[bold]Next steps:[/bold]")
             console.print(
-                f"  [dim]1. Quality check: fluxloop inputs qc --scenario-id {scenario_id} --input-set-id {input_set_id}[/dim]"
+                f"  [dim]1. Quality check: fluxloop inputs qc --scenario-id {scenario_id} --input-set-id {result_input_set_id}[/dim]"
             )
             console.print(
-                f"  [dim]2. Create bundle: fluxloop bundles publish --scenario-id {scenario_id} --input-set-id {input_set_id}[/dim]"
+                f"  [dim]2. Create bundle: fluxloop bundles publish --scenario-id {scenario_id} --input-set-id {result_input_set_id}[/dim]"
             )
 
     except Exception as e:
