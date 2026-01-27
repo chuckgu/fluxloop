@@ -225,7 +225,8 @@ fluxloop test --scenario <name>
 
 ### View Results
 ```bash
-cat .fluxloop/scenarios/<name>/.state/latest_result.md
+fluxloop test results --scenario <name>    # Formatted output
+fluxloop test results --scenario <name> --raw  # Raw markdown
 ```
 
 ---
@@ -310,6 +311,7 @@ python -c "from agents.wrapper import run; print(run('test'))"
 | `fluxloop bundles publish --scenario-id <id> --input-set-id <id>` | Publish bundle |
 | `fluxloop sync pull --bundle-version-id <id>` | Pull bundle (auto-uses current scenario) |
 | `fluxloop test --scenario <name>` | Run test |
+| `fluxloop test results --scenario <name>` | View latest test results |
 
 ---
 

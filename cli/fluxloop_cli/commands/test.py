@@ -430,5 +430,36 @@ def main(
         for item in criteria_items:
             console.print(f"- {item}")
     console.print("───────────────────────────────────────────")
-    console.print(f"📁 상세 확인: cat {latest_path}")
+    console.print(f"📁 상세 확인: fluxloop test results --scenario {scenario or '<name>'}")
     console.print("═══════════════════════════════════════════")
+
+
+@app.command("results")
+def results(
+    scenario: Optional[str] = typer.Option(
+        None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"
+    ),
+    raw: bool = typer.Option(
+        False, "--raw", help="Output raw markdown without formatting"
+    ),
+):
+    """
+    Show latest test results.
+    
+    Displays the contents of .fluxloop/scenarios/{scenario}/.state/latest_result.md
+    """
+    scenario_root = _resolve_scenario_dir(scenario)
+    result_path = scenario_root / STATE_DIR_NAME / "latest_result.md"
+    
+    if not result_path.exists():
+        console.print("[yellow]No test results found.[/yellow]")
+        console.print(f"[dim]Run test first: fluxloop test --scenario {scenario or '<name>'}[/dim]")
+        raise typer.Exit(1)
+    
+    content = result_path.read_text(encoding="utf-8")
+    
+    if raw:
+        print(content)
+    else:
+        from rich.markdown import Markdown
+        console.print(Markdown(content))
