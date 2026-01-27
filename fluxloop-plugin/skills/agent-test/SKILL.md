@@ -66,12 +66,14 @@ ls .fluxloop/scenarios   # Check local scenario folders (from workspace root)
 # 0. Check if installed
 fluxloop --version
 
-# If not installed:
-uv tool install fluxloop-cli
-# OR: pip install fluxloop-cli
+# If not installed, add to workspace environment (match your project's setup):
+# - uv:     uv add fluxloop-cli     → run with: uv run fluxloop ...
+# - pip:    pip install fluxloop-cli → run with: fluxloop ... (venv activated)
+# - poetry: poetry add fluxloop-cli → run with: poetry run fluxloop ...
+# Priority: Install in the SAME environment where your agent runs (important for simulation)
 
-# 1. Login
-fluxloop auth login
+# 1. Login (for agents: prints code then polls)
+fluxloop auth login --no-wait && fluxloop auth login --resume
 
 # 2. Select or create project
 fluxloop projects list
@@ -81,6 +83,7 @@ fluxloop projects create --name "my-agent"
 fluxloop intent refine --intent "..."
 ```
 
+> **Important**: Install fluxloop-cli in your workspace's environment so simulations run with the same dependencies as your agent.
 > For detailed setup instructions, run `/fluxloop:setup`
 
 ---

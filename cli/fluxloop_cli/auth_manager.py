@@ -77,6 +77,50 @@ def ensure_fluxloop_home() -> Path:
     return fluxloop_home
 
 
+def get_pending_login_path() -> Path:
+    """Get the path to the pending login file."""
+    return ensure_fluxloop_home() / "pending_login.json"
+
+
+def save_pending_login(device_response: DeviceCodeResponse, api_url: str) -> Path:
+    """Save pending device-code login data for later resume."""
+    pending_path = get_pending_login_path()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=device_response.expires_in)
+    payload = {
+        "api_url": api_url,
+        "device_code": device_response.device_code,
+        "user_code": device_response.user_code,
+        "verification_url": device_response.verification_url,
+        "expires_in": device_response.expires_in,
+        "interval": device_response.interval,
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+    }
+    pending_path.write_text(json.dumps(payload, indent=2))
+    pending_path.chmod(0o600)
+    return pending_path
+
+
+def load_pending_login() -> Optional[dict]:
+    """Load pending login data from ~/.fluxloop/pending_login.json."""
+    pending_path = get_pending_login_path()
+    if not pending_path.exists():
+        return None
+    try:
+        return json.loads(pending_path.read_text())
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"Warning: Failed to load pending login: {e}")
+        return None
+
+
+def delete_pending_login() -> None:
+    """Delete pending login data."""
+    pending_path = get_pending_login_path()
+    if pending_path.exists():
+        pending_path.unlink()
+
+
 def load_auth_token() -> Optional[AuthToken]:
     """
     Load authentication token from ~/.fluxloop/auth.json.

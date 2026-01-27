@@ -7,6 +7,7 @@ Designed for both interactive and agent (Claude Code, Cursor) environments.
 import os
 import sys
 import webbrowser
+from datetime import datetime, timezone
 from typing import Optional
 
 import typer
@@ -21,6 +22,9 @@ from ..auth_manager import (
     save_auth_token,
     load_auth_token,
     delete_auth_token,
+    save_pending_login,
+    load_pending_login,
+    delete_pending_login,
     is_token_expired,
     ensure_valid_token,
     format_expires_at,
@@ -63,7 +67,17 @@ def login(
         False, "--force", "-f", help="Force re-login even if already logged in"
     ),
     no_browser: bool = typer.Option(
-        False, "--no-browser", help="Don't open browser automatically (for agent/headless environments)"
+        False, "--no-browser", help="Don't open browser automatically (for CI/CD or headless environments)"
+    ),
+    no_wait: bool = typer.Option(
+        False,
+        "--no-wait",
+        help="Print device code and exit without polling (use --resume to finish)",
+    ),
+    resume: bool = typer.Option(
+        False,
+        "--resume",
+        help="Resume a pending login by polling saved device code",
     ),
 ):
     """
@@ -85,22 +99,90 @@ def login(
             console.print("[dim]Use --force to re-login with a new session.[/dim]")
             return
 
+    if resume:
+        pending = load_pending_login()
+        if not pending:
+            console.print("[red]✗[/red] No pending login found. Run 'fluxloop auth login --no-wait' first.")
+            print("LOGIN_STATUS: no_pending")
+            raise typer.Exit(1)
+
+        pending_api_url = pending.get("api_url") or api_url
+        device_code = pending.get("device_code")
+        if not device_code:
+            console.print("[red]✗[/red] Pending login data is missing device_code.")
+            delete_pending_login()
+            print("LOGIN_STATUS: invalid_pending")
+            raise typer.Exit(1)
+
+        interval = pending.get("interval") or 5
+        timeout = pending.get("expires_in") or 300
+        expires_at = pending.get("expires_at")
+        if expires_at:
+            try:
+                expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                if expires_dt.tzinfo is None:
+                    expires_dt = expires_dt.replace(tzinfo=timezone.utc)
+                remaining = int((expires_dt - datetime.now(timezone.utc)).total_seconds())
+                if remaining <= 0:
+                    delete_pending_login()
+                    console.print("[red]✗[/red] Pending login has expired. Run 'fluxloop auth login --no-wait' again.")
+                    print("LOGIN_STATUS: expired_pending")
+                    raise typer.Exit(1)
+                timeout = remaining
+            except ValueError:
+                pass
+
+        try:
+            # Poll for completion
+            token = poll_device_code(
+                pending_api_url,
+                device_code,
+                interval=interval,
+                timeout=timeout,
+            )
+
+            save_auth_token(token)
+            delete_pending_login()
+
+            print()
+            print(f"LOGIN_SUCCESS: {token.user_email}")
+            console.print(f"[green]✓[/green] Login successful: [bold]{token.user_email}[/bold]")
+            console.print()
+            console.print("[dim]Next steps:[/dim]")
+            console.print("[dim]  • fluxloop projects list    - View your projects[/dim]")
+            console.print("[dim]  • fluxloop context set-project <id>  - Select a project[/dim]")
+            return
+        except TimeoutError as e:
+            delete_pending_login()
+            console.print(f"\n[red]✗[/red] {e}", style="bold red")
+            raise typer.Exit(1)
+        except ValueError as e:
+            delete_pending_login()
+            console.print(f"\n[red]✗[/red] {e}", style="bold red")
+            raise typer.Exit(1)
+        except Exception as e:
+            delete_pending_login()
+            console.print(f"\n[red]✗[/red] Login failed: {e}", style="bold red")
+            raise typer.Exit(1)
+
     # Detect agent environment for adjusted behavior
-    is_agent = _is_agent_environment() or no_browser
+    is_agent = _is_agent_environment()
+    skip_browser = no_browser
 
     try:
         # Start device-code flow
         device_response = start_device_code_flow(api_url)
 
         # Always print plain text for agent compatibility (parseable output)
-        print()
-        print("=" * 50)
-        print("FLUXLOOP LOGIN")
-        print("=" * 50)
-        print(f"URL:  {device_response.verification_url}")
-        print(f"CODE: {device_response.user_code}")
-        print("=" * 50)
-        print()
+        # Use flush=True to ensure output appears immediately in agent environments
+        print(flush=True)
+        print("=" * 50, flush=True)
+        print("FLUXLOOP LOGIN", flush=True)
+        print("=" * 50, flush=True)
+        print(f"URL:  {device_response.verification_url}", flush=True)
+        print(f"CODE: {device_response.user_code}", flush=True)
+        print("=" * 50, flush=True)
+        print(flush=True)
 
         # Also display rich panel for interactive terminals
         if sys.stdout.isatty():
@@ -114,18 +196,27 @@ def login(
             console.print(login_panel)
             console.print()
 
-        # Try to open browser automatically (unless disabled)
-        if not is_agent:
+        # Save pending login info for agent/non-blocking resume
+        pending_path = save_pending_login(device_response, api_url)
+
+        # Try to open browser automatically (unless disabled with --no-browser)
+        if not skip_browser:
             try:
                 webbrowser.open(device_response.verification_url)
                 console.print("[dim]Browser opened automatically...[/dim]")
             except Exception:
                 console.print("[dim]Please open the browser manually.[/dim]")
         else:
-            print("(Browser auto-open disabled for agent environment)")
+            print("(Browser auto-open disabled with --no-browser)", flush=True)
 
-        print()
-        print("Waiting for approval...")
+        print(flush=True)
+        print("Waiting for approval...", flush=True)
+
+        if no_wait:
+            print(f"PENDING_LOGIN_PATH: {pending_path}", flush=True)
+            console.print("[yellow]Login pending.[/yellow] Open the URL, enter the code, then run:")
+            console.print("[dim]  fluxloop auth login --resume[/dim]")
+            return
 
         # Poll for completion
         if sys.stdout.isatty() and not is_agent:
@@ -149,6 +240,7 @@ def login(
 
         # Save token
         save_auth_token(token)
+        delete_pending_login()
 
         # Success message (User-scoped, no project selection at login)
         print()
@@ -160,12 +252,15 @@ def login(
         console.print("[dim]  • fluxloop context set-project <id>  - Select a project[/dim]")
 
     except TimeoutError as e:
+        delete_pending_login()
         console.print(f"\n[red]✗[/red] {e}", style="bold red")
         raise typer.Exit(1)
     except ValueError as e:
+        delete_pending_login()
         console.print(f"\n[red]✗[/red] {e}", style="bold red")
         raise typer.Exit(1)
     except Exception as e:
+        delete_pending_login()
         console.print(f"\n[red]✗[/red] Login failed: {e}", style="bold red")
         raise typer.Exit(1)
 
