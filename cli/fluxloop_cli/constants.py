@@ -33,7 +33,6 @@ SCENARIO_CONFIG_FILENAME = "scenario.yaml"
 PROJECT_CONFIG_FILENAME = "project.yaml"    # Legacy alias for scenario.yaml
 INPUT_CONFIG_FILENAME = "input.yaml"
 SIMULATION_CONFIG_FILENAME = "simulation.yaml"
-EVALUATION_CONFIG_FILENAME = "evaluation.yaml"
 
 DEFAULT_CONFIG_FILENAME = "setting.yaml"
 LEGACY_CONFIG_FILENAMES = ("fluxloop.yaml",)
@@ -44,8 +43,7 @@ CONFIG_SECTION_FILENAMES = {
     "project": PROJECT_CONFIG_FILENAME,     # Legacy alias
     "input": INPUT_CONFIG_FILENAME,
     "simulation": SIMULATION_CONFIG_FILENAME,
-    "evaluation": EVALUATION_CONFIG_FILENAME,
 }
 
-CONFIG_SECTION_ORDER = ("scenario", "input", "simulation", "evaluation")
+CONFIG_SECTION_ORDER = ("scenario", "input", "simulation")
 

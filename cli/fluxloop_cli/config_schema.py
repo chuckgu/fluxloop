@@ -48,11 +48,6 @@ CONFIG_SECTIONS: Tuple[ConfigSection, ...] = (
         description="Experiment execution parameters (runner, iterations, environments).",
         required=True,
     ),
-    ConfigSection(
-        key="evaluation",
-        filename=CONFIG_SECTION_FILENAMES["evaluation"],
-        description="Post-run evaluation pipelines and scoring strategies.",
-    ),
 )
 
 CONFIG_SECTION_BY_KEY: Dict[str, ConfigSection] = {

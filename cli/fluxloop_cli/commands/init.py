@@ -20,7 +20,6 @@ from rich.tree import Tree
 from ..templates import (
     create_input_config,
     create_simulation_config,
-    create_evaluation_config,
     create_env_file,
     create_pytest_bridge_template,
     create_agent_wrapper_template,
@@ -71,7 +70,7 @@ def scenario(
     Initialize a new FluxLoop scenario.
     
     Creates the scenario folder structure at .fluxloop/scenarios/{name}/:
-    - configs/: Configuration files (scenario/input/simulation/evaluation)
+    - configs/: Configuration files (scenario/input/simulation)
     - agents/: Agent code
     - inputs/: Input data
     - experiments/: Test results
@@ -119,9 +118,6 @@ def scenario(
     (config_dir / "simulation.yaml").write_text(create_simulation_config(name))
     console.print("  [green]✓[/green] simulation.yaml")
     
-    (config_dir / "evaluation.yaml").write_text(create_evaluation_config())
-    console.print("  [green]✓[/green] evaluation.yaml")
-    
     # Create .env
     env_file = scenario_path / ".env"
     env_file.write_text(create_env_file())
@@ -168,7 +164,6 @@ def scenario(
     configs_node.add(f"📄 {SCENARIO_CONFIG_FILENAME}")
     configs_node.add("📄 input.yaml")
     configs_node.add("📄 simulation.yaml")
-    configs_node.add("📄 evaluation.yaml")
     
     agents_node = tree.add("📁 agents/")
     agents_node.add("📄 _template_wrapper.py")

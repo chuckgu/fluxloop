@@ -17,16 +17,12 @@ from .commands import (
     config,
     context,
     criteria,
-    doctor,
-    evaluate,
     generate,
     init,
     inputs,
     local_context,
-    parse,
     personas,
     projects,
-    record,
     run,
     scenarios,
     status,
@@ -68,10 +64,6 @@ app.add_typer(run.app, name="run", help="Run simulations and experiments")
 app.add_typer(status.app, name="status", help="Check status and view results")
 app.add_typer(config.app, name="config", help="Manage configuration")
 app.add_typer(generate.app, name="generate", help="Generate input datasets")
-app.add_typer(parse.app, name="parse", help="Parse experiments into readable files")
-app.add_typer(record.app, name="record", help="Manage recording mode and settings")
-app.add_typer(doctor.app, name="doctor", help="Diagnose CLI and MCP environment issues")
-app.add_typer(evaluate.app, name="evaluate", help="Evaluate experiment results")
 app.add_typer(sync.app, name="sync", help="Sync bundles and upload results")
 app.add_typer(criteria.app, name="criteria", help="Show pulled evaluation criteria")
 app.add_typer(test.app, name="test", help="Run pull -> run -> upload test workflow")
