@@ -18,7 +18,7 @@ from rich.console import Console
 
 from ..config_loader import load_experiment_config
 from ..constants import DEFAULT_CONFIG_PATH, FLUXLOOP_DIR_NAME, SCENARIOS_DIR_NAME
-from ..context_manager import get_current_web_project_id
+from ..context_manager import get_current_web_project_id, get_current_scenario
 from ..environment import load_env_chain
 from ..project_paths import resolve_config_path
 from ..turns import load_turns, summarize_turns, utc_now_iso
@@ -26,6 +26,22 @@ from ..turns import load_turns, summarize_turns, utc_now_iso
 
 app = typer.Typer(help="Sync bundle inputs and upload run results.")
 console = Console()
+
+
+def _get_effective_scenario(scenario: Optional[str]) -> Optional[str]:
+    """Get scenario from argument or current context.
+    
+    Priority:
+    1. Explicit --scenario argument
+    2. Current scenario from context (context.json)
+    """
+    if scenario:
+        return scenario
+    ctx_scenario = get_current_scenario()
+    if ctx_scenario and ctx_scenario.local_path:
+        # "scenarios/dataset-diagnosis" → "dataset-diagnosis"
+        return Path(ctx_scenario.local_path).name
+    return None
 
 
 def _resolve_scenario_dir(scenario: Optional[str], base_dir: Optional[Path] = None) -> Path:
@@ -47,7 +63,37 @@ def _resolve_relative_path(path: Path, scenario: Optional[str], base_dir: Option
     return (scenario_dir / path).resolve()
 
 
+def _get_workspace_env_path(base_dir: Optional[Path] = None) -> Optional[Path]:
+    """Get the workspace-level .env path (.fluxloop/.env)."""
+    from ..project_paths import find_workspace_root
+    workspace_root = find_workspace_root(base_dir)
+    if workspace_root:
+        return workspace_root / FLUXLOOP_DIR_NAME / ".env"
+    # Fall back to current directory
+    cwd_fluxloop = (base_dir or Path.cwd()) / FLUXLOOP_DIR_NAME
+    if cwd_fluxloop.exists():
+        return cwd_fluxloop / ".env"
+    return None
+
+
 def _load_env(scenario: Optional[str], base_dir: Optional[Path] = None) -> None:
+    """Load environment variables from .env files.
+    
+    Load order (later overrides earlier):
+    1. .fluxloop/.env (workspace level, shared by all scenarios - API keys)
+    2. .fluxloop/scenarios/{scenario}/.env (scenario specific - OPENAI_API_KEY, etc.)
+    """
+    import fluxloop
+    
+    # Load workspace-level .env first (API keys shared by all scenarios)
+    workspace_env = _get_workspace_env_path(base_dir)
+    if workspace_env and workspace_env.exists():
+        try:
+            fluxloop.load_env(workspace_env, override=True, refresh_config=False)
+        except Exception:
+            pass  # Ignore errors, scenario env will be tried next
+    
+    # Then load scenario-level .env (can override workspace settings)
     source_dir = _resolve_scenario_dir(scenario, base_dir)
     load_env_chain(source_dir, refresh_config=False)
 
@@ -452,7 +498,7 @@ def pull(
     config_file: Path = typer.Option(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Config file to resolve inputs path"
     ),
-    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (defaults to current context)"),
     api_url: Optional[str] = typer.Option(None, "--api-url", help="Sync API base URL"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Sync API key"),
     quiet: bool = typer.Option(False, "--quiet", help="Minimal output"),
@@ -460,9 +506,14 @@ def pull(
     """
     Pull bundle inputs/personas/criteria for local execution.
     
-    Data is saved to .fluxloop/scenarios/{scenario}/ if --scenario is specified,
-    or the current directory otherwise.
+    Data is saved to .fluxloop/scenarios/{scenario}/.
+    Uses current scenario from context if --scenario is not specified.
     """
+    # Resolve scenario from argument or context
+    scenario = _get_effective_scenario(scenario)
+    if scenario and not quiet:
+        console.print(f"[dim]Using scenario: {scenario}[/dim]")
+    
     _load_env(scenario)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)
@@ -550,7 +601,7 @@ def upload(
     config_file: Path = typer.Option(
         DEFAULT_CONFIG_PATH, "--config", "-c", help="Config file to resolve output dir"
     ),
-    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (folder in .fluxloop/scenarios/)"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Scenario name (defaults to current context)"),
     api_url: Optional[str] = typer.Option(None, "--api-url", help="Sync API base URL"),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="Sync API key"),
     bundle_version_id: Optional[str] = typer.Option(
@@ -560,7 +611,14 @@ def upload(
 ):
     """
     Upload run results and artifacts to the sync API.
+    
+    Uses current scenario from context if --scenario is not specified.
     """
+    # Resolve scenario from argument or context
+    scenario = _get_effective_scenario(scenario)
+    if scenario and not quiet:
+        console.print(f"[dim]Using scenario: {scenario}[/dim]")
+    
     _load_env(scenario)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)

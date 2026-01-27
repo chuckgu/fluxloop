@@ -5,9 +5,11 @@ Note: This is separate from 'generate inputs' which does local generation.
 These commands interact with the Web API for synthesis.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -23,6 +25,19 @@ from ..context_manager import get_current_scenario_id, get_current_web_project_i
 
 app = typer.Typer(help="Synthesize and manage test inputs via Web API")
 console = Console()
+
+DEFAULT_SYNTHESIZE_TIMEOUT = 180.0
+
+
+def _get_default_timeout() -> float:
+    """Get default timeout from environment variable or use built-in default."""
+    env_timeout = os.getenv("FLUXLOOP_SYNTHESIZE_TIMEOUT")
+    if env_timeout:
+        try:
+            return float(env_timeout)
+        except ValueError:
+            pass
+    return DEFAULT_SYNTHESIZE_TIMEOUT
 
 
 @app.command()
@@ -51,6 +66,11 @@ def synthesize(
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
     ),
+    timeout_seconds: Optional[float] = typer.Option(
+        None,
+        "--timeout",
+        help="Request timeout in seconds (default: 180, or FLUXLOOP_SYNTHESIZE_TIMEOUT env)",
+    ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
@@ -60,6 +80,7 @@ def synthesize(
     
     Uses current project/scenario from context if not specified.
     """
+    effective_timeout = timeout_seconds or _get_default_timeout()
     api_url = resolve_api_url(api_url)
     
     # Use context if no project_id specified
@@ -133,8 +154,10 @@ def synthesize(
 
     try:
         console.print("[cyan]Synthesizing test inputs...[/cyan]")
+        if effective_timeout > 60:
+            console.print(f"[dim]Timeout: {effective_timeout:.0f}s[/dim]")
 
-        client = create_authenticated_client(api_url, use_jwt=True, timeout=60.0)
+        client = create_authenticated_client(api_url, use_jwt=True, timeout=effective_timeout)
         resp = post_with_retry(client, "/api/inputs/synthesize", payload=payload)
 
         handle_api_error(resp, f"input synthesis for scenario {scenario_id}")
@@ -202,6 +225,16 @@ def synthesize(
                 f"  [dim]2. Create bundle: fluxloop bundles publish --scenario-id {scenario_id} --input-set-id {result_input_set_id}[/dim]"
             )
 
+    except httpx.TimeoutException:
+        console.print(
+            f"[red]✗[/red] Synthesis timed out after {effective_timeout:.0f}s.\n"
+            "  Options:\n"
+            "    --timeout 300              (increase timeout)\n"
+            "    --total-count N            (reduce inputs)\n"
+            "    FLUXLOOP_SYNTHESIZE_TIMEOUT=300  (env default)",
+            style="bold red",
+        )
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]✗[/red] Synthesis failed: {e}", style="bold red")
         raise typer.Exit(1)
@@ -217,6 +250,11 @@ def refine(
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
     ),
+    timeout_seconds: Optional[float] = typer.Option(
+        None,
+        "--timeout",
+        help="Request timeout in seconds (default: 180, or FLUXLOOP_SYNTHESIZE_TIMEOUT env)",
+    ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
@@ -225,6 +263,7 @@ def refine(
     Refine existing test inputs.
     """
     api_url = resolve_api_url(api_url)
+    effective_timeout = timeout_seconds or _get_default_timeout()
 
     # Build payload
     payload: Dict[str, Any] = {
@@ -240,8 +279,10 @@ def refine(
 
     try:
         console.print("[cyan]Refining test inputs...[/cyan]")
+        if effective_timeout > 60:
+            console.print(f"[dim]Timeout: {effective_timeout:.0f}s[/dim]")
 
-        client = create_authenticated_client(api_url, use_jwt=True, timeout=60.0)
+        client = create_authenticated_client(api_url, use_jwt=True, timeout=effective_timeout)
         resp = post_with_retry(client, "/api/inputs/refine", payload=payload)
 
         handle_api_error(resp, f"input refinement for set {input_set_id}")
@@ -274,6 +315,15 @@ def refine(
                     console.print(f"\n  {i}. [dim]Before:[/dim] {before}")
                     console.print(f"     [dim]After:[/dim]  {after}")
 
+    except httpx.TimeoutException:
+        console.print(
+            f"[red]✗[/red] Refinement timed out after {effective_timeout:.0f}s.\n"
+            "  Options:\n"
+            "    --timeout 300              (increase timeout)\n"
+            "    FLUXLOOP_SYNTHESIZE_TIMEOUT=300  (env default)",
+            style="bold red",
+        )
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]✗[/red] Refinement failed: {e}", style="bold red")
         raise typer.Exit(1)
@@ -286,6 +336,11 @@ def qc(
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
     ),
+    timeout_seconds: Optional[float] = typer.Option(
+        None,
+        "--timeout",
+        help="Request timeout in seconds (default: 180, or FLUXLOOP_SYNTHESIZE_TIMEOUT env)",
+    ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
@@ -294,6 +349,7 @@ def qc(
     Run quality checks on test inputs.
     """
     api_url = resolve_api_url(api_url)
+    effective_timeout = timeout_seconds or _get_default_timeout()
 
     # Build payload
     payload: Dict[str, Any] = {
@@ -308,8 +364,10 @@ def qc(
 
     try:
         console.print("[cyan]Running quality checks...[/cyan]")
+        if effective_timeout > 60:
+            console.print(f"[dim]Timeout: {effective_timeout:.0f}s[/dim]")
 
-        client = create_authenticated_client(api_url, use_jwt=True, timeout=60.0)
+        client = create_authenticated_client(api_url, use_jwt=True, timeout=effective_timeout)
         resp = post_with_retry(client, "/api/inputs/qc", payload=payload)
 
         handle_api_error(resp, f"quality check for input set {input_set_id}")
@@ -356,6 +414,15 @@ def qc(
                 similarity = issue.get("similarity", 0)
                 console.print(f"  - {id1} and {id2} similar ({similarity:.0%})")
 
+    except httpx.TimeoutException:
+        console.print(
+            f"[red]✗[/red] Quality check timed out after {effective_timeout:.0f}s.\n"
+            "  Options:\n"
+            "    --timeout 300              (increase timeout)\n"
+            "    FLUXLOOP_SYNTHESIZE_TIMEOUT=300  (env default)",
+            style="bold red",
+        )
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]✗[/red] Quality check failed: {e}", style="bold red")
         raise typer.Exit(1)

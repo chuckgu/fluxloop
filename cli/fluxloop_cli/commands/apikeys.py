@@ -12,14 +12,30 @@ from typing import Dict, Optional
 import typer
 from rich.console import Console
 
-from ..constants import DEFAULT_ROOT_DIR_NAME
+from ..constants import DEFAULT_ROOT_DIR_NAME, FLUXLOOP_DIR_NAME
 from ..http_client import create_authenticated_client, post_with_retry
 from ..api_utils import handle_api_error, resolve_api_url
 from ..context_manager import get_current_project_id
-from ..project_paths import resolve_env_path
+from ..project_paths import resolve_env_path, find_workspace_root
 
 app = typer.Typer(help="Manage API Keys for sync operations")
 console = Console()
+
+
+def _get_workspace_env_path() -> Optional[Path]:
+    """Get the workspace-level .env path (.fluxloop/.env).
+    
+    API keys are project-scoped, so they're stored at workspace level
+    and shared by all scenarios.
+    """
+    workspace_root = find_workspace_root()
+    if workspace_root:
+        return workspace_root / FLUXLOOP_DIR_NAME / ".env"
+    # Fall back to current directory
+    cwd_fluxloop = Path.cwd() / FLUXLOOP_DIR_NAME
+    if cwd_fluxloop.exists():
+        return cwd_fluxloop / ".env"
+    return None
 
 
 def _check_existing_api_key(env_file: Path) -> Optional[str]:
@@ -88,15 +104,29 @@ def create_api_key(
     project_id: Optional[str] = typer.Option(None, "--project-id", help="Project ID"),
     name: Optional[str] = typer.Option("cli-generated", "--name", "-n", help="Key name"),
     save: bool = typer.Option(True, "--save/--no-save", help="Save to .env"),
-    env_file: Path = typer.Option(Path(".env"), "--env-file", help="Env file path"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file", help="Override env file path"),
     overwrite_env: bool = typer.Option(False, "--overwrite-env", help="Overwrite existing"),
-    project: Optional[str] = typer.Option(None, "--project", help="Project name"),
+    project: Optional[str] = typer.Option(None, "--project", help="Project name (legacy)"),
     root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="Root dir"),
     api_url: Optional[str] = typer.Option(None, "--api-url", help="API base URL"),
 ):
-    """Create an API Key for sync operations (pull/upload)."""
+    """Create an API Key for sync operations (pull/upload).
+    
+    Saves to .fluxloop/.env (workspace level) by default.
+    API keys are project-scoped and shared by all scenarios.
+    """
     api_url = resolve_api_url(api_url)
-    env_path = resolve_env_path(env_file, project, root)
+    
+    # Priority: --env-file > workspace .fluxloop/.env > legacy resolution
+    if env_file:
+        env_path = env_file.expanduser().resolve()
+    else:
+        env_path = _get_workspace_env_path()
+        if env_path:
+            console.print(f"[dim]Saving to workspace: {env_path}[/dim]")
+        else:
+            env_path = resolve_env_path(Path(".env"), project, root)
+            console.print(f"[dim]No workspace found, saving to: {env_path}[/dim]")
     
     if not project_id:
         project_id = get_current_project_id()
@@ -155,40 +185,48 @@ def create_api_key(
 
 @app.command("check")
 def check_api_key(
-    env_file: Path = typer.Option(Path(".env"), "--env-file", help="Env file"),
-    project: Optional[str] = typer.Option(None, "--project", help="Project name"),
+    env_file: Optional[Path] = typer.Option(None, "--env-file", help="Override env file"),
+    project: Optional[str] = typer.Option(None, "--project", help="Project name (legacy)"),
     root: Path = typer.Option(Path(DEFAULT_ROOT_DIR_NAME), "--root", help="Root dir"),
 ):
-    """Check if API Key is configured."""
-    env_key = os.getenv("FLUXLOOP_SYNC_API_KEY") or os.getenv("FLUXLOOP_API_KEY")
+    """Check if API Key is configured.
     
-    if env_key:
+    Checks in order: environment variable → .fluxloop/.env → legacy paths
+    """
+    # 1. Check environment variable
+    env_key = os.getenv("FLUXLOOP_SYNC_API_KEY") or os.getenv("FLUXLOOP_API_KEY")
+    if env_key and env_key != "your-api-key-here":
         masked = "****" + env_key[-4:] if len(env_key) > 4 else "****"
         console.print(f"[green]✓[/green] API Key set: {masked}")
         console.print("[dim]Source: environment variable[/dim]")
         return
     
-    env_path = resolve_env_path(env_file, project, root)
+    # 2. Check workspace .fluxloop/.env
+    workspace_env = _get_workspace_env_path()
+    if workspace_env and workspace_env.exists():
+        for line in workspace_env.read_text().splitlines():
+            if line.startswith("FLUXLOOP_SYNC_API_KEY=") or line.startswith("FLUXLOOP_API_KEY="):
+                val = line.split("=", 1)[1].strip()
+                if val and val != "your-api-key-here":
+                    masked = "****" + val[-4:] if len(val) > 4 else "****"
+                    console.print(f"[green]✓[/green] API Key set: {masked}")
+                    console.print(f"[dim]Source: {workspace_env}[/dim]")
+                    return
+    
+    # 3. Check explicit env file or legacy path
+    if env_file:
+        env_path = env_file.expanduser().resolve()
+    else:
+        env_path = resolve_env_path(Path(".env"), project, root)
     
     if env_path.exists():
         for line in env_path.read_text().splitlines():
             if line.startswith("FLUXLOOP_SYNC_API_KEY=") or line.startswith("FLUXLOOP_API_KEY="):
                 val = line.split("=", 1)[1].strip()
-                if val:
+                if val and val != "your-api-key-here":
                     masked = "****" + val[-4:] if len(val) > 4 else "****"
                     console.print(f"[green]✓[/green] API Key set: {masked}")
                     console.print(f"[dim]Source: {env_path}[/dim]")
-                    return
-    
-    cwd_env = Path.cwd() / ".env"
-    if cwd_env != env_path and cwd_env.exists():
-        for line in cwd_env.read_text().splitlines():
-            if line.startswith("FLUXLOOP_SYNC_API_KEY=") or line.startswith("FLUXLOOP_API_KEY="):
-                val = line.split("=", 1)[1].strip()
-                if val:
-                    masked = "****" + val[-4:] if len(val) > 4 else "****"
-                    console.print(f"[green]✓[/green] API Key set: {masked}")
-                    console.print(f"[dim]Source: {cwd_env}[/dim]")
                     return
     
     console.print("[yellow]✗[/yellow] API Key not set")

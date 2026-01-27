@@ -39,6 +39,25 @@ Manages the complete test cycle for AI agents.
 | **Input Set** | Generated test inputs (`input_set_id`) |
 | **Bundle** | Published snapshot of inputs + personas (`bundle_version_id`) |
 
+### Workspace Structure
+```
+project_root/
+  .fluxloop/
+    project.json          # Web Project connection
+    context.json          # Current scenario pointer
+    .env                  # API key (shared by all scenarios)
+    scenarios/
+      scenario-a/
+        .env              # Scenario-specific env (OPENAI_API_KEY, etc.)
+        agents/           # Agent wrapper files
+          wrapper.py
+        configs/          # simulation.yaml, evaluation.yaml
+        inputs/           # Generated test inputs
+        experiments/      # Test results
+      scenario-b/
+        ...
+```
+
 ---
 
 ## Phase 0: Context Check (Always First!)
@@ -99,15 +118,21 @@ pwd  # Should be your project directory, NOT ~
 
 # 1. Initialize local folder (creates .fluxloop/scenarios/<name>/)
 fluxloop init scenario order-bot
-cd .fluxloop/scenarios/order-bot
 
 # 2. Create and refine web scenario
 fluxloop scenarios create --name "Order Bot" --goal "..."
 fluxloop scenarios refine --scenario-id <id>
 
-# 3. Create API key
+# 3. Create API key (saves to .fluxloop/.env, shared by all scenarios)
 fluxloop apikeys create
+
+# 4. Set up agent wrapper (if complex agent - see "Agent Wrapper Setup" section)
+#    Create: .fluxloop/scenarios/<name>/agents/wrapper.py
+#    Update: configs/simulation.yaml → runner.target: "agents.wrapper:run"
 ```
+
+> **Note:** API keys are project-scoped and stored in `.fluxloop/.env`.
+> All scenarios in the workspace share the same API key.
 
 **Common mistake:** Running `init scenario` from home directory creates in `~/.fluxloop/` instead of workspace.
 
@@ -164,23 +189,23 @@ Key info to display: **version/name, tag/description, count, created date**
 
 **Use existing bundle (2 commands):**
 ```bash
-fluxloop sync pull --bundle-version-id <id>
+fluxloop sync pull --bundle-version-id <id>  # Auto-saves to current scenario
 fluxloop test --scenario <name>
 ```
 
 **Use existing input set (3 commands):**
 ```bash
 fluxloop bundles publish --scenario-id <id> --input-set-id <id>
-fluxloop sync pull --bundle-version-id <id>
+fluxloop sync pull --bundle-version-id <id>  # Auto-saves to current scenario
 fluxloop test --scenario <name>
 ```
 
 **Full generation (5 commands):**
 ```bash
 fluxloop personas suggest --scenario-id <id>
-fluxloop inputs synthesize --scenario-id <id>
+fluxloop inputs synthesize --scenario-id <id>  # Use --timeout 300 for large sets
 fluxloop bundles publish --scenario-id <id> --input-set-id <id>
-fluxloop sync pull --bundle-version-id <id>
+fluxloop sync pull --bundle-version-id <id>    # Auto-saves to current scenario
 fluxloop test --scenario <name>
 ```
 
@@ -188,9 +213,11 @@ fluxloop test --scenario <name>
 
 ## Phase 4: Run Test
 
+**Pre-check:** Ensure wrapper is configured (see "Agent Wrapper Setup" section)
+
 ```bash
 # Always run sync pull and test separately
-fluxloop sync pull --bundle-version-id <id>
+fluxloop sync pull --bundle-version-id <id>   # Auto-uses current scenario
 fluxloop test --scenario <name>
 ```
 
@@ -203,148 +230,84 @@ cat .fluxloop/scenarios/<name>/.state/latest_result.md
 
 ---
 
-## Example Conversations
+## Agent Wrapper Setup
 
-### Example 1: "Run test"
+To run tests, FluxLoop needs to invoke your agent.
+The `runner.target` in `configs/simulation.yaml` must point to the agent entry point.
 
-```
-User: "Run test"
+### When is Wrapper Needed?
 
-Agent: [Check context]
-       
-       📋 Current state:
-       - Project: order-bot
-       - Scenario: order-cancel
-       - Existing bundle: v2 (10 inputs, created 3 days ago)
-       
-       What would you like to do?
-       1. Run test with existing bundle (v2)
-       2. Generate new inputs and test
-       3. Select different scenario
+| Agent Type | Wrapper? | Description |
+|------------|----------|-------------|
+| Simple function `def run(input: str) -> str` | ❌ | Direct call |
+| Class/stateful agent | ✅ | Wrap initialization |
+| External dependencies (DB, broker, API) | ✅ | Wrap dependency injection |
+| Needs conversation_id or context | ✅ | Wrap metadata handling |
 
-User: "1"
+### Setup Steps
 
-Agent: [Execute]
-       → fluxloop sync pull --bundle-version-id <v2_id>
-       → fluxloop test --scenario order-cancel
-       
-       ✅ 8/10 passed (80%)
-```
+1. Create wrapper: `.fluxloop/scenarios/<name>/agents/wrapper.py`
+2. Update `configs/simulation.yaml` → `runner.target: "agents.wrapper:run"`
+3. Run test
 
-### Example 2: "Test with new inputs"
+### Wrapper Template
 
-```
-User: "Test with new inputs"
+```python
+# agents/wrapper.py
+import uuid
+from my_agent import AgentService
 
-Agent: [Check context - scenario exists, new generation requested]
-       
-       Generating new inputs and running test.
-       
-       [Execute]
-       → fluxloop personas suggest --scenario-id <id>
-       → fluxloop inputs synthesize --scenario-id <id>
-       → fluxloop bundles publish --scenario-id <id> --input-set-id <id>
-       → fluxloop sync pull --bundle-version-id <id>
-       → fluxloop test --scenario <name>
-       
-       ✅ 9/10 passed (90%)
+_agent = None
+
+def run(input_text: str, metadata: dict = None) -> str:
+    """FluxLoop test entry point. Must return string."""
+    global _agent
+    if _agent is None:
+        _agent = AgentService()  # Initialize once
+    
+    conversation_id = str(uuid.uuid4())
+    response = _agent.process(conversation_id, input_text)
+    return str(response)
 ```
 
-### Example 3: First-time User
-
+```yaml
+# configs/simulation.yaml
+runner:
+  target: "agents.wrapper:run"
 ```
-User: "I want to test my agent"
 
-Agent: [Check context - none]
-       
-       This is your first time! Let's set up first.
-       
-       Are you logged in?
-       
-User: "No"
+### Async Wrapper
 
-Agent: → fluxloop auth login
-       (Browser opens)
-       
-       Let me know when you're done.
+```python
+def run(input_text: str, metadata: dict = None) -> str:
+    return asyncio.run(my_async_agent.process(input_text))
+```
 
-User: "Done"
+### Debug
 
-Agent: What agent are you testing?
-
-User: "Order cancellation chatbot"
-
-Agent: [Create project + scenario]
-       → fluxloop projects create --name "order-cancel-bot"
-       → fluxloop intent refine --intent "Order cancellation handling test"
-       → fluxloop init scenario order-cancel
-       → fluxloop scenarios create --name "Order Cancel" --goal "..."
-       → fluxloop scenarios refine --scenario-id <id>
-       → fluxloop apikeys create
-       
-       ✓ Setup complete
-       
-       Would you like to generate test data?
-
-User: "Yes"
-
-Agent: [Generate data + test]
-       ...
+```bash
+cd .fluxloop/scenarios/<name>
+python -c "from agents.wrapper import run; print(run('test'))"
 ```
 
 ---
 
-## Command Reference
+## Quick Reference
 
-### Context
-```bash
-fluxloop context show     # Current state
-fluxloop context clear    # Reset
-```
-
-### Auth
-```bash
-fluxloop auth login
-fluxloop auth status
-```
-
-### Projects
-```bash
-fluxloop projects list
-fluxloop projects select <id>
-fluxloop projects create --name X
-fluxloop intent refine --intent "..."
-```
-
-### Scenarios
-```bash
-fluxloop scenarios list
-fluxloop scenarios select <id>
-fluxloop scenarios create --name X --goal "..."
-fluxloop scenarios refine --scenario-id <id>
-fluxloop init scenario <name>
-```
-
-### Data (Always check with list first!)
-```bash
-fluxloop bundles list --scenario-id <id>
-fluxloop inputs list --scenario-id <id>
-fluxloop personas suggest --scenario-id <id>
-fluxloop inputs synthesize --scenario-id <id>
-fluxloop bundles publish --scenario-id <id> --input-set-id <id>
-```
-
-### Sync & Test (Always separate!)
-```bash
-fluxloop sync pull --bundle-version-id <id>
-fluxloop test --scenario <name>
-```
-
-### API Keys
-```bash
-fluxloop apikeys check
-fluxloop apikeys create
-```
+| Command | Description |
+|---------|-------------|
+| `fluxloop context show` | Check current state |
+| `fluxloop auth login` | Login |
+| `fluxloop projects select <id>` | Select project |
+| `fluxloop init scenario <name>` | Create local scenario folder |
+| `fluxloop scenarios create --name X --goal "..."` | Create web scenario |
+| `fluxloop apikeys create` | Create API key (saves to `.fluxloop/.env`) |
+| `fluxloop bundles list --scenario-id <id>` | List existing bundles |
+| `fluxloop personas suggest --scenario-id <id>` | Generate personas |
+| `fluxloop inputs synthesize --scenario-id <id>` | Generate inputs (use `--timeout 300` for large) |
+| `fluxloop bundles publish --scenario-id <id> --input-set-id <id>` | Publish bundle |
+| `fluxloop sync pull --bundle-version-id <id>` | Pull bundle (auto-uses current scenario) |
+| `fluxloop test --scenario <name>` | Run test |
 
 ---
 
@@ -357,7 +320,11 @@ fluxloop apikeys create
 | `Sync API key not set` | `fluxloop apikeys create` |
 | `Inputs file not found` | `fluxloop sync pull --bundle-version-id <id>` |
 | `No personas found` | `fluxloop personas suggest --scenario-id <id>` first |
+| `Synthesis timed out` | Use `--timeout 300` or reduce `--total-count` |
 | Scenario created in `~/.fluxloop/` | Run from workspace root, not home. Do `projects select` first. |
+| `ModuleNotFoundError` in test | Check `runner.target` in simulation.yaml, ensure wrapper is in Python path |
+| `TypeError: run() missing argument` | Wrapper must accept `(input_text: str, metadata: dict = None)` |
+| Agent returns None | Ensure wrapper returns string, not None |
 
 ---
 
@@ -368,3 +335,4 @@ fluxloop apikeys create
 3. **Ask user before executing** (NO auto-execution)
 4. **Run sync pull + test separately** (Do NOT use `--pull`)
 5. **Use explicit IDs** (`--bundle-version-id`, `--scenario-id`)
+6. **Complex agents need wrapper** (See "Agent Wrapper Setup" section)
