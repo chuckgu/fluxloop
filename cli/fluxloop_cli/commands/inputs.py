@@ -154,8 +154,16 @@ def synthesize(
                 count = persona_info.get("count", 0)
                 console.print(f"[green]✓[/green] Persona: {persona_name} ({count} inputs)")
 
-        # Show total count
-        total_generated = data.get("total_count", 0)
+        # Show total count (fallback to item list when API omits total_count)
+        total_generated = data.get("total_count")
+        if total_generated is None:
+            for key in ("items", "input_items", "inputs"):
+                items = data.get(key)
+                if isinstance(items, list):
+                    total_generated = len(items)
+                    break
+        if total_generated is None:
+            total_generated = 0
         console.print()
         console.print(f"[bold]Synthesis complete: {total_generated} inputs generated[/bold]")
 
@@ -186,8 +194,13 @@ def synthesize(
 
         # Next steps
         if "input_set_id" in data and not dry_run:
+            input_set_id = data["input_set_id"]
+            console.print("\n[bold]Next steps:[/bold]")
             console.print(
-                f"\n[dim]Quality check: fluxloop inputs qc --input-set-id {data['input_set_id']}[/dim]"
+                f"  [dim]1. Quality check: fluxloop inputs qc --scenario-id {scenario_id} --input-set-id {input_set_id}[/dim]"
+            )
+            console.print(
+                f"  [dim]2. Create bundle: fluxloop bundles publish --scenario-id {scenario_id} --input-set-id {input_set_id}[/dim]"
             )
 
     except Exception as e:
@@ -349,10 +362,13 @@ def qc(
         raise typer.Exit(1)
 
 
-@app.command()
-def list(
+@app.command("list")
+def list_inputs(
     scenario_id: Optional[str] = typer.Option(
         None, "--scenario-id", help="Filter by scenario ID"
+    ),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Filter by project ID"
     ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
@@ -363,11 +379,19 @@ def list(
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
     try:
         client = create_authenticated_client(api_url, use_jwt=True)
 
         # Build query params
-        params = {}
+        params = {"project_id": project_id}
         if scenario_id:
             params["scenario_id"] = scenario_id
 
@@ -379,18 +403,29 @@ def list(
 
         if not input_sets:
             console.print("[yellow]No input sets found.[/yellow]")
+            if scenario_id:
+                console.print(
+                    f"[dim]Create inputs: fluxloop inputs synthesize --scenario-id {scenario_id}[/dim]"
+                )
+            else:
+                console.print(
+                    "[dim]Create inputs: fluxloop inputs synthesize --scenario-id <id>[/dim]"
+                )
             return
 
         # Create table
         table = Table(title="Input Sets")
         table.add_column("Input Set ID", style="cyan")
-        table.add_column("Count", style="bold")
+        table.add_column("Version", style="bold")
         table.add_column("Created", style="dim")
 
         for input_set in input_sets:
+            # Support both 'id' and 'input_set_id' field names
+            set_id = input_set.get("input_set_id") or input_set.get("id", "N/A")
+            count = input_set.get("count") or input_set.get("version", 0)
             table.add_row(
-                input_set.get("input_set_id", "N/A"),
-                str(input_set.get("count", 0)),
+                set_id,
+                str(count),
                 input_set.get("created_at", "N/A"),
             )
 

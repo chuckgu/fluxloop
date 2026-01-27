@@ -396,6 +396,35 @@ fluxloop inputs synthesize --scenario-id X --total-count N # Synthesize inputs
 fluxloop inputs qc --scenario-id X         # Quality check
 ```
 
+### Bundles
+```bash
+fluxloop bundles list --scenario-id X          # List bundles
+fluxloop bundles publish --scenario-id X --input-set-id Y  # Create & publish
+fluxloop bundles show --bundle-version-id Z    # Show details
+```
+
+### Mid-Start Flow (Resuming from Existing Data)
+
+When starting from an existing scenario, check what already exists:
+
+```
+# 1. Check existing inputs
+fluxloop inputs list --scenario-id <scenario_id>
+  → If empty: fluxloop inputs synthesize --scenario-id <scenario_id>
+
+# 2. Check existing bundles
+fluxloop bundles list --scenario-id <scenario_id>
+  → If empty: fluxloop bundles publish --scenario-id <scenario_id> --input-set-id <input_set_id>
+
+# 3. Pull and test
+fluxloop sync pull --bundle-version-id <bundle_version_id>
+fluxloop test --scenario <scenario_name>
+```
+
+**Key IDs:**
+- `input_set_id`: Returned by `inputs synthesize` or listed in `inputs list`
+- `bundle_version_id`: Returned by `bundles publish` or listed in `bundles list`
+
 ---
 
 ## Error Handling

@@ -139,6 +139,9 @@ class LocalContext:
 def get_fluxloop_dir(base_dir: Optional[Path] = None) -> Path:
     """Get the .fluxloop workspace directory path."""
     base = base_dir or Path.cwd()
+    workspace_root = find_workspace_root(base)
+    if workspace_root:
+        return workspace_root / FLUXLOOP_DIR_NAME
     return base / FLUXLOOP_DIR_NAME
 
 

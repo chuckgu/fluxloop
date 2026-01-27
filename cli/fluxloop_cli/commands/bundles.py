@@ -2,6 +2,7 @@
 Bundle management commands for FluxLoop CLI.
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -15,6 +16,7 @@ from ..api_utils import (
     load_payload_file,
     resolve_api_url,
 )
+from ..context_manager import get_current_web_project_id
 from ..http_client import create_authenticated_client, post_with_retry
 
 app = typer.Typer(help="Manage test bundles")
@@ -25,6 +27,9 @@ console = Console()
 def publish(
     scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID for the bundle"),
     input_set_id: str = typer.Option(..., "--input-set-id", help="Input set ID to include"),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (auto-detected from context)"
+    ),
     name: Optional[str] = typer.Option(
         None, "--name", help="Bundle name"
     ),
@@ -44,15 +49,26 @@ def publish(
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
+    # Auto-generate name if not provided
+    if not name:
+        name = f"bundle-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
     # Build payload
     payload: Dict[str, Any] = {
+        "project_id": project_id,
         "scenario_id": scenario_id,
         "input_set_id": input_set_id,
+        "name": name,
         "status": "draft",
     }
-
-    if name:
-        payload["name"] = name
 
     # Override with file if provided
     if file:
@@ -70,7 +86,8 @@ def publish(
         handle_api_error(resp, "bundle creation")
 
         data = resp.json()
-        bundle_version_id = data.get("bundle_version_id")
+        # Support both 'id' and 'bundle_version_id' field names
+        bundle_version_id = data.get("bundle_version_id") or data.get("id")
 
         if not bundle_version_id:
             raise ValueError("Bundle creation succeeded but no bundle_version_id returned")
@@ -124,6 +141,9 @@ def publish(
 def create(
     scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID for the bundle"),
     input_set_id: str = typer.Option(..., "--input-set-id", help="Input set ID to include"),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (auto-detected from context)"
+    ),
     name: Optional[str] = typer.Option(
         None, "--name", help="Bundle name"
     ),
@@ -139,15 +159,26 @@ def create(
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
+    # Auto-generate name if not provided
+    if not name:
+        name = f"bundle-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
     # Build payload
     payload: Dict[str, Any] = {
+        "project_id": project_id,
         "scenario_id": scenario_id,
         "input_set_id": input_set_id,
+        "name": name,
         "status": "draft",
     }
-
-    if name:
-        payload["name"] = name
 
     # Override with file if provided
     if file:
@@ -164,9 +195,12 @@ def create(
 
         data = resp.json()
 
+        # Support both 'id' and 'bundle_version_id' field names
+        bundle_id = data.get("bundle_version_id") or data.get("id", "N/A")
+
         console.print()
         console.print(
-            f"[green]✓[/green] Bundle created: [bold]{data.get('bundle_version_id', 'N/A')}[/bold]"
+            f"[green]✓[/green] Bundle created: [bold]{bundle_id}[/bold]"
         )
         console.print(f"  Status: {data.get('status', 'draft')}")
 
@@ -178,10 +212,13 @@ def create(
         raise typer.Exit(1)
 
 
-@app.command()
-def list(
+@app.command("list")
+def list_bundles(
     scenario_id: Optional[str] = typer.Option(
         None, "--scenario-id", help="Filter by scenario ID"
+    ),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Filter by project ID"
     ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
@@ -192,11 +229,19 @@ def list(
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
     try:
         client = create_authenticated_client(api_url, use_jwt=True)
 
         # Build query params
-        params = {}
+        params = {"project_id": project_id}
         if scenario_id:
             params["scenario_id"] = scenario_id
 
@@ -208,6 +253,14 @@ def list(
 
         if not bundles:
             console.print("[yellow]No bundles found.[/yellow]")
+            if scenario_id:
+                console.print(
+                    f"[dim]Create one: fluxloop bundles publish --scenario-id {scenario_id} --input-set-id <input_set_id>[/dim]"
+                )
+            else:
+                console.print(
+                    "[dim]Create one: fluxloop bundles publish --scenario-id <id> --input-set-id <id>[/dim]"
+                )
             return
 
         # Create table

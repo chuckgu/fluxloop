@@ -213,6 +213,34 @@ def resolve_env_path(env_file: Path, project: Optional[str], root: Optional[Path
     if env_file != Path(".env"):
         return resolve_project_relative(env_file, project, root)
 
+    # Prefer scenario .env when running inside a scenario directory
+    scenario_root = find_scenario_root()
+    if scenario_root:
+        return _normalize_path(scenario_root / ".env")
+
+    # If context points to a scenario, use that scenario's .env
+    try:
+        from .context_manager import find_workspace_root, load_context
+
+        workspace_root = find_workspace_root()
+        if workspace_root:
+            context = load_context(workspace_root)
+            if context and context.current_scenario and context.current_scenario.local_path:
+                scenario_dir = (
+                    workspace_root
+                    / FLUXLOOP_DIR_NAME
+                    / context.current_scenario.local_path
+                )
+                return _normalize_path(scenario_dir / ".env")
+            scenarios_dir = workspace_root / FLUXLOOP_DIR_NAME / SCENARIOS_DIR_NAME
+            if scenarios_dir.exists():
+                scenario_dirs = [entry for entry in scenarios_dir.iterdir() if entry.is_dir()]
+                if len(scenario_dirs) == 1:
+                    return _normalize_path(scenario_dirs[0] / ".env")
+    except Exception:
+        # Fall back to legacy resolution if context isn't available
+        pass
+
     if project:
         project_dir = resolve_project_dir(project, root)
         project_env = project_dir / ".env"

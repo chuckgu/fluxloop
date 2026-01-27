@@ -18,6 +18,7 @@ from rich.console import Console
 
 from ..config_loader import load_experiment_config
 from ..constants import DEFAULT_CONFIG_PATH, FLUXLOOP_DIR_NAME, SCENARIOS_DIR_NAME
+from ..context_manager import get_current_web_project_id
 from ..environment import load_env_chain
 from ..project_paths import resolve_config_path
 from ..turns import load_turns, summarize_turns, utc_now_iso
@@ -465,6 +466,13 @@ def pull(
     _load_env(scenario)
     api_url = _resolve_api_url(api_url)
     api_key = _resolve_api_key(api_key)
+
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id and not bundle_version_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
 
     payload: Dict[str, Any] = {
         "bundle_version_id": bundle_version_id,
