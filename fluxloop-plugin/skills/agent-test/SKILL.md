@@ -62,6 +62,23 @@ and executes the full workflow without requiring web visits (after initial login
 
 ---
 
+## Prerequisites (First-Time Only)
+
+If `fluxloop` command is not found, install first:
+
+```bash
+# Check if installed
+fluxloop --version
+
+# If not installed:
+uv tool install fluxloop-cli
+# OR: pip install fluxloop-cli
+```
+
+> For detailed setup, run `/fluxloop:setup`
+
+---
+
 ## Phase 0: Context Check
 
 ```bash
