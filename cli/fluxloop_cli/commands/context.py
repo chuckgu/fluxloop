@@ -15,6 +15,7 @@ from ..api_utils import (
     save_cache_file,
 )
 from ..http_client import create_authenticated_client, post_with_retry
+from ..context_manager import get_current_web_project_id
 
 app = typer.Typer(help="Manage intent and context refinement")
 console = Console()
@@ -25,11 +26,14 @@ def refine(
     intent: Optional[str] = typer.Option(
         None, "--intent", help="User intent description"
     ),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (defaults to current context)"
+    ),
     scenario_id: Optional[str] = typer.Option(
         None, "--scenario-id", help="Associated scenario ID"
     ),
     apply: bool = typer.Option(
-        False, "--apply", help="Apply refinements to scenario"
+        True, "--apply/--no-apply", help="Apply refinements to project context"
     ),
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
@@ -40,11 +44,24 @@ def refine(
 ):
     """
     Refine intent and extract constraints using AI.
+    
+    Uses current project from context if --project-id is not specified.
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
     # Build payload
-    payload: Dict[str, Any] = {"apply": apply}
+    payload: Dict[str, Any] = {
+        "project_id": project_id,
+        "apply": apply,
+    }
 
     if intent:
         payload["intent"] = intent
@@ -87,6 +104,9 @@ def refine(
             console.print(f"\n  [bold cyan]Constraints:[/bold cyan]")
             for constraint in data["constraints"]:
                 console.print(f"    - {constraint}")
+
+        if apply:
+            console.print("\n[green]✓[/green] Saved to project context")
 
         # Save to cache
         cache_filename = f"{scenario_id}_context.yaml" if scenario_id else "latest_context.yaml"

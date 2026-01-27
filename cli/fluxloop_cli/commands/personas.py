@@ -16,6 +16,7 @@ from ..api_utils import (
     save_cache_file,
 )
 from ..http_client import create_authenticated_client, post_with_retry
+from ..context_manager import get_current_web_project_id
 
 app = typer.Typer(help="Manage test personas")
 console = Console()
@@ -24,6 +25,9 @@ console = Console()
 @app.command()
 def suggest(
     scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID for persona suggestions"),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (defaults to current context)"
+    ),
     count: int = typer.Option(3, "--count", help="Number of personas to suggest"),
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
@@ -34,11 +38,22 @@ def suggest(
 ):
     """
     Get AI-suggested personas for a scenario.
+    
+    Uses current project from context if --project-id is not specified.
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
     # Build payload
     payload: Dict[str, Any] = {
+        "project_id": project_id,
         "scenario_id": scenario_id,
         "count": count,
     }
@@ -58,6 +73,19 @@ def suggest(
 
         data = resp.json()
         personas = data if isinstance(data, list) else data.get("personas", [])
+        suggested_ids: List[str] = []
+        if isinstance(data, dict):
+            raw_ids = data.get("persona_ids")
+            if isinstance(raw_ids, list):
+                suggested_ids = [
+                    pid for pid in raw_ids if isinstance(pid, str) and pid
+                ]
+        if not suggested_ids and isinstance(personas, list):
+            suggested_ids = [
+                persona.get("id")
+                for persona in personas
+                if isinstance(persona, dict) and isinstance(persona.get("id"), str)
+            ]
 
         if not personas:
             console.print("[yellow]No personas suggested.[/yellow]")
@@ -91,15 +119,17 @@ def suggest(
 
         # Save to cache
         cache_path = save_cache_file(
-            "personas", f"suggested_{scenario_id}.yaml", {"personas": personas}
+            "personas",
+            f"suggested_{scenario_id}.yaml",
+            {"persona_ids": suggested_ids, "personas": personas},
         )
         console.print(f"\n[dim]Saved to: {cache_path}[/dim]")
 
         # Show next steps
-        if personas and "id" in personas[0]:
-            ids = ",".join(p.get("id", "") for p in personas if "id" in p)
+        if suggested_ids:
+            ids = ",".join(suggested_ids)
             console.print(
-                f"\n[dim]To select: fluxloop personas select --ids {ids} --scenario-id {scenario_id}[/dim]"
+                f"\n[dim]Use in synthesis: fluxloop inputs synthesize --scenario-id {scenario_id} --persona-ids {ids}[/dim]"
             )
 
     except Exception as e:
@@ -107,54 +137,8 @@ def suggest(
         raise typer.Exit(1)
 
 
-@app.command()
-def select(
-    ids: str = typer.Option(..., "--ids", help="Comma-separated persona IDs to select"),
-    scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID to associate personas with"),
-    api_url: Optional[str] = typer.Option(
-        None, "--api-url", help="FluxLoop API base URL"
-    ),
-):
-    """
-    Select personas for a scenario.
-    """
-    api_url = resolve_api_url(api_url)
-
-    # Parse persona IDs
-    persona_ids: List[str] = [pid.strip() for pid in ids.split(",") if pid.strip()]
-
-    if not persona_ids:
-        raise typer.BadParameter("No persona IDs provided")
-
-    # Build payload
-    payload: Dict[str, Any] = {
-        "persona_ids": persona_ids,
-    }
-
-    try:
-        console.print(f"[cyan]Selecting {len(persona_ids)} personas for scenario {scenario_id}...[/cyan]")
-
-        client = create_authenticated_client(api_url, use_jwt=True)
-        resp = post_with_retry(
-            client,
-            f"/api/scenarios/{scenario_id}/personas",
-            payload=payload
-        )
-
-        handle_api_error(resp, f"persona selection for scenario {scenario_id}")
-
-        console.print()
-        console.print(
-            f"[green]✓[/green] {len(persona_ids)} personas selected for scenario {scenario_id}"
-        )
-
-    except Exception as e:
-        console.print(f"[red]✗[/red] Selection failed: {e}", style="bold red")
-        raise typer.Exit(1)
-
-
-@app.command()
-def list(
+@app.command("list")
+def list_personas(
     scenario_id: Optional[str] = typer.Option(
         None, "--scenario-id", help="Filter by scenario ID"
     ),

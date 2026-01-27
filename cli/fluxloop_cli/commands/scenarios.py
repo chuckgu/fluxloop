@@ -3,7 +3,7 @@ Scenario management commands for FluxLoop CLI.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
@@ -20,6 +20,7 @@ from ..http_client import create_authenticated_client, post_with_retry
 from ..context_manager import (
     get_current_project_id,
     get_current_scenario_id,
+    get_current_web_project_id,
     set_scenario,
 )
 
@@ -30,8 +31,11 @@ console = Console()
 @app.command()
 def refine(
     scenario_id: str = typer.Option(..., "--scenario-id", help="Scenario ID to refine"),
+    project_id: Optional[str] = typer.Option(
+        None, "--project-id", help="Project ID (defaults to current context)"
+    ),
     apply: bool = typer.Option(
-        False, "--apply", help="Apply refinements to scenario"
+        True, "--apply/--no-apply", help="Apply refinements to scenario"
     ),
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load payload from YAML or JSON file"
@@ -42,11 +46,22 @@ def refine(
 ):
     """
     Refine scenario goal and constraints using AI.
+    
+    Uses current project from context if --project-id is not specified.
     """
     api_url = resolve_api_url(api_url)
 
+    # Use context if no project_id specified
+    if not project_id:
+        project_id = get_current_web_project_id()
+        if not project_id:
+            console.print("[yellow]No Web Project selected.[/yellow]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
+            raise typer.Exit(1)
+
     # Build payload
     payload: Dict[str, Any] = {
+        "project_id": project_id,
         "scenario_id": scenario_id,
         "apply": apply,
     }
@@ -98,8 +113,20 @@ def create(
     description: Optional[str] = typer.Option(
         None, "--description", help="Scenario description"
     ),
+    goal: Optional[str] = typer.Option(
+        None, "--goal", help="Scenario goal (one sentence objective)"
+    ),
+    constraint: Optional[List[str]] = typer.Option(
+        None, "--constraint", help="Constraint (can be specified multiple times)"
+    ),
+    assumption: Optional[List[str]] = typer.Option(
+        None, "--assumption", help="Assumption/prerequisite (can be specified multiple times)"
+    ),
+    success_criteria: Optional[List[str]] = typer.Option(
+        None, "--success-criteria", help="Success criteria (can be specified multiple times)"
+    ),
     config_file: Optional[Path] = typer.Option(
-        None, "--config-file", help="Path to config file for snapshot"
+        None, "--config-file", help="Path to config file for snapshot (overrides inline options)"
     ),
     file: Optional[Path] = typer.Option(
         None, "--file", "-f", help="Load full payload from YAML or JSON file"
@@ -115,6 +142,24 @@ def create(
     Create a new test scenario.
     
     Uses current project from context if --project-id is not specified.
+    
+    Config snapshot can be provided via:
+    1. Inline options: --goal, --constraint, --assumption, --success-criteria
+    2. Config file: --config-file <path>
+    3. Full payload file: --file <path>
+    
+    Priority: --file > --config-file > inline options > default (goal=name)
+    
+    Examples:
+        # Minimal (uses name as goal)
+        fluxloop scenarios create --name "SQL Query Test"
+        
+        # With inline options
+        fluxloop scenarios create --name "SQL Query Test" \\
+            --goal "Test SQL query execution and result interpretation" \\
+            --constraint "Response must be in Korean" \\
+            --constraint "Response time under 30 seconds" \\
+            --assumption "User has no SQL knowledge"
     """
     api_url = resolve_api_url(api_url)
     
@@ -123,26 +168,42 @@ def create(
         project_id = get_current_project_id()
         if not project_id:
             console.print("[yellow]No project selected.[/yellow]")
-            console.print("[dim]Select one with: fluxloop context set-project <id>[/dim]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
             raise typer.Exit(1)
+
+    # Build config_snapshot from inline options (lowest priority)
+    config_snapshot: Dict[str, Any] = {}
+    
+    # Use name as default goal if no goal specified
+    effective_goal = goal if goal else name
+    config_snapshot["goal"] = effective_goal
+    
+    if constraint:
+        config_snapshot["constraints"] = constraint
+    
+    if assumption:
+        config_snapshot["assumptions"] = assumption
+    
+    if success_criteria:
+        config_snapshot["success_criteria"] = success_criteria
+
+    # Override with config_file if provided (medium priority)
+    if config_file:
+        if not config_file.exists():
+            raise typer.BadParameter(f"Config file not found: {config_file}")
+        config_snapshot = load_payload_file(config_file)
 
     # Build payload
     payload: Dict[str, Any] = {
         "name": name,
         "project_id": project_id,
-        "config_snapshot": {},  # Default empty snapshot (required by backend)
+        "config_snapshot": config_snapshot,
     }
 
     if description:
         payload["description"] = description
 
-    if config_file:
-        if not config_file.exists():
-            raise typer.BadParameter(f"Config file not found: {config_file}")
-        config_data = load_payload_file(config_file)
-        payload["config_snapshot"] = config_data
-
-    # Override with file if provided
+    # Override with file if provided (highest priority)
     if file:
         file_data = load_payload_file(file)
         payload.update(file_data)
@@ -262,7 +323,7 @@ def list_scenarios(
         project_id = get_current_project_id()
         if not project_id:
             console.print("[yellow]No project selected.[/yellow]")
-            console.print("[dim]Select one with: fluxloop context set-project <id>[/dim]")
+            console.print("[dim]Select one with: fluxloop projects select <id>[/dim]")
             raise typer.Exit(1)
 
     try:

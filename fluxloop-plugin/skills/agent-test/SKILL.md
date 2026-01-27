@@ -37,14 +37,28 @@ and executes the full workflow without requiring web visits (after initial login
 ## Quick Reference: Setup Flow
 
 ```
-1. fluxloop auth login              # Login (if needed)
-2. fluxloop projects select <id>    # Select Web Project
-3. fluxloop init scenario X         # Create local scenario folder
-4. cd .fluxloop/scenarios/X         # Enter scenario directory
-5. fluxloop scenarios create --name "X"  # Create Web Scenario
-6. fluxloop apikeys create          # Create API Key
-7. fluxloop test                    # Run test
+1. fluxloop auth login                                        # Login
+
+# Project: Choose ONE
+   fluxloop projects select <id>                              # Use existing (intent already set)
+   fluxloop projects create --name "X" && fluxloop intent refine --intent "..."  # Create new + set intent
+
+2. fluxloop init scenario X && cd .fluxloop/scenarios/X       # Create local folder
+
+# Scenario: Choose ONE
+   fluxloop scenarios select <id>                             # Use existing (goal already set)
+   fluxloop scenarios create --name "X" --goal "..." --constraint "..."  # Create new with goal
+
+3. fluxloop apikeys create                                    # API Key (for sync)
+4. fluxloop personas suggest --scenario-id <id>               # Generate personas
+5. fluxloop inputs synthesize --scenario-id <id>              # Generate test inputs
+6. fluxloop test                                              # Run test
 ```
+
+| Resource | New | Existing |
+|----------|-----|----------|
+| **Project** | `projects create` → `intent refine` | `projects select` |
+| **Scenario** | `scenarios create --goal "..."` | `scenarios select` |
 
 ---
 
@@ -95,8 +109,9 @@ fluxloop projects list
 # Select existing project (creates .fluxloop/project.json)
 fluxloop projects select <project_id>
 
-# Or create new project
+# Or create new project (new projects should set intent)
 fluxloop projects create --name "my-agent"
+fluxloop intent refine --intent "Order cancellation flows"
 ```
 
 ---
@@ -132,8 +147,27 @@ This creates:
 ## Phase 4: Web Scenario Setup
 
 ```bash
-# Create Web Scenario (uses current Web Project)
-fluxloop scenarios create --name "Order Cancellation" --description "Angry customer handling"
+# Create Web Scenario with inline options (recommended)
+# Fill each option based on the user's request:
+fluxloop scenarios create --name "Order Cancellation" \
+  --description "Angry customer handling" \
+  --goal "Test order cancellation handling for frustrated customers" \
+  --constraint "Response must be polite and empathetic" \
+  --constraint "Refund policy must be clearly explained" \
+  --assumption "Customer has valid order in system" \
+  --success-criteria "Customer receives cancellation confirmation"
+
+# Options:
+#   --goal: one sentence describing the test objective
+#   --constraint: hard requirement (can be repeated)
+#   --assumption: environment or data assumption (can be repeated)
+#   --success-criteria: how to judge success (can be repeated)
+#
+# Minimal version (uses name as goal):
+#   fluxloop scenarios create --name "Order Cancellation"
+#
+# Alternative: use config file instead of inline options
+#   fluxloop scenarios create --name "X" --config-file configs/scenario_snapshot.json
 
 # List scenarios
 fluxloop scenarios list
@@ -194,27 +228,30 @@ If missing, synthesize:
 # 1. Get scenario_id
 fluxloop scenarios list
 
-# 2. Refine intent/context
-fluxloop intent refine --intent "Order cancellation flows" --scenario-id <scenario_id> --apply
+# 2. Refine intent/context (auto-saves to project context)
+fluxloop intent refine --intent "Order cancellation flows"
 
-# 3. Refine scenario
+# 3. Refine scenario (auto-saves to scenario snapshot)
 fluxloop scenarios refine --scenario-id <scenario_id>
 
 # 4. Generate personas (REQUIRED)
 fluxloop personas suggest --scenario-id <scenario_id>
 
-# 5. Synthesize inputs
+# 5. Synthesize inputs (auto-uses suggested personas if --persona-ids not provided)
 fluxloop inputs synthesize --scenario-id <scenario_id> --total-count 10
 
-# 6. Pull to local
+# 6. (Optional) Pull to local
+# `fluxloop test` already runs sync pull by default.
 fluxloop sync pull --scenario <scenario_name>
 ```
 
-> ⚠️ **Important:** Personas must exist before synthesis. Without personas, `inputs synthesize` returns empty results.
+> ⚠️ **Important:**
+> - Web Project must be selected (`fluxloop projects select`)
+> - Personas must exist before synthesis. Without personas, `inputs synthesize` returns empty results.
 
 ---
 
-## Phase 7: Test Execution
+## Phase 7: Test Execution (includes sync pull)
 
 From workspace root:
 ```bash
@@ -336,7 +373,7 @@ fluxloop test --scenario X                # Run test
 
 ### Synthesis
 ```bash
-fluxloop intent refine --intent "..." --scenario-id X --apply   # Refine intent/context
+fluxloop intent refine --intent "..." --apply      # Refine project intent
 fluxloop personas suggest --scenario-id X  # Generate personas
 fluxloop inputs synthesize --scenario-id X --total-count N # Synthesize inputs
 fluxloop inputs qc --scenario-id X         # Quality check

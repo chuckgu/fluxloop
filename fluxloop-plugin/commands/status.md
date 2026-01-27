@@ -15,6 +15,5 @@ fluxloop auth status
 
 ## Description
 
-- Display login status and project information
-- Last sync time
-- Active bundle information
+- Display login status and token expiry
+- Show selected Web Project and Scenario (if set)

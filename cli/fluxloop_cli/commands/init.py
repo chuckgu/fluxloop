@@ -87,7 +87,7 @@ def scenario(
     scenarios_dir = ensure_scenarios_dir()
     
     scenario_path = scenarios_dir / name
-    
+
     console.print(f"\n[bold blue]Initializing FluxLoop scenario:[/bold blue] {name}")
     console.print(f"[dim]Location: {scenario_path}[/dim]")
     print(f"SCENARIO_PATH: {scenario_path}")
@@ -103,7 +103,7 @@ def scenario(
     # Create config directory and files
     config_dir = scenario_path / CONFIG_DIRECTORY_NAME
     config_dir.mkdir(exist_ok=True)
-    
+
     console.print("\n📝 Creating configuration files...")
     
     # Create scenario.yaml

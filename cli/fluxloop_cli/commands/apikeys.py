@@ -102,7 +102,7 @@ def create_api_key(
         project_id = get_current_project_id()
         if not project_id:
             console.print("[yellow]No project selected.[/yellow]")
-            console.print("[dim]Select: fluxloop context set-project <id>[/dim]")
+            console.print("[dim]Select: fluxloop projects select <id>[/dim]")
             raise typer.Exit(1)
     
     # Pre-check existing key

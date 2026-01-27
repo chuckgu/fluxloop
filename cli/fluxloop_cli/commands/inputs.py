@@ -88,6 +88,34 @@ def synthesize(
     if persona_ids:
         persona_id_list: List[str] = [pid.strip() for pid in persona_ids.split(",") if pid.strip()]
         payload["persona_ids"] = persona_id_list
+    else:
+        suggested_path = Path.home() / ".fluxloop" / "personas" / f"suggested_{scenario_id}.yaml"
+        if suggested_path.exists():
+            try:
+                suggested_payload = load_payload_file(suggested_path)
+                suggested_ids = suggested_payload.get("persona_ids")
+                if isinstance(suggested_ids, list):
+                    suggested_ids = [
+                        pid for pid in suggested_ids if isinstance(pid, str) and pid
+                    ]
+                else:
+                    suggested_ids = []
+                if not suggested_ids:
+                    personas_payload = suggested_payload.get("personas")
+                    if isinstance(personas_payload, list):
+                        suggested_ids = [
+                            persona.get("id")
+                            for persona in personas_payload
+                            if isinstance(persona, dict)
+                            and isinstance(persona.get("id"), str)
+                        ]
+                if suggested_ids:
+                    payload["persona_ids"] = suggested_ids
+                    console.print(
+                        f"[dim]Using suggested personas ({len(suggested_ids)}) from {suggested_path}[/dim]"
+                    )
+            except Exception as e:
+                console.print(f"[yellow]Failed to load suggested personas: {e}[/yellow]")
 
     if total_count is not None:
         payload["total_count"] = total_count
