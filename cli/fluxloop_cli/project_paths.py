@@ -130,10 +130,17 @@ def find_workspace_root(start_dir: Optional[Path] = None) -> Optional[Path]:
     Find the workspace root by looking for .fluxloop directory.
     
     Searches from start_dir upward until finding .fluxloop/.
+    
+    Note: Home directory (~) is excluded from workspace detection.
+    The global ~/.fluxloop/ is for auth/config only, not a project workspace.
     """
     current = (start_dir or Path.cwd()).resolve()
+    home_dir = Path.home().resolve()
     
     for parent in [current] + list(current.parents):
+        # Skip home directory - ~/.fluxloop is for global config, not workspace
+        if parent == home_dir:
+            continue
         fluxloop_dir = parent / FLUXLOOP_DIR_NAME
         if fluxloop_dir.exists() and fluxloop_dir.is_dir():
             return parent

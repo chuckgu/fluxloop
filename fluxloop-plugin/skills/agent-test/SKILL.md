@@ -87,8 +87,14 @@ fluxloop intent refine --intent "..."
 
 ## Phase 2: Create Scenario (Once per scenario)
 
+> ⚠️ **Important:** Run from workspace root (where `.fluxloop/` should be created).  
+> Phase 1 (`projects select`) must be done first to establish the workspace.
+
 ```bash
-# 1. Initialize local folder
+# 0. Ensure you're in workspace root (not home directory!)
+pwd  # Should be your project directory, NOT ~
+
+# 1. Initialize local folder (creates .fluxloop/scenarios/<name>/)
 fluxloop init scenario order-bot
 cd .fluxloop/scenarios/order-bot
 
@@ -99,6 +105,8 @@ fluxloop scenarios refine --scenario-id <id>
 # 3. Create API key
 fluxloop apikeys create
 ```
+
+**Common mistake:** Running `init scenario` from home directory creates in `~/.fluxloop/` instead of workspace.
 
 ---
 
@@ -346,6 +354,7 @@ fluxloop apikeys create
 | `Sync API key not set` | `fluxloop apikeys create` |
 | `Inputs file not found` | `fluxloop sync pull --bundle-version-id <id>` |
 | `No personas found` | `fluxloop personas suggest --scenario-id <id>` first |
+| Scenario created in `~/.fluxloop/` | Run from workspace root, not home. Do `projects select` first. |
 
 ---
 
