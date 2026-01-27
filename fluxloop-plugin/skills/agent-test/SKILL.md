@@ -301,6 +301,8 @@ python -c "from agents.wrapper import run; print(run('test'))"
 | `fluxloop projects select <id>` | Select project |
 | `fluxloop init scenario <name>` | Create local scenario folder |
 | `fluxloop scenarios create --name X --goal "..."` | Create web scenario |
+| `fluxloop scenarios select <id>` | Select scenario (auto-detects local folder) |
+| `fluxloop scenarios select <id> --local-path <folder>` | Select with explicit local folder |
 | `fluxloop apikeys create` | Create API key (saves to `.fluxloop/.env`) |
 | `fluxloop bundles list --scenario-id <id>` | List existing bundles |
 | `fluxloop personas suggest --scenario-id <id>` | Generate personas |
@@ -322,6 +324,7 @@ python -c "from agents.wrapper import run; print(run('test'))"
 | `No personas found` | `fluxloop personas suggest --scenario-id <id>` first |
 | `Synthesis timed out` | Use `--timeout 300` or reduce `--total-count` |
 | Scenario created in `~/.fluxloop/` | Run from workspace root, not home. Do `projects select` first. |
+| Local path mismatch in context | `fluxloop scenarios select <id> --local-path <folder>` |
 | `ModuleNotFoundError` in test | Check `runner.target` in simulation.yaml, ensure wrapper is in Python path |
 | `TypeError: run() missing argument` | Wrapper must accept `(input_text: str, metadata: dict = None)` |
 | Agent returns None | Ensure wrapper returns string, not None |

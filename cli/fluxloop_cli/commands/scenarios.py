@@ -17,12 +17,14 @@ from ..api_utils import (
     save_cache_file,
 )
 from ..http_client import create_authenticated_client, post_with_retry
+from ..constants import FLUXLOOP_DIR_NAME, SCENARIOS_DIR_NAME
 from ..context_manager import (
     get_current_project_id,
     get_current_scenario_id,
     get_current_web_project_id,
     set_scenario,
 )
+from ..project_paths import find_workspace_root
 
 app = typer.Typer(help="Manage test scenarios")
 console = Console()
@@ -372,15 +374,35 @@ def list_scenarios(
         raise typer.Exit(1)
 
 
+def _find_local_scenarios() -> List[str]:
+    """Find existing local scenario folders in .fluxloop/scenarios/."""
+    workspace_root = find_workspace_root()
+    if not workspace_root:
+        return []
+    scenarios_dir = workspace_root / FLUXLOOP_DIR_NAME / SCENARIOS_DIR_NAME
+    if not scenarios_dir.exists():
+        return []
+    return [
+        d.name for d in scenarios_dir.iterdir() 
+        if d.is_dir() and not d.name.startswith(".")
+    ]
+
+
 @app.command()
 def select(
     scenario_id: str = typer.Argument(..., help="Scenario ID to select"),
+    local_path: Optional[str] = typer.Option(
+        None, "--local-path", "-l", help="Local scenario folder name (in .fluxloop/scenarios/)"
+    ),
     api_url: Optional[str] = typer.Option(
         None, "--api-url", help="FluxLoop API base URL"
     ),
 ):
     """
     Select a scenario as the current working scenario.
+    
+    Use --local-path to specify which local folder to link.
+    If not specified, tries to find existing folders automatically.
     """
     api_url = resolve_api_url(api_url)
 
@@ -392,10 +414,32 @@ def select(
         data = resp.json()
 
         scenario_name = data.get("name", "Unknown")
-        set_scenario(scenario_id, scenario_name)
+        
+        # Determine local_path
+        effective_local_path = None
+        if local_path:
+            # User explicitly specified
+            effective_local_path = f"{SCENARIOS_DIR_NAME}/{local_path}"
+            console.print(f"[dim]Using local folder: {local_path}[/dim]")
+        else:
+            # Try to find existing folders
+            existing_folders = _find_local_scenarios()
+            if len(existing_folders) == 1:
+                # Only one folder exists, use it
+                effective_local_path = f"{SCENARIOS_DIR_NAME}/{existing_folders[0]}"
+                console.print(f"[dim]Auto-detected local folder: {existing_folders[0]}[/dim]")
+            elif len(existing_folders) > 1:
+                # Multiple folders, show warning
+                console.print(f"[yellow]⚠[/yellow] Multiple local folders found: {', '.join(existing_folders)}")
+                console.print(f"[dim]Using scenario name '{scenario_name}' as local path.[/dim]")
+                console.print(f"[dim]Use --local-path to specify a different folder.[/dim]")
+        
+        set_scenario(scenario_id, scenario_name, effective_local_path)
 
         console.print(f"[green]✓[/green] Scenario selected: [bold]{scenario_name}[/bold]")
         console.print(f"  ID: {scenario_id}")
+        if effective_local_path:
+            console.print(f"  Local: {effective_local_path}")
 
     except Exception as e:
         console.print(f"[red]✗[/red] Selection failed: {e}", style="bold red")
