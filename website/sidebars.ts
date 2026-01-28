@@ -2,15 +2,10 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-    {
-      type: 'doc',
-      id: 'intro',
-      label: 'Welcome',
-    },
+    'intro',
     {
       type: 'category',
       label: 'Getting Started',
-      collapsed: false,
       items: [
         'getting-started/installation',
         'getting-started/quick-start',
@@ -19,19 +14,26 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Guides',
+      label: 'Workflows',
       items: [
-        'guides/end-to-end-workflow',
-        'guides/ai-assistant-integration-guide',
+        'guides/local-testing-workflow',
         'guides/virtual-environment-setup',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Web Platform',
+      items: [
+        'platform/platform-overview',
+        'platform/projects-and-scenarios',
+        'platform/viewing-results',
+        'platform/api-keys',
       ],
     },
     {
       type: 'category',
       label: 'Advanced',
       items: [
-        'advanced/argument-replay',
-        'advanced/recording-mode',
         'advanced/custom-storage',
       ],
     },
@@ -40,8 +42,8 @@ const sidebars: SidebarsConfig = {
       label: 'Reference',
       items: [
         'reference/configuration',
-        'reference/artifacts',
         'reference/json-contract',
+        'reference/artifacts',
       ],
     },
   ],

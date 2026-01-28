@@ -768,6 +768,5 @@ variation_strategies:
 ## See Also
 
 - [Simulation Configuration](/cli/configuration/simulation-config) - Runner and experiment settings
-- [Evaluation Configuration](/cli/configuration/evaluation-config) - Evaluators configuration
 - [generate Command](/cli/commands/generate) - Input generation CLI
 - [Basic Workflow](/cli/workflows/basic-workflow) - Complete workflow guide

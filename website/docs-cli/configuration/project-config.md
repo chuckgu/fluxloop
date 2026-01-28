@@ -181,7 +181,7 @@ URL of remote FluxLoop collector service for centralized trace storage.
 
 **Offline Mode:**
 - Set to `null` to use offline/local-only mode
-- Traces saved to `experiments/` directory
+- Traces saved to `results/` directory
 - No network calls made
 
 **Configuration:**
@@ -457,7 +457,7 @@ Use environment-specific config:
 
 ```bash
 cp configs/project.prod.yaml configs/project.yaml
-fluxloop run experiment
+fluxloop test
 ```
 
 ### Team Conventions
@@ -476,6 +476,5 @@ Document in team wiki or `README.md`.
 
 - [Input Configuration](/cli/configuration/input-config) - Personas and input generation
 - [Simulation Configuration](/cli/configuration/simulation-config) - Runner and experiment settings
-- [Evaluation Configuration](/cli/configuration/evaluation-config) - Evaluators and success criteria
 - [config Command](/cli/commands/config) - Configuration management CLI
 - [Basic Workflow](/cli/workflows/basic-workflow) - Complete workflow guide

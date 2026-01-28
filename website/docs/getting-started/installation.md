@@ -44,21 +44,6 @@ You should see output like:
 FluxLoop CLI version 0.2.1
 ```
 
-## Optional: VSCode Extension
-
-If you use Visual Studio Code, install the FluxLoop extension for enhanced workflow:
-
-1. Open VSCode
-2. Go to Extensions (Cmd+Shift+X / Ctrl+Shift+X)
-3. Search for "FluxLoop"
-4. Click Install
-
-Or install from command line:
-
-```bash
-code --install-extension fluxloop
-```
-
 ## Virtual Environment Setup
 
 We recommend using a virtual environment:
@@ -85,5 +70,5 @@ Now that you have FluxLoop installed:
 
 - **[Quick Start](./quick-start)** - Create your first project
 - **[Core Concepts](./core-concepts)** - Understand the fundamentals
-- **[End-to-End Guide](../guides/end-to-end-workflow)** - Complete walkthrough
+- **[Local Testing Workflow](../guides/local-testing-workflow)** - Complete walkthrough
 

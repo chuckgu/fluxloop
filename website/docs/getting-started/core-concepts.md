@@ -4,151 +4,77 @@ sidebar_position: 3
 
 # Core Concepts
 
-Understanding these core concepts will help you use FluxLoop effectively.
+FluxLoop is built on a few key concepts that enable robust agent testing at scale.
 
 ## Agent
 
 An **agent** is any function that processes inputs and produces outputs. In FluxLoop, you mark agent entry points with the `@fluxloop.agent()` decorator:
 
 ```python
+import fluxloop
+
 @fluxloop.agent()
 def my_agent(prompt: str) -> str:
     return process(prompt)
 ```
 
+The decorator automatically captures execution data, timing, and results.
+
 ## Trace
 
-A **trace** represents a single execution of your agent with a specific input. Each trace captures:
+A **trace** is the complete record of a single agent execution. It captures:
+- **Inputs**: What the user said
+- **Outputs**: What the agent replied
+- **Steps**: Internal tool calls, LLM queries, and state changes
+- **Metrics**: Latency, token usage, and estimated cost
 
-- Input parameters
-- Output results
-- Execution metadata (timestamps, duration, etc.)
-- Observations (events, LLM calls, etc.)
+## Persona
 
-## Observation
+A **persona** is a synthetic user archetype. Instead of just testing "How do I start?", you test it from the perspective of a "frustrated novice" or a "technical power user". This helps uncover edge cases in how agents handle different tones and levels of expertise.
 
-An **observation** is an event that occurs during agent execution:
+## Scenario
 
-- LLM API calls
-- Tool invocations
-- State transitions
-- Custom events
+A **scenario** is a curated test case that combines personas, inputs, and expected outcomes. Scenarios can be:
+- **Local**: Defined in your `fluxloop.yaml` or YAML files.
+- **Cloud-managed**: Centrally managed on the Web Platform for team-wide consistency.
 
-FluxLoop automatically captures observations from supported frameworks (LangChain, LangGraph).
+## Test Run
 
-## Experiment
-
-An **experiment** runs your agent multiple times with different inputs:
-
-```bash
-fluxloop run experiment --iterations 100
-```
-
-Each experiment produces structured artifacts for analysis.
+A **test run** is a batch execution of one or more scenarios. When you run `fluxloop test`, you create a local test run. When you upload it, it becomes a permanent record on the Web Platform.
 
 ## Input Generation
 
-**Input generation** creates test input variations using:
+FluxLoop uses LLMs to generate realistic **input variations**. From a single base input like "Where is my order?", FluxLoop can generate 100 variations like:
+- "Can you tell me where my package is?" (Polite)
+- "Still waiting for my delivery, any updates?" (Impatient)
+- "Order #12345 status please." (Concise)
 
-- **LLM mode**: Use GPT/Claude to generate realistic variations
-- **Deterministic mode**: Apply transformation rules (rephrase, verbose, etc.)
+## Web Platform
 
-```yaml
-# configs/input.yaml
-input_generation:
-  mode: llm
-  strategies:
-    - rephrase
-    - verbose
-    - error_prone
-```
-
-## Recording & Replay
-
-For complex function signatures (WebSocket handlers, callbacks), you can:
-
-1. **Record** actual arguments from staging/production
-2. **Replay** them locally with different content
-
-```bash
-fluxloop record enable    # Capture arguments
-# ... run your service ...
-fluxloop record disable
-fluxloop run experiment   # Replay with variations
-```
-
-## Artifacts
-
-Every experiment produces **structured artifacts**:
-
-| File | Description |
-|------|-------------|
-| `summary.json` | Aggregate statistics |
-| `trace_summary.jsonl` | Per-trace summaries |
-| `traces.jsonl` | Detailed traces |
-| `observations.jsonl` | Observation stream |
-
-All artifacts follow a documented [JSON contract](../reference/json-contract).
-
-## Configuration
-
-FluxLoop uses YAML configuration files:
-
-- **project.yaml** - Project metadata, collector settings
-- **input.yaml** - Personas, base inputs, LLM provider
-- **simulation.yaml** - Runner target, iterations, replay args
-- **evaluation.yaml** - Evaluator definitions
-
-## Storage Backends
-
-Traces can be stored locally or sent to a remote collector:
-
-- **File Storage** (default): Writes to local JSONL files
-- **HTTP Storage**: Sends to FluxLoop collector service
-
-```python
-# Use local file storage
-client = FluxLoopClient(storage="file")
-
-# Use HTTP collector
-client = FluxLoopClient(
-    storage="http",
-    collector_url="http://localhost:8000"
-)
-```
-
-## Framework Integration
-
-FluxLoop integrates with popular agent frameworks:
-
-- **LangChain** - Automatic callback integration
-- **LangGraph** - Workflow tracing
-- **Custom** - Direct SDK usage
+The **Web Platform** ([app.fluxloop.ai](https://app.fluxloop.ai)) is the central hub for:
+- **Visualization**: Interactive dashboards for exploring traces.
+- **Collaboration**: Sharing results and scenarios with your team.
+- **Evaluation**: Automating pass/fail checks based on criteria.
+- **History**: Tracking agent performance over time.
 
 ## Workflow
 
-The typical FluxLoop workflow:
+The typical FluxLoop workflow is "Agent-First":
 
-```
-1. Init Project
-   ↓
-2. Instrument Agent (@fluxloop.agent)
-   ↓
-3. Define Personas & Base Inputs
-   ↓
-4. Generate Input Variations
-   ↓
-5. Run Experiment
-   ↓
-6. Parse Results
-   ↓
-7. Analyze & Improve
-```
+1. **Build**: Write your agent and add `@fluxloop.agent()`.
+2. **Test**: Run `/fluxloop test` in Claude Code or `fluxloop test` in CLI.
+3. **Analyze**: View results on [results.fluxloop.ai](https://results.fluxloop.ai).
+4. **Iterate**: Improve your agent based on insights and re-test.
+
+## Framework Agnostic
+
+FluxLoop works with any agent architecture:
+- **LangChain / LangGraph**: Automatic integration with native tracing.
+- **Custom Code**: Direct use of decorators and SDK.
+- **API-based Agents**: Test via HTTP or other interfaces.
 
 ## Next Steps
 
-- **[End-to-End Workflow](../guides/end-to-end-workflow)** - Complete walkthrough
-- **[SDK Reference](/sdk/)** - SDK documentation
-- **[CLI Reference](/cli/)** - CLI commands
-- **[Configuration Reference](../reference/configuration)** - Config files
-
+- **[Installation Guide](./installation)** - Get FluxLoop running
+- **[Quick Start](./quick-start)** - Run your first test in 5 minutes
+- **[Claude Code Guide](/claude-code/)** - The IDE-first testing experience

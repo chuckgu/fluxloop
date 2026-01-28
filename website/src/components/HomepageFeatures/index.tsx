@@ -11,29 +11,38 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Simulate at Scale',
-    icon: '🎯',
+    title: 'Synthetic Testing at Scale',
+    icon: '🎭',
     description: (
       <>
-        Run thousands of realistic multi-turn scenarios in parallel. Find edge cases before production.
+        Generate persona-based synthetic inputs. Run hundreds of scenarios automatically. Interact with agents like real users.
       </>
     ),
   },
   {
-    title: 'Align to Your Standards',
+    title: 'Seamless Claude Code Integration',
+    icon: '🔗',
+    description: (
+      <>
+        Test instantly with /fluxloop commands. View results right in your IDE. Validate without breaking your workflow.
+      </>
+    ),
+  },
+  {
+    title: 'Cloud-Powered Analysis',
     icon: '📊',
     description: (
       <>
-        Capture your implicit decision criteria. Turn intuition into automated evaluation.
+        Visualize results on the web platform. Share test data with your team. Track agent performance over time.
       </>
     ),
   },
   {
-    title: 'Act on Insights',
-    icon: '🚀',
+    title: 'Python-First SDK',
+    icon: '🐍',
     description: (
       <>
-        Reports that show what to fix and how. Analysis that drives action.
+        Simple instrumentation with @agent and @trace decorators. Native support for LangChain and LangGraph. Seamless pytest integration.
       </>
     ),
   },
@@ -41,7 +50,7 @@ const FeatureList: FeatureItem[] = [
 
 function Feature({title, icon, description}: FeatureItem) {
   return (
-    <div className={clsx('col col--4')}>
+    <div className={clsx('col col--3')}>
       <div className="text--center padding-horiz--md">
         <div className={styles.featureIcon} style={{fontSize: '3rem', marginBottom: '1rem'}}>{icon}</div>
         <Heading as="h3">{title}</Heading>

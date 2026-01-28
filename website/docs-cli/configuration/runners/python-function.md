@@ -106,7 +106,7 @@ output:
 
 **Execution**
 ```bash
-fluxloop run experiment
+fluxloop test
 ```
 
 ### Example 2: OpenAI Call (Async)

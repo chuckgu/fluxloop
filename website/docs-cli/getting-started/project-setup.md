@@ -11,7 +11,7 @@ Create and configure your first FluxLoop project.
 Create a new project with the CLI:
 
 ```bash
-fluxloop init project --name my-agent
+fluxloop init scenario --name my-agent
 cd fluxloop/my-agent
 ```
 
@@ -27,7 +27,7 @@ fluxloop/my-agent/
 ├── .env                      # Environment variables
 ├── examples/
 │   └── simple_agent.py       # Sample instrumented agent
-├── experiments/              # Results output directory
+├── results/              # Results output directory
 ├── inputs/                   # Generated inputs directory
 └── recordings/               # Recorded arguments (optional)
 ```
@@ -235,7 +235,7 @@ FluxLoop supports multiple projects:
 
 ```bash
 # Create another project
-fluxloop init project --name chatbot-v2
+fluxloop init scenario --name chatbot-v2
 cd fluxloop/chatbot-v2
 
 # Switch between projects
@@ -274,6 +274,6 @@ Each project has independent configuration and results.
 
 ## Next Steps
 
-- [First Experiment](./first-experiment) - Run your first experiment
-- [Command Reference](/cli/commands/init) - Detailed command docs
-- [Configuration Reference](/cli/configuration/project-config) - Full config specs
+- [First Test](./first-test) - Run your first test
+- [Command Reference](../commands/init) - Detailed command docs
+- [Configuration Reference](../configuration/project-config) - Full config specs

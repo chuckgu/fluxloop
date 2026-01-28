@@ -96,7 +96,7 @@ name: my_agent_experiment
 
 **Output Directory:**
 ```
-experiments/exp_20250117_143022/
+results/exp_20250117_143022/
 ```
 
 ### description
@@ -452,10 +452,9 @@ replay_args:
 
 **4. Run experiment:**
 ```bash
-fluxloop run experiment
+fluxloop test
 ```
 
-See [Recording Workflow](/cli/workflows/recording-workflow) for details.
 
 ---
 
@@ -673,7 +672,7 @@ output_directory: experiments
 
 **Structure:**
 ```
-experiments/
+results/
 └── exp_20250117_143022/
     ├── summary.json
     ├── metadata.json
@@ -848,10 +847,10 @@ Override configuration from command line:
 
 ```bash
 # Basic overrides
-fluxloop run experiment --iterations 20
+fluxloop test --iterations 20
 
 # Multi-turn overrides
-fluxloop run experiment \
+fluxloop test \
   --multi-turn \
   --max-turns 15 \
   --auto-approve \
@@ -859,7 +858,7 @@ fluxloop run experiment \
   --supervisor-temperature 0.3
 
 # Persona override
-fluxloop run experiment --persona expert_user
+fluxloop test --persona expert_user
 ```
 
 ---
@@ -908,6 +907,5 @@ multi_turn:
 
 - [Runner Targets](/cli/configuration/runner-targets) - Detailed runner patterns
 - [Multi-Turn Workflow](/cli/workflows/multi-turn-workflow) - Complete guide
-- [Recording Workflow](/cli/workflows/recording-workflow) - Recording mode
-- [run Command](/cli/commands/run) - CLI reference
+- [run Command](/cli/commands/test) - CLI reference
 - [Project Configuration](/cli/configuration/project-config) - Project settings

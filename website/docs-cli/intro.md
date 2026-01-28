@@ -5,7 +5,7 @@ slug: /
 
 # FluxLoop CLI
 
-Command-line interface for managing FluxLoop projects, generating inputs, and running agent simulations.
+Command-line interface for managing FluxLoop projects, generating test inputs, and running agent simulations with Web Platform integration.
 
 ## Installation
 
@@ -13,119 +13,82 @@ Command-line interface for managing FluxLoop projects, generating inputs, and ru
 pip install fluxloop-cli
 ```
 
-## Version
-
-Current version: **0.2.30**
-
 ## Features
 
-- 🎯 **Project Management**: Initialize and configure simulation projects
-- 📝 **Input Generation**: Create test input variations using LLM or deterministic strategies
-- 🧪 **Experiment Execution**: Run batch simulations with configurable iterations
-- 💬 **Multi-Turn Conversations**: Automatically extend experiments into dynamic dialogues with AI supervisor
-- 📊 **Result Parsing & Evaluation**: Convert raw artifacts to human-readable formats and score with evaluators
-- 🔴 **Recording Mode**: Capture and replay complex function arguments
-- ⚙️ **Configuration**: Structured YAML-based configuration system
-- 🩺 **Environment Diagnostics**: Verify installation and detect configuration issues
+- 🎯 **Project Management**: Initialize and configure agent testing projects
+- 📝 **Input Generation**: Create test input variations using LLMs
+- 🧪 **Agent Testing**: Run batch simulations locally and capture traces
+- ☁️ **Cloud Integration**: Sync scenarios and upload results to [app.fluxloop.ai](https://app.fluxloop.ai)
+- ⚙️ **Flexible Configuration**: Simple YAML-based configuration for runners and targets
+- 🤝 **Team Collaboration**: Share test results and scenarios with your team
 
-## Quick Example
+## Quick Start
 
 ```bash
-# Initialize a new project
-fluxloop init project --name my-agent
-cd fluxloop/my-agent
+# 1. Initialize a new project
+fluxloop init scenario --name my-agent
+cd my-agent
 
-# Generate 50 input variations
-fluxloop generate inputs --limit 50
+# 2. Authenticate with Web Platform
+fluxloop auth login
 
-# Run experiment
-fluxloop run experiment
+# 3. Generate test inputs
+fluxloop generate --limit 20
 
-# Parse results
-fluxloop parse experiment experiments/exp_*/
+# 4. Run tests
+fluxloop test
 
-# Evaluate results (writes evaluation_report/report.html by default)
-fluxloop evaluate experiment experiments/exp_*/
-
-# Check environment
-fluxloop doctor
+# 5. Upload results
+fluxloop sync upload
 ```
 
-## Key Commands
+## Key Command Groups
 
 ### Project Initialization
+`fluxloop init` - Create new projects or initialize existing ones.
 
-```bash
-fluxloop init project --name <project-name>
+### Authentication & Sync
+`fluxloop auth` - Manage authentication with the Web Platform.
+`fluxloop pull` - Download scenarios, criteria, and bundles from the cloud.
+`fluxloop upload` - Upload results, local scenarios, and bundles to the cloud.
+
+### Testing Workflow
+`fluxloop generate` - Generate synthetic test inputs.
+`fluxloop test` - Execute agent tests locally.
+`fluxloop status` - Check project and test status.
+
+### Input Management
+`fluxloop personas` - Manage test personas.
+`fluxloop inputs` - Manage base and generated inputs.
+`fluxloop bundles` - Manage test input bundles.
+
+## Configuration
+
+FluxLoop CLI uses `fluxloop.yaml` for project configuration:
+
+```yaml
+# fluxloop.yaml
+project:
+  name: my-agent
+  version: "1.0.0"
+
+runner:
+  target: "src.agent:run"
+  type: python-function
+
+test:
+  iterations: 1
+  parallel: 4
 ```
-
-Creates a new FluxLoop project with:
-- `configs/` directory (project, input, simulation, evaluation configs)
-- `.env` file for environment variables
-- `examples/` with sample agent code
-- `inputs/`, `recordings/`, `experiments/` directories
-
-### Input Generation
-
-```bash
-fluxloop generate inputs [--limit 100] [--mode llm]
-```
-
-Generate input variations from base inputs defined in `configs/input.yaml`.
-
-### Experiment Execution
-
-```bash
-fluxloop run experiment [--iterations 10]
-
-# Multi-turn conversations (LLM-driven)
-fluxloop run experiment --multi-turn --max-turns 12 --auto-approve
-
-# Multi-turn scripted playback (deterministic)
-# Set supervisor.provider to 'mock' and supply scripted_questions in simulation.yaml
-fluxloop run experiment --multi-turn --supervisor-provider mock
-```
-
-Run simulation experiment using configuration from `configs/simulation.yaml`. Enable multi-turn mode to automatically extend single inputs into dynamic conversations. Use `provider: openai` for AI-driven follow-ups or `provider: mock` for scripted question playback.
-
-### Recording Mode
-
-```bash
-fluxloop record enable   # Enable argument recording
-fluxloop record disable  # Disable recording
-fluxloop record status   # Check recording state
-```
-
-### Configuration
-
-```bash
-fluxloop config set-llm <provider> <api-key> [--model <model>]
-```
-
-Update LLM provider settings in `configs/input.yaml`.
-
-## Configuration Files (v0.2.0)
-
-FluxLoop CLI uses a multi-file configuration structure:
-
-| File | Purpose |
-|------|---------|
-| `configs/project.yaml` | Project metadata, service context, collector settings |
-| `configs/input.yaml` | Personas, base inputs, LLM settings |
-| `configs/simulation.yaml` | Runner, iterations, multi-turn settings |
-| `configs/evaluation.yaml` | Evaluator definitions |
 
 ## What's Next?
 
-- **[Installation](/cli/getting-started/installation)** - Detailed installation guide
-- **[Project Setup](/cli/getting-started/project-setup)** - Initialize your first project
-- **[Commands Reference](/cli/commands/init)** - Full command documentation
-- **[Doctor Command](/cli/commands/doctor)** - Diagnose environment and configuration
-- **[Configuration](/cli/configuration/project-config)** - Config file reference
-- **[Multi-Turn Workflow](/cli/workflows/multi-turn-workflow)** - Run dynamic conversations
-- **[Runner Targets](/cli/configuration/runner-targets)** - Connect your code to simulations
+- **[Installation](/cli/getting-started/installation)** - Get set up in minutes
+- **[Authentication](/cli/getting-started/authentication)** - Connect to the Web Platform
+- **[First Test](/cli/getting-started/first-test)** - Run your first test end-to-end
+- **[Command Reference](/cli/commands/test)** - Complete documentation of all commands
+- **[Configuration Guide](/cli/configuration/project-config)** - Fine-tune your testing environment
 
 ---
 
-Need help? Run `fluxloop --help` or check [GitHub Issues](https://github.com/chuckgu/fluxloop/issues).
-
+Need help? Run `fluxloop --help` or visit the [GitHub Repository](https://github.com/chuckgu/fluxloop).

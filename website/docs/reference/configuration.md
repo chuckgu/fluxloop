@@ -14,15 +14,13 @@ FluxLoop uses YAML configuration files:
 |------|---------|
 | `configs/project.yaml` | Project metadata, collector settings |
 | `configs/input.yaml` | Personas, base inputs, LLM provider |
-| `configs/simulation.yaml` | Runner target, iterations, replay args |
-| `configs/evaluation.yaml` | Evaluator definitions |
+| `configs/simulation.yaml` | Runner target, iterations, execution settings |
 
 ## Detailed References
 
 - [Project Config](/cli/configuration/project-config)
 - [Input Config](/cli/configuration/input-config)
 - [Simulation Config](/cli/configuration/simulation-config)
-- [Evaluation Config](/cli/configuration/evaluation-config)
 
 ## Coming Soon
 

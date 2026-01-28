@@ -2,33 +2,59 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
   cliSidebar: [
-    {
-      type: 'doc',
-      id: 'intro',
-      label: 'CLI Overview',
-    },
+    'intro',
     {
       type: 'category',
       label: 'Getting Started',
-      collapsed: false,
       items: [
         'getting-started/installation',
-        'getting-started/project-setup',
-        'getting-started/first-experiment',
+        'getting-started/authentication',
+        'getting-started/first-test',
       ],
     },
     {
       type: 'category',
-      label: 'Commands',
+      label: 'Core Commands',
+      collapsed: false,
       items: [
-        'commands/init',
-        'commands/generate',
-        'commands/evaluate',
-        'commands/run',
-        'commands/parse',
-        'commands/record',
-        'commands/config',
-        'commands/status',
+        {
+          type: 'category',
+          label: 'Project Management',
+          items: [
+            'commands/init',
+            'commands/status',
+            'commands/config',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Authentication & Sync',
+          items: [
+            'commands/auth',
+            'commands/projects',
+            'commands/scenarios',
+            'commands/apikeys',
+            'commands/sync',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Testing Workflow',
+          items: [
+            'commands/generate',
+            'commands/test',
+            'commands/criteria',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Input Generation',
+          items: [
+            'commands/personas',
+            'commands/inputs',
+            'commands/bundles',
+          ],
+        },
       ],
     },
     {
@@ -37,22 +63,16 @@ const sidebars: SidebarsConfig = {
       items: [
         'configuration/project-config',
         'configuration/input-config',
-        'configuration/simulation-config',
+        'configuration/runner-targets',
         {
           type: 'category',
-          label: 'Runner Targets',
-          collapsed: false,
-          link: {
-            type: 'doc',
-            id: 'configuration/runner-targets',
-          },
+          label: 'Runner Types',
           items: [
             'configuration/runners/python-function',
             'configuration/runners/http-sse',
             'configuration/runners/subprocess-jsonl',
           ],
         },
-        'configuration/evaluation-config',
       ],
     },
     {
@@ -61,13 +81,19 @@ const sidebars: SidebarsConfig = {
       items: [
         'workflows/basic-workflow',
         'workflows/multi-turn-workflow',
-        'workflows/recording-workflow',
         'workflows/pytest-integration',
         'workflows/ci-cd-integration',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Reference',
+      items: [
+        'reference/command-reference',
+        'reference/exit-codes',
       ],
     },
   ],
 };
 
 export default sidebars;
-

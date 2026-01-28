@@ -160,5 +160,5 @@ fluxloop generate inputs
 
 ## Next Steps
 
-- [Run Experiment](./run) - Run simulation with generated inputs
+- [Run Experiment](/cli/commands/test) - Run simulation with generated inputs
 - [Input Configuration](../configuration/input-config) - Configure generation settings

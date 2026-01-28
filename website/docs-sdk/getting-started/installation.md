@@ -310,5 +310,5 @@ See [Client Configuration](/sdk/configuration/client-config) for all options.
 
 ---
 
-Having issues? Check [GitHub Issues](https://github.com/chuckgu/fluxloop/issues) or the [Troubleshooting Guide](/sdk/configuration/client-config#troubleshooting).
+Having issues? Check [GitHub Issues](https://github.com/chuckgu/fluxloop/issues) or the [Troubleshooting section](#troubleshooting).
 

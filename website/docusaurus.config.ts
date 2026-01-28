@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'FluxLoop',
-  tagline: 'Simulate, Evaluate, and Trust Your AI Agents',
+  tagline: 'Test AI Agents with Synthetic Data',
   favicon: 'img/favicon.ico',
 
   future: {
@@ -34,7 +34,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
+          editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/packages/website/',
           routeBasePath: 'docs',
           path: 'docs',
         },
@@ -44,7 +44,7 @@ const config: Config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
+          editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/packages/website/',
           blogTitle: 'FluxLoop Blog',
           blogDescription: 'Release notes, tutorials, and updates',
         },
@@ -76,6 +76,16 @@ const config: Config = {
         editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
       },
     ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'claude-code',
+        path: 'docs-claude-code',
+        routeBasePath: 'claude-code',
+        sidebarPath: './sidebars-claude-code.ts',
+        editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/website/',
+      },
+    ],
   ],
 
   themeConfig: {
@@ -101,13 +111,18 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          to: '/sdk/',
-          label: 'SDK',
+          to: '/claude-code/',
+          label: 'Claude Code',
           position: 'left',
         },
         {
           to: '/cli/',
           label: 'CLI',
+          position: 'left',
+        },
+        {
+          to: '/sdk/',
+          label: 'SDK',
           position: 'left',
         },
         {
@@ -137,12 +152,16 @@ const config: Config = {
               to: '/docs/',
             },
             {
-              label: 'SDK',
-              to: '/sdk/',
+              label: 'Claude Code Plugin',
+              to: '/claude-code/',
             },
             {
-              label: 'CLI',
+              label: 'CLI Tool',
               to: '/cli/',
+            },
+            {
+              label: 'Python SDK',
+              to: '/sdk/',
             },
           ],
         },

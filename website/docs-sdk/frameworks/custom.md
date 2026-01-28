@@ -229,13 +229,13 @@ After integration, verify observations are captured:
 4. Use `fluxloop parse experiment` to verify structured output
 
 ```bash
-fluxloop run experiment --config config.yaml
+fluxloop test --config config.yaml
 # Check artifacts directory
-ls experiments/<experiment_name>/artifacts/
+ls results/<experiment_name>/artifacts/
 # Should see observations.jsonl
 
 # Parse and analyze
-fluxloop parse experiment experiments/<experiment_name>
+fluxloop parse experiment results/<experiment_name>
 ```
 
 ## Need Help?

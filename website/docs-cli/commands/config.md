@@ -315,7 +315,7 @@ fluxloop config validate --project my-agent
 
 ```bash
 # 1. Initialize project
-fluxloop init project --name my-agent
+fluxloop init scenario --name my-agent
 
 # 2. Set LLM provider
 fluxloop config set-llm openai sk-xxxxx --model gpt-4o
@@ -382,7 +382,7 @@ fluxloop/my-agent/
 ├── inputs/
 │   └── generated.yaml
 ├── recordings/
-└── experiments/
+└── results/
 ```
 
 ---
@@ -437,6 +437,4 @@ fluxloop config set iterations 10 --project dev-agent
 - [Project Configuration](/cli/configuration/project-config) - Detailed config reference
 - [Input Configuration](/cli/configuration/input-config) - Persona and input settings
 - [Simulation Configuration](/cli/configuration/simulation-config) - Runner and experiment settings
-- [Evaluation Configuration](/cli/configuration/evaluation-config) - Evaluator configuration
-- [doctor Command](/cli/commands/doctor) - Environment diagnostics
 - [status Command](/cli/commands/status) - System status checks

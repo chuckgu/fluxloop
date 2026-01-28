@@ -26,7 +26,7 @@ This guide walks through each phase with practical examples.
 
 ```bash
 # Initialize a new FluxLoop project
-fluxloop init project --name my-agent
+fluxloop init scenario --name my-agent
 
 # Navigate to project directory
 cd fluxloop/my-agent
@@ -47,7 +47,7 @@ fluxloop/my-agent/
 │   └── simple_agent.py    # Sample agent implementation
 ├── inputs/                # Generated inputs stored here
 ├── recordings/            # Recorded arguments (if using recording mode)
-└── experiments/           # Experiment outputs
+└── results/           # Experiment outputs
 ```
 
 ### Verify Installation
@@ -236,13 +236,13 @@ code inputs/generated.yaml
 
 ```bash
 # Run experiment with default settings
-fluxloop run experiment
+fluxloop test
 
 # Run with custom iterations
-fluxloop run experiment --iterations 5
+fluxloop test --iterations 5
 
 # Run with multi-turn enabled
-fluxloop run experiment --multi-turn --max-turns 10
+fluxloop test --multi-turn --max-turns 10
 ```
 
 **What Happens:**
@@ -253,7 +253,7 @@ fluxloop run experiment --multi-turn --max-turns 10
    - Calls your agent function
    - Captures traces via FluxLoop SDK
    - Records observations
-4. Saves results to `experiments/exp_<timestamp>/`
+4. Saves results to `results/exp_<timestamp>/`
 
 **Output:**
 
@@ -269,7 +269,7 @@ Running experiments...
 
 ✓ Experiment completed!
 
-Results saved to: experiments/exp_20250117_143022/
+Results saved to: results/exp_20250117_143022/
   - traces.jsonl (50 traces)
   - observations.jsonl (150 observations)
   - summary.json
@@ -280,7 +280,7 @@ Results saved to: experiments/exp_20250117_143022/
 
 ```bash
 # View summary
-cat experiments/exp_*/summary.json | jq
+cat results/exp_*/summary.json | jq
 
 # List recent experiments
 fluxloop status experiments
@@ -294,10 +294,10 @@ fluxloop status experiments
 
 ```bash
 # Parse experiment outputs
-fluxloop parse experiment experiments/exp_20250117_143022/
+fluxloop parse experiment results/exp_20250117_143022/
 
 # Or use glob pattern for latest
-fluxloop parse experiment experiments/exp_*/
+fluxloop parse experiment results/exp_*/
 ```
 
 **What Happens:**
@@ -310,12 +310,12 @@ fluxloop parse experiment experiments/exp_*/
 **Output:**
 
 ```
-Parsing experiment: experiments/exp_20250117_143022/
+Parsing experiment: results/exp_20250117_143022/
 
 ✓ Parsed 50 traces
   - Total observations: 150
   - Average trace length: 3 observations
-  - Saved to: experiments/.../per_trace_analysis/
+  - Saved to: results/.../per_trace_analysis/
 
 Generated Files:
   - per_trace_analysis/00_<trace_id>.md (50 files)
@@ -326,7 +326,7 @@ Generated Files:
 
 ```bash
 # Open first trace in editor
-code experiments/exp_*/per_trace_analysis/00_*.md
+code results/exp_*/per_trace_analysis/00_*.md
 ```
 
 **Example Parsed Trace (Markdown):**
@@ -389,10 +389,10 @@ code experiments/exp_*/per_trace_analysis/00_*.md
 
 ```bash
 # Run evaluation
-fluxloop evaluate experiment experiments/exp_20250117_143022/
+fluxloop evaluate experiment results/exp_20250117_143022/
 
 # With custom config
-fluxloop evaluate experiment experiments/exp_*/ \
+fluxloop evaluate experiment results/exp_*/ \
   --config configs/evaluation.yaml
 ```
 
@@ -409,26 +409,26 @@ fluxloop evaluate experiment experiments/exp_*/ \
 **Output:**
 
 ```
-📊 Evaluating experiment at experiments/exp_20250117_143022
-🧵 Per-trace data: experiments/.../per_trace_analysis/per_trace.jsonl
-📁 Output: experiments/.../evaluation_report
+📊 Evaluating experiment at results/exp_20250117_143022
+🧵 Per-trace data: results/.../per_trace_analysis/per_trace.jsonl
+📁 Output: results/.../evaluation_report
 
 Stage 1: LLM-PT (10 traces) ...
 Stage 2: Aggregation ...
 Stage 3: LLM-OV ...
 Stage 4 & 5: Rendering HTML report...
 
-✅ Report ready: experiments/.../evaluation_report/report.html
+✅ Report ready: results/.../evaluation_report/report.html
 ```
 
 ### View Evaluation Reports
 
 ```bash
 # Open HTML report in browser
-open experiments/exp_*/evaluation_report/report.html
+open results/exp_*/evaluation_report/report.html
 
 # Check the structured traces (input to the pipeline)
-cat experiments/exp_*/per_trace_analysis/per_trace.jsonl | jq
+cat results/exp_*/per_trace_analysis/per_trace.jsonl | jq
 ```
 
 ---
@@ -451,7 +451,7 @@ echo "=== FluxLoop Complete Workflow ==="
 # 1. Initialize (if needed)
 if [ ! -d "fluxloop/$PROJECT" ]; then
     echo "1. Initializing project..."
-    fluxloop init project --name "$PROJECT"
+    fluxloop init scenario --name "$PROJECT"
 fi
 
 cd "fluxloop/$PROJECT"
@@ -467,10 +467,10 @@ fluxloop generate inputs --limit 50 --mode llm
 
 # 4. Run experiment
 echo "4. Running experiment..."
-fluxloop run experiment --iterations "$ITERATIONS"
+fluxloop test --iterations "$ITERATIONS"
 
 # 5. Find latest experiment
-LATEST_EXP=$(ls -td experiments/*/ | head -1)
+LATEST_EXP=$(ls -td results/*/ | head -1)
 
 # 6. Parse results
 echo "5. Parsing results..."
@@ -509,7 +509,7 @@ Begin with a minimal setup to verify everything works:
 fluxloop generate inputs --limit 10
 
 # Run 1 iteration
-fluxloop run experiment --iterations 1
+fluxloop test --iterations 1
 
 # Verify results
 fluxloop status experiments
@@ -527,21 +527,22 @@ fluxloop config set variation_strategies "[rephrase, verbose]" --file configs/in
 fluxloop config set iterations 20 --file configs/simulation.yaml
 
 # Re-run and compare
-fluxloop run experiment
+fluxloop test
 ```
 
-### Version Control Your Configs
+### Sync Test Data
+
+Link your workspace and sync with the cloud:
 
 ```bash
-# Track configuration changes
-git add configs/
-git commit -m "Tune evaluation thresholds"
+# 1. Select a web project
+fluxloop projects select <project_id>
 
-# Compare experiment results across git branches
-git checkout experiment-v1
-fluxloop run experiment
-git checkout experiment-v2
-fluxloop run experiment
+# 2. Pull scenarios
+fluxloop sync pull
+
+# 3. Test and upload
+fluxloop test
 ```
 
 ### Use Multi-Turn for Deeper Testing
@@ -552,7 +553,7 @@ fluxloop config set multi_turn.enabled true --file configs/simulation.yaml
 fluxloop config set multi_turn.max_turns 10 --file configs/simulation.yaml
 
 # Run with supervisor
-fluxloop run experiment --multi-turn --auto-approve
+fluxloop test --multi-turn --auto-approve
 ```
 
 ---
@@ -595,8 +596,8 @@ fluxloop generate inputs --limit 10 --mode deterministic
 **Solution:**
 ```bash
 # Must parse before evaluating
-fluxloop parse experiment experiments/exp_*/
-fluxloop evaluate experiment experiments/exp_*/
+fluxloop parse experiment results/exp_*/
+fluxloop evaluate experiment results/exp_*/
 ```
 
 ---
@@ -604,7 +605,6 @@ fluxloop evaluate experiment experiments/exp_*/
 ## Next Steps
 
 - **[Multi-Turn Workflow](/cli/workflows/multi-turn-workflow)** - Dynamic conversations
-- **[Recording Workflow](/cli/workflows/recording-workflow)** - Capture and replay arguments
 - **[CI/CD Integration](/cli/workflows/ci-cd-integration)** - Automate in pipelines
 - **[Commands Reference](/cli/commands/init)** - Detailed command documentation
 
@@ -614,18 +614,13 @@ fluxloop evaluate experiment experiments/exp_*/
 
 ```bash
 # Setup
-fluxloop init project --name my-agent
-fluxloop config set-llm openai sk-xxxxx
+fluxloop projects select <id>
+fluxloop init scenario my-agent
+fluxloop auth login
 fluxloop doctor
 
 # Workflow
-fluxloop generate inputs --limit 50
-fluxloop run experiment
-fluxloop parse experiment experiments/latest_*/
-fluxloop evaluate experiment experiments/latest_*/
-
-# Monitoring
-fluxloop status check
-fluxloop status experiments
-fluxloop config env
+fluxloop sync pull
+fluxloop test
+fluxloop sync upload
 ```

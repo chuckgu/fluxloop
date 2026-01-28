@@ -30,5 +30,5 @@ FluxLoop CLI version 0.2.30
 
 ## Next Steps
 
-- [Project Setup](./project-setup)
-- [First Experiment](./first-experiment)
+- [Authentication](./authentication)
+- [First Test](./first-test)

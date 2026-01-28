@@ -4,12 +4,13 @@
 
 - ✅ Docusaurus 3.9.2 설치 및 설정
 - ✅ 70+ 문서 페이지 작성
-- ✅ SDK, CLI, VSCode Extension 문서 섹션 구성
+- ✅ SDK, CLI, Claude Code 문서 섹션 구성
 - ✅ 랜딩 페이지 FluxLoop 브랜딩
 - ✅ 네비게이션 및 사이드바 설정
 - ✅ Vercel 배포 설정 파일 작성
 - ✅ CI/CD GitHub Actions 구성
 - ✅ 모든 broken links 수정 완료
+- ✅ Agent-First 기반 문서 개편 (init scenario, sync pull/upload, test)
 
 ## 🚀 즉시 배포 가능!
 
@@ -110,7 +111,7 @@ packages/website/
 
 - **총 페이지 수**: 70+ 페이지
 - **코드 예제**: 40+ 예제
-- **문서 섹션**: 4개 (Main, SDK, CLI, VSCode)
+- **문서 섹션**: 4개 (Main, SDK, CLI, Claude Code)
 - **지원 언어**: 영어, 한국어 (i18n 준비)
 
 ## 🔍 로컬 테스트 완료
@@ -126,7 +127,7 @@ npm run build  # ✅ 빌드 성공
 - **메인**: https://docs.fluxloop.ai
 - **SDK 문서**: https://docs.fluxloop.ai/sdk
 - **CLI 문서**: https://docs.fluxloop.ai/cli
-- **VSCode 문서**: https://docs.fluxloop.ai/vscode
+- **Claude Code 문서**: https://docs.fluxloop.ai/claude-code
 
 ## 🔄 자동 배포 플로우
 

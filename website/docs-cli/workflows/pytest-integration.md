@@ -274,7 +274,7 @@ def test_multi_turn(fluxloop_runner_multi_turn):
 
 ### fluxloop_cli (Advanced)
 
-Executes experiments by calling `fluxloop run experiment` as a subprocess (CLI mode).
+Executes experiments by calling `fluxloop test` as a subprocess (CLI mode).
 
 **When to Use:**
 
@@ -540,7 +540,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: fluxloop-results
-          path: experiments/
+          path: results/
 ```
 
 ### GitLab CI
@@ -565,7 +565,7 @@ test:fluxloop:
   artifacts:
     when: always
     paths:
-      - experiments/
+      - results/
     expire_in: 1 week
 ```
 
@@ -812,7 +812,7 @@ pytest -k fluxloop
 ## See Also
 
 - [CI/CD Integration](/cli/workflows/ci-cd-integration) - Full CI/CD guide
-- [Run Command](/cli/commands/run) - CLI reference
+- [Run Command](/cli/commands/test) - CLI reference
 - [Basic Workflow](/cli/workflows/basic-workflow) - Complete workflow
 - [init pytest-template](/cli/commands/init#init-pytest-template) - Template generation
 

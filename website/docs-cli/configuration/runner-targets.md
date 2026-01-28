@@ -106,7 +106,7 @@ See simulation configuration for details.
 
 - Explore pattern-specific docs for full options and examples
 - [Simulation Config](./simulation-config) for complete structure
-- [Run Command](../commands/run) for CLI usage
+- [Test Command](/cli/commands/test) for CLI usage
 
 ## MCP Server Integration
 

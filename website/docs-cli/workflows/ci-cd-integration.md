@@ -13,7 +13,7 @@ FluxLoop can be integrated into CI/CD pipelines to:
 - **Automate regression testing** after code changes
 - **Validate agent quality** before deployment
 - **Track performance trends** over time
-- **Enforce quality gates** based on evaluation scores
+
 - **Generate test reports** for stakeholders
 
 This guide covers GitHub Actions, GitLab CI, and generic CI/CD setup.
@@ -27,7 +27,7 @@ This guide covers GitHub Actions, GitLab CI, and generic CI/CD setup.
 1. FluxLoop project with configuration in `configs/`
 2. Agent code instrumented with FluxLoop SDK
 3. Base inputs defined in `configs/input.yaml`
-4. Evaluators configured in `configs/evaluation.yaml`
+
 5. API keys (OpenAI, Anthropic, etc.) stored as secrets
 
 ### Key Principles
@@ -39,7 +39,7 @@ This guide covers GitHub Actions, GitLab CI, and generic CI/CD setup.
 3. **Cache dependencies** (Python packages, MCP index)
 4. **Store API keys as secrets**, not in code
 5. **Generate artifacts** (reports, traces) for review
-6. **Fail pipeline** if evaluation scores below threshold
+
 
 ---
 
@@ -85,35 +85,33 @@ jobs:
           cd fluxloop/my-agent
           fluxloop generate inputs --limit 20 --mode deterministic
       
-      - name: Run experiment
+      - name: Run agent tests
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          FLUXLOOP_ENABLED: 'true'
+          FLUXLOOP_API_KEY: ${{ secrets.FLUXLOOP_API_KEY }}
         run: |
-          cd fluxloop/my-agent
-          fluxloop run experiment --iterations 1
+          cd my-agent
+          fluxloop sync pull
+          fluxloop test
       
       - name: Parse results
         run: |
           cd fluxloop/my-agent
-          LATEST_EXP=$(ls -td experiments/*/ | head -1)
+          LATEST_EXP=$(ls -td results/*/ | head -1)
           fluxloop parse experiment "$LATEST_EXP"
       
       - name: Evaluate results
         run: |
           cd fluxloop/my-agent
-          LATEST_EXP=$(ls -td experiments/*/ | head -1)
-          fluxloop evaluate experiment "$LATEST_EXP"
+          LATEST_EXP=$(ls -td results/*/ | head -1)
       
       - name: Check evaluation threshold
         run: |
           cd fluxloop/my-agent
-          LATEST_EXP=$(ls -td experiments/*/ | head -1)
+          LATEST_EXP=$(ls -td results/*/ | head -1)
           python3 << 'EOF'
           import json
           import sys
           
-          with open(f"${LATEST_EXP}/evaluation/summary.json") as f:
               summary = json.load(f)
           
           score = summary.get("overall_score", 0)
@@ -134,7 +132,7 @@ jobs:
         with:
           name: fluxloop-results
           path: |
-            fluxloop/my-agent/experiments/
+            fluxloop/my-agent/results/
             fluxloop/my-agent/inputs/
           retention-days: 30
       
@@ -144,14 +142,13 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const expDir = 'fluxloop/my-agent/experiments/';
+            const expDir = 'fluxloop/my-agent/results/';
             const latest = fs.readdirSync(expDir)
               .filter(f => fs.statSync(expDir + f).isDirectory())
               .sort()
               .reverse()[0];
             
             const summary = JSON.parse(
-              fs.readFileSync(`${expDir}${latest}/evaluation/summary.json`)
             );
             
             const body = `
@@ -194,10 +191,9 @@ Compare results against a baseline:
       - name: Compare with baseline
         run: |
           cd fluxloop/my-agent
-          LATEST_EXP=$(ls -td experiments/*/ | head -1)
+          LATEST_EXP=$(ls -td results/*/ | head -1)
           
           if [ -f "baseline/summary.json" ]; then
-            fluxloop evaluate experiment "$LATEST_EXP" \
               --baseline baseline/summary.json
           fi
       
@@ -206,7 +202,6 @@ Compare results against a baseline:
         uses: actions/upload-artifact@v4
         with:
           name: baseline-summary
-          path: fluxloop/my-agent/experiments/*/evaluation/summary.json
 ```
 
 ### Scheduled Regression Testing
@@ -242,7 +237,7 @@ cache:
 stages:
   - setup
   - test
-  - evaluate
+  
   - report
 
 before_script:
@@ -277,58 +272,31 @@ run_experiment:
     - generate_inputs
   script:
     - cd fluxloop/my-agent
-    - fluxloop run experiment --iterations 1
+    - fluxloop test --iterations 1
   artifacts:
     paths:
-      - fluxloop/my-agent/experiments/
+      - fluxloop/my-agent/results/
     expire_in: 1 month
 
 parse_results:
-  stage: evaluate
   dependencies:
     - run_experiment
   script:
     - cd fluxloop/my-agent
-    - LATEST_EXP=$(ls -td experiments/*/ | head -1)
+    - LATEST_EXP=$(ls -td results/*/ | head -1)
     - fluxloop parse experiment "$LATEST_EXP"
   artifacts:
     paths:
-      - fluxloop/my-agent/experiments/*/per_trace_analysis/
+      - fluxloop/my-agent/results/*/per_trace_analysis/
     expire_in: 1 month
-
-evaluate_results:
-  stage: evaluate
-  dependencies:
-    - parse_results
-  script:
-    - cd fluxloop/my-agent
-    - LATEST_EXP=$(ls -td experiments/*/ | head -1)
-    - fluxloop evaluate experiment "$LATEST_EXP"
-    - |
-      python3 << 'EOF'
-      import json, sys
-      with open(f"${LATEST_EXP}/evaluation/summary.json") as f:
-          summary = json.load(f)
-      score = summary.get("overall_score", 0)
-      if score < 0.7:
-          print(f"FAIL: Score {score:.2f} below 0.7")
-          sys.exit(1)
-      EOF
-  artifacts:
-    paths:
-      - fluxloop/my-agent/experiments/*/evaluation/
-    expire_in: 1 month
-    reports:
-      junit: fluxloop/my-agent/experiments/*/evaluation/junit.xml
 
 generate_report:
   stage: report
   dependencies:
-    - evaluate_results
+    _results
   script:
     - cd fluxloop/my-agent
-    - LATEST_EXP=$(ls -td experiments/*/ | head -1)
-    - cp "$LATEST_EXP/evaluation/report.html" public/index.html
+    - LATEST_EXP=$(ls -td results/*/ | head -1)
   artifacts:
     paths:
       - public
@@ -389,7 +357,7 @@ pipeline {
                 sh '''
                     . venv/bin/activate
                     cd fluxloop/my-agent
-                    fluxloop run experiment --iterations 1
+                    fluxloop test --iterations 1
                 '''
             }
         }
@@ -399,9 +367,8 @@ pipeline {
                 sh '''
                     . venv/bin/activate
                     cd fluxloop/my-agent
-                    LATEST_EXP=$(ls -td experiments/*/ | head -1)
+                    LATEST_EXP=$(ls -td results/*/ | head -1)
                     fluxloop parse experiment "$LATEST_EXP"
-                    fluxloop evaluate experiment "$LATEST_EXP"
                 '''
             }
         }
@@ -409,7 +376,6 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    def summary = readJSON file: "fluxloop/my-agent/experiments/*/evaluation/summary.json"
                     def score = summary.overall_score
                     
                     if (score < 0.7) {
@@ -422,11 +388,11 @@ pipeline {
     
     post {
         always {
-            archiveArtifacts artifacts: 'fluxloop/my-agent/experiments/**/*', 
+            archiveArtifacts artifacts: 'fluxloop/my-agent/results/**/*', 
                              allowEmptyArchive: true
             
             publishHTML([
-                reportDir: 'fluxloop/my-agent/experiments/*/evaluation/',
+                reportDir: 'fluxloop/my-agent/results/*/evaluation/',
                 reportFiles: 'report.html',
                 reportName: 'FluxLoop Evaluation Report'
             ])
@@ -461,7 +427,7 @@ RUN cd fluxloop/my-agent && \
     fluxloop doctor
 
 # Default command
-CMD ["bash", "-c", "cd fluxloop/my-agent && fluxloop run experiment"]
+CMD ["bash", "-c", "cd fluxloop/my-agent && fluxloop test"]
 ```
 
 ### Docker Compose for Testing
@@ -482,9 +448,8 @@ services:
       bash -c "
         cd fluxloop/my-agent &&
         fluxloop generate inputs --limit 20 --mode deterministic &&
-        fluxloop run experiment --iterations 1 &&
-        fluxloop parse experiment experiments/*/ &&
-        fluxloop evaluate experiment experiments/*/
+        fluxloop test --iterations 1 &&
+        fluxloop parse experiment results/*/ &&
       "
 
 volumes:
@@ -532,7 +497,7 @@ Run with CI configs:
 ```bash
 # Override config directory
 cp -r configs-ci/* configs/
-fluxloop run experiment
+fluxloop test
 ```
 
 ### 3. Cache Wisely
@@ -575,7 +540,6 @@ environment {
 import json
 import sys
 
-with open("experiments/latest/evaluation/summary.json") as f:
     summary = json.load(f)
 
 score = summary["overall_score"]
@@ -610,7 +574,6 @@ import json
 import requests
 from datetime import datetime
 
-with open("experiments/latest/evaluation/summary.json") as f:
     summary = json.load(f)
 
 # Send to monitoring system
@@ -632,7 +595,6 @@ python3 << 'EOF'
 import json
 import glob
 
-experiments = sorted(glob.glob("experiments/*/evaluation/summary.json"))[-10:]
 
 for exp in experiments:
     with open(exp) as f:
@@ -678,7 +640,7 @@ EOF
    fluxloop generate inputs --limit 10
    
    # Single iteration
-   fluxloop run experiment --iterations 1
+   fluxloop test --iterations 1
    ```
 
 2. **Sample LLM evaluations**
@@ -752,15 +714,11 @@ jobs:
       
       - name: Run tests
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FLUXLOOP_API_KEY: ${{ secrets.FLUXLOOP_API_KEY }}
         run: |
-          cd fluxloop/my-agent
-          fluxloop generate inputs --limit 20 --mode deterministic
-          fluxloop run experiment --iterations 1
-          
-          LATEST=$(ls -td experiments/*/ | head -1)
-          fluxloop parse experiment "$LATEST"
-          fluxloop evaluate experiment "$LATEST"
+          cd my-agent
+          fluxloop sync pull
+          fluxloop test
       
       - name: Quality gate
         run: |
@@ -772,7 +730,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: results-py${{ matrix.python-version }}
-          path: fluxloop/my-agent/experiments/
+          path: fluxloop/my-agent/results/
       
       - name: Report to PR
         if: github.event_name == 'pull_request'
@@ -789,5 +747,4 @@ jobs:
 
 - [Basic Workflow](/cli/workflows/basic-workflow) - Standard FluxLoop workflow
 - [Multi-Turn Workflow](/cli/workflows/multi-turn-workflow) - Dynamic conversations
-- [Commands Reference](/cli/commands/run) - CLI command documentation
-- [Evaluation Configuration](/cli/configuration/evaluation-config) - Success criteria and thresholds
+- [Commands Reference](/cli/commands/test) - CLI command documentation

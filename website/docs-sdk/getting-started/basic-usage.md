@@ -365,7 +365,7 @@ runner:
 **3. Run experiment:**
 
 ```bash
-fluxloop run experiment
+fluxloop test
 ```
 
 See [Runner Integration](/sdk/configuration/runner-integration) for detailed patterns.

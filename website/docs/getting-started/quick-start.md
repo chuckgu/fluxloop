@@ -11,33 +11,26 @@ Get up and running with FluxLoop in 5 minutes.
 Initialize a new FluxLoop project:
 
 ```bash
-fluxloop init project --name my-agent
-cd fluxloop/my-agent
+fluxloop init scenario --name my-agent
+cd my-agent
 ```
 
 This creates:
 
 ```
-fluxloop/my-agent/
-├── configs/
-│   ├── project.yaml          # Project metadata
-│   ├── input.yaml            # Input generation settings
-│   ├── simulation.yaml       # Experiment configuration
-│   └── evaluation.yaml       # Evaluation rules
-├── .env                      # Environment variables
-├── examples/
-│   └── simple_agent.py       # Sample agent
-├── experiments/              # Results output
-├── inputs/                   # Generated inputs
-└── recordings/               # Recorded arguments
+my-agent/
+├── fluxloop.yaml          # Main configuration file
+├── .env                   # Environment variables
+├── src/
+│   └── agent.py           # Sample agent code
+└── scenarios/             # Test scenarios
 ```
 
 ## Step 2: Instrument Your Agent
 
-Edit your agent code and add the `@fluxloop.agent()` decorator:
+Add the `@fluxloop.agent()` decorator to your agent function in `src/agent.py`:
 
 ```python
-# examples/my_agent.py
 import fluxloop
 
 @fluxloop.agent()
@@ -48,21 +41,21 @@ def run(input_text: str) -> str:
     return result
 ```
 
-## Step 3: Configure LLM Provider (Optional)
+## Step 3: Authenticate
 
-If you want to generate inputs using LLM:
+Log in to the Web Platform:
 
 ```bash
-# Set OpenAI API key
-fluxloop config set-llm openai sk-your-api-key --model gpt-4o-mini
-
-# Or set in .env file
-echo "OPENAI_API_KEY=sk-your-api-key" >> .env
+fluxloop auth login
+# Enter your API key from app.fluxloop.ai
 ```
 
-Edit `configs/input.yaml` to define personas and base inputs:
+## Step 4: Define Scenarios
+
+Edit `fluxloop.yaml` to define your test personas and base inputs:
 
 ```yaml
+# fluxloop.yaml
 personas:
   - name: novice_user
     description: A user new to the system
@@ -72,54 +65,54 @@ base_inputs:
     expected_intent: help
 ```
 
-## Step 4: Generate Inputs
+## Step 5: Generate Inputs
 
-Create input variations:
-
-```bash
-fluxloop generate inputs --limit 50
-```
-
-This produces `inputs/generated.yaml` with 50 variations.
-
-## Step 5: Run Experiment
-
-Execute your agent with all generated inputs:
+Create diverse test case variations:
 
 ```bash
-fluxloop run experiment
+fluxloop generate --limit 50
 ```
 
-Results are saved to `experiments/exp_YYYYMMDD_HHMMSS/`.
+This creates a local test bundle with 50 variations based on your personas.
 
-## Step 6: View Results
+## Step 6: Run Test
 
-Parse the results into human-readable format:
+Execute your agent with the generated inputs:
 
 ```bash
-fluxloop parse experiment experiments/exp_*/
+fluxloop test
 ```
 
-This creates Markdown timelines under `per_trace_analysis/`.
+Results are saved locally in the `results/` directory.
+
+## Step 7: View Results in the Cloud
+
+Upload and analyze your results on the Web Platform:
+
+```bash
+fluxloop sync upload
+```
+
+Open the provided link to [results.fluxloop.ai](https://results.fluxloop.ai) to see:
+- Visual conversation traces
+- Performance metrics (latency, tokens, cost)
+- Success rate analysis
 
 ## What You Get
 
-After running an experiment, you'll have:
+After running a test and uploading, you'll have:
 
-- **summary.json** - Aggregate statistics
-- **trace_summary.jsonl** - Per-trace summaries
-- **traces.jsonl** - Detailed execution traces
-- **observations.jsonl** - Observation stream
-- **per_trace_analysis/** - Human-readable timelines
+- **Local Results** - Structured JSONL data in `./results/`
+- **Cloud Dashboard** - Interactive visualization and team collaboration
+- **Performance Insights** - Automatic analysis of agent behavior
 
 ## Next Steps
 
-- **[Core Concepts](./core-concepts)** - Understand key concepts
-- **[End-to-End Workflow](../guides/end-to-end-workflow)** - Detailed guide
-- **[Configuration](../reference/configuration)** - Config file reference
-- **[CLI Commands](/cli/commands/init)** - Full command reference
+- **[Core Concepts](./core-concepts)** - Understand the FluxLoop philosophy
+- **[CLI Reference](/cli/)** - Explore all commands
+- **[Claude Code Integration](../../claude-code/)** - Test agents directly in your IDE
+- **[Web Platform Guide](../platform/platform-overview)** - Learn about cloud features
 
 ---
 
-**Congratulations!** 🎉 You've run your first FluxLoop experiment.
-
+**Congratulations!** 🎉 You've run your first FluxLoop test.

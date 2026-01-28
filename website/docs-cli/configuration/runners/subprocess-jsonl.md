@@ -120,7 +120,7 @@ runner:
 
 **Execution**
 ```bash
-fluxloop run experiment
+fluxloop test
 ```
 
 ### Example 2: Node.js Streaming Agent (OpenAI)

@@ -151,7 +151,7 @@ runner:
 uvicorn server:app --port 8000
 
 # Terminal 2: Run FluxLoop
-fluxloop run experiment
+fluxloop test
 ```
 
 ### Example 3: Anthropic Claude Streaming

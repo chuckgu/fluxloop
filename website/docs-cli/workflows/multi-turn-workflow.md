@@ -64,7 +64,7 @@ inputs:
 ### 4. Run Experiment
 
 ```bash
-fluxloop run experiment
+fluxloop test
 ```
 
 FluxLoop will now run multi-turn conversations automatically.
@@ -134,17 +134,17 @@ Override multi-turn settings from the command line:
 
 ```bash
 # Enable multi-turn with custom settings
-fluxloop run experiment \
+fluxloop test \
   --multi-turn \
   --max-turns 15 \
   --auto-approve \
   --supervisor-model gpt-4o-mini
 
 # Disable multi-turn for single-turn testing
-fluxloop run experiment --no-multi-turn
+fluxloop test --no-multi-turn
 
 # Override persona
-fluxloop run experiment --multi-turn --persona expert_user
+fluxloop test --multi-turn --persona expert_user
 ```
 
 ## Advanced Usage
@@ -302,6 +302,6 @@ Multi-turn mode makes additional LLM calls (supervisor decisions). Use:
 ## Next Steps
 
 - [Runner Targets](../configuration/runner-targets) – detailed runner integration patterns
-- [Run Command](../commands/run) – command-line reference
+- [Test Command](/cli/commands/test) – command-line reference
 - [Project Configuration](../configuration/project-config) – metadata setup
 

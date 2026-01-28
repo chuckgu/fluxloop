@@ -24,6 +24,7 @@
   justify-content: center;
   margin-top: 2rem;
   flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .codeExample {
@@ -31,6 +32,18 @@
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.codeLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ifm-hero-text-color);
+  margin-bottom: 0.75rem;
+  opacity: 0.85;
+}
+
+[data-theme='dark'] .codeLabel {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .codeExample pre {
@@ -68,9 +81,15 @@
 
   .buttons {
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .buttons > * {
-    margin: 0.5rem 0;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .codeExample {
+    margin-top: 2rem;
   }
 }

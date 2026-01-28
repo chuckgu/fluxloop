@@ -73,7 +73,7 @@ Recommendations:
 | Issue | Details | Recommendation |
 |-------|---------|----------------|
 | SDK not installed | FluxLoop SDK missing | `pip install fluxloop` |
-| Config incomplete | Missing config files | `fluxloop init project` |
+| Config incomplete | Missing config files | `fluxloop init scenario` |
 | API key not set | No `FLUXLOOP_API_KEY` | Set in `.env` file |
 | Collector error | Cannot connect | Check collector URL |
 
@@ -144,7 +144,7 @@ For each experiment with a `summary.json` file, displays:
 ```
 No experiments found in: ./experiments
 
-Run an experiment first: fluxloop run experiment
+Run an experiment first: fluxloop test
 ```
 
 ---
@@ -193,13 +193,13 @@ Until the collector service is running, view traces in experiment directories:
 
 ```bash
 # List trace files
-ls experiments/exp_*/artifacts/
+ls results/exp_*/artifacts/
 
 # View trace summary
-cat experiments/exp_*/summary.json | jq
+cat results/exp_*/summary.json | jq
 
 # View individual traces
-cat experiments/exp_*/artifacts/traces.jsonl | head -n 5
+cat results/exp_*/artifacts/traces.jsonl | head -n 5
 ```
 
 ---
@@ -214,9 +214,6 @@ Before running experiments, verify everything is configured:
 # Quick status check
 fluxloop status check
 
-# Or use doctor for comprehensive diagnostics
-fluxloop doctor
-
 # Verify configuration
 fluxloop config validate
 ```
@@ -229,11 +226,8 @@ After running experiments, review results:
 # List recent experiments
 fluxloop status experiments --limit 5
 
-# Parse latest experiment for detailed analysis
-fluxloop parse experiment experiments/latest_run_*/
-
-# Evaluate results
-fluxloop evaluate experiment experiments/latest_run_*/
+# View latest experiment results
+cat results/latest_run_*/summary.json
 ```
 
 ### Monitoring Experiment History
@@ -262,39 +256,9 @@ fluxloop status check --verbose
 # 2. Verify environment
 fluxloop config env
 
-# 3. Run full diagnostics
-fluxloop doctor
-
-# 4. Validate configuration
+# 3. Validate configuration
 fluxloop config validate
 ```
-
----
-
-## Status vs Doctor
-
-Both `status check` and `doctor` verify system health, but with different focuses:
-
-| Aspect | `status check` | `doctor` |
-|--------|----------------|----------|
-| **Focus** | Quick health check | Comprehensive diagnostics |
-| **Checks** | SDK, Collector, Config, API Key | Python, CLI, SDK, MCP, Index, Config |
-| **Output** | Concise table | Detailed panels with recommendations |
-| **Speed** | Fast | Thorough |
-| **Use Case** | Quick verification | Deep troubleshooting |
-
-**When to Use Each:**
-
-Use `status check`:
-- Quick health verification before running experiments
-- Checking if basic setup is complete
-- Verifying configuration after changes
-
-Use `doctor`:
-- Initial setup verification
-- Troubleshooting installation issues
-- Verifying MCP server and index
-- Complete environment diagnostics
 
 ---
 
@@ -312,7 +276,7 @@ Use `doctor`:
 | Status | Meaning | Action |
 |--------|---------|--------|
 | ✓ Found | All required configs present | None needed |
-| - Incomplete | Missing config files | `fluxloop init project` |
+| - Incomplete | Missing config files | `fluxloop init scenario` |
 | ✗ Invalid | Config syntax errors | Fix YAML syntax |
 
 ### API Key Status
@@ -357,7 +321,7 @@ if ! fluxloop status check --verbose; then
 fi
 
 # Run experiment
-fluxloop run experiment
+fluxloop test
 
 # Show results
 fluxloop status experiments --limit 1
@@ -392,8 +356,5 @@ All `status` subcommands follow consistent exit code patterns:
 
 ## See Also
 
-- [doctor Command](/cli/commands/doctor) - Comprehensive environment diagnostics
 - [config Command](/cli/commands/config) - Configuration management
-- [run Command](/cli/commands/run) - Execute experiments
-- [parse Command](/cli/commands/parse) - Parse experiment results
-- [evaluate Command](/cli/commands/evaluate) - Evaluate experiment outputs
+- [run Command](/cli/commands/test) - Execute experiments

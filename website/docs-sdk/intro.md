@@ -225,12 +225,11 @@ runner:
 ```
 
 ```bash
-# Run experiments with your instrumented agent
-fluxloop run experiment
+# Run tests locally
+fluxloop test
 
-# Parse and evaluate results
-fluxloop parse experiment experiments/latest_*/
-fluxloop evaluate experiment experiments/latest_*/
+# Upload results to Web Platform
+fluxloop sync upload
 ```
 
 See [CLI Integration](/sdk/configuration/runner-integration) for details.
