@@ -1,144 +1,509 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
- */
+/* Import Inter Font - The signature font of clean docs */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Mintlify/Prelude Color Palette (Slate) */
+  --ifm-color-primary: #0f172a;       /* Slate 900 */
+  --ifm-color-primary-dark: #334155;  /* Slate 700 */
+  --ifm-color-primary-darker: #475569;/* Slate 600 */
+  --ifm-color-primary-darkest: #64748b;/* Slate 500 */
+  --ifm-color-primary-light: #94a3b8; /* Slate 400 */
+  --ifm-color-primary-lighter: #cbd5e1;/* Slate 300 */
+  --ifm-color-primary-lightest: #e2e8f0;/* Slate 200 */
+
+  /* Semantic Colors */
+  --ifm-font-color-base: #334155;     /* Slate 700 - Body text */
+  --ifm-heading-color: #0f172a;       /* Slate 900 - Headings */
+  --ifm-link-color: #2563eb;          /* Blue 600 - Links */
+  --ifm-link-hover-color: #1d4ed8;    /* Blue 700 */
+  
+  /* Typography Variables */
+  --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ifm-font-size-base: 16px;
+  --ifm-line-height-base: 1.625;
+  --ifm-heading-font-weight: 700;
+  
+  /* Layout Dimensions */
+  --ifm-navbar-height: 4rem;
+  --ifm-sidebar-width: 220px;
+  --doc-sidebar-width: 220px;
+  --ifm-spacing-horizontal: 1.5rem;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.05);
+  
+  /* Component Variables */
+  --doc-sidebar-hidden-border: 1px solid #f1f5f9;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --ifm-menu-color-background-hover: transparent;
+  --ifm-menu-color-background-active: transparent;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Dark Mode Overrides */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #f8fafc;       /* Slate 50 */
+  --ifm-color-primary-dark: #e2e8f0;
+  --ifm-color-primary-darker: #cbd5e1;
+  
+  --ifm-font-color-base: #94a3b8;     /* Slate 400 */
+  --ifm-heading-color: #f8fafc;       /* Slate 50 */
+  --ifm-link-color: #60a5fa;          /* Blue 400 */
+  --ifm-link-hover-color: #93c5fd;    /* Blue 300 */
+  
+  --ifm-background-color: #0b1120;    /* Deep Blue/Black */
+  --ifm-background-surface-color: #1e293b; /* Slate 800 */
+  
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.05);
+  --ifm-menu-color-background-hover: transparent;
+  --ifm-menu-color-background-active: transparent;
 }
 
-/* Custom styles */
-.hero--primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+/* =========================================
+   Global Typography & Layout
+   ========================================= */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-[data-theme='dark'] .hero--primary {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  color: #fff;
+body {
+  letter-spacing: -0.011em; /* Tighten body text slightly */
 }
 
-/* Ensure hero text is always white */
-.hero--primary h1,
-.hero--primary p,
-.hero--primary .hero__title,
-.hero--primary .hero__subtitle {
-  color: #fff !important;
-}
-
-/* Code blocks */
-code {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
-  padding: 0.2rem 0.4rem;
-}
-
-[data-theme='dark'] code {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Headings */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
+  letter-spacing: -0.025em; /* Tighten headings */
+  color: var(--ifm-heading-color);
 }
 
-/* Links */
-a {
-  text-decoration: none;
+h1 { font-size: 2.25rem; margin-bottom: 1.5rem; }
+h2 { font-size: 1.5rem; margin-top: 3rem; margin-bottom: 1rem; }
+h3 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.75rem; }
+
+/* Constrain content width for readability */
+.container {
+  max-width: 1400px !important;
+  margin: 0 auto;
 }
 
-a:hover {
-  text-decoration: underline;
+.markdown {
+  max-width: 760px; /* Optimal reading width */
 }
 
-/* Tables */
-table {
-  display: block;
-  overflow-x: auto;
-  max-width: 100%;
+/* Add left padding for main content */
+.theme-doc-markdown {
+  padding-left: 2.75rem;
 }
 
-/* Navbar */
-.navbar {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+/* Match left padding for doc breadcrumbs/navigation */
+.theme-doc-breadcrumbs {
+  padding-left: 2.75rem;
 }
 
-/* Footer */
-.footer {
-  padding: 2rem 0;
-}
-
-/* Sidebar */
-.theme-doc-sidebar-container {
-  border-right: 1px solid var(--ifm-toc-border-color);
-}
-
-/* Mobile menu */
 @media (max-width: 996px) {
-  /* 모바일에서 네비게이션바 레이아웃 수정 */
-  .navbar {
-    padding: 0.5rem 1rem;
+  .theme-doc-markdown {
+    padding-left: 0.5rem;
   }
 
-  /* 로고와 타이틀 영역 */
-  .navbar__brand {
-    margin-right: auto;
+  .theme-doc-breadcrumbs {
+    padding-left: 0.5rem;
+  }
+}
+
+/* Add breathing room below the navbar */
+.main-wrapper {
+  padding-top: 1.25rem;
+}
+
+@media (max-width: 996px) {
+  .main-wrapper {
+    padding-top: 1rem;
+  }
+}
+
+/* =========================================
+   Navbar Styling
+   ========================================= */
+.navbar {
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: none;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 0.75rem 1rem;
+}
+
+[data-theme='dark'] .navbar {
+  background-color: rgba(11, 17, 32, 0.85);
+  border-bottom-color: #1e293b;
+}
+
+.navbar__brand { font-weight: 700; margin-right: 2rem; }
+.navbar__item { font-weight: 500; font-size: 0.9rem; }
+
+/* =========================================
+   Sidebar Styling (Clean & Minimal)
+   ========================================= */
+/* Force sidebar width */
+.theme-doc-sidebar-container {
+  --doc-sidebar-width: 220px !important;
+  border-right: 1px solid var(--card-border) !important; /* Add border right */
+  background-color: transparent !important;
+  padding-right: 0;
+  padding-left: 1rem; /* Add left padding to sidebar container */
+}
+
+aside.theme-doc-sidebar-container {
+  width: 236px !important; /* width + padding-left */
+  min-width: 236px !important;
+}
+
+/* Menu container */
+.menu {
+  padding: 0.5rem 0 !important;
+  background: transparent !important;
+}
+
+/* Menu breadcrumbs/home link styling override */
+.menu__breadcrumbs {
+  padding-left: 0.5rem;
+}
+
+/* Menu List Items - Tighter spacing */
+.menu__list-item {
+  margin-bottom: 0px !important; /* Reduced from 1px to 0 */
   }
 
-  /* 햄버거 메뉴 버튼을 왼쪽 끝에 배치 */
-  .navbar__toggle {
-    order: -1;
+/* Regular items (not headers) */
+.menu__list-item:not(.menu__list-item-collapsible) {
+  margin-bottom: 0px !important; 
+}
+
+/* Specific targeting for top-level menu items to ensure spacing is tight */
+.theme-doc-sidebar-menu > .menu__list-item {
+  margin-top: 0 !important;
+}
+.theme-doc-sidebar-menu > .menu__list-item + .menu__list-item {
+  margin-top: 0.2rem !important;
+}
+
+/* Remove default padding from menu lists to tighten everything */
+.menu__list {
+  padding-left: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.menu__list-item:not(.menu__list-item-collapsible) > .menu__link::before {
+  content: "•";
+  color: #cbd5e1; /* Light gray dot */
     margin-right: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1;
   }
 
-  /* 로고를 햄버거 메뉴 옆에 배치 */
-  .navbar__logo {
-    order: 0;
+/* Hover state for the dot */
+.menu__list-item:not(.menu__list-item-collapsible) > .menu__link:hover::before {
+  color: #94a3b8; /* Darker gray on hover */
+}
+
+/* Active state for the dot */
+.menu__list-item:not(.menu__list-item-collapsible) > .menu__link--active::before {
+  color: #9ca3af; /* Gray dot when active */
+}
+
+.menu__list {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.menu__list-item {
+  margin: 0 !important;
+}
+
+/* Menu links - Remove all backgrounds */
+.menu__link {
+  color: #4b5563 !important;
+  font-weight: 400 !important;
+  font-size: 0.9rem !important; /* Slightly reduced font size */
+  border-radius: 4px !important;
+  padding: 0.3rem 0.5rem !important;
+  line-height: 1.4 !important;
+  background: transparent !important;
+  transition: color 0.15s ease !important;
   }
 
-  /* 오른쪽 아이템들 (언어 선택, GitHub 등) */
-  .navbar__items--right {
+.menu__link:hover {
+  color: #374151 !important;
+  background: transparent !important;
+  font-weight: 600 !important; /* Bold on hover */
+  text-decoration: none !important;
+}
+
+/* Active State - Only text color change, no background */
+.menu__link--active,
+.menu__link--active:not(.menu__link--sublist) {
+  color: #374151 !important;
+  background: transparent !important;
+  font-weight: 600 !important;
+}
+
+.menu__link--active:hover {
+  background: transparent !important;
+}
+
+/* Dark mode */
+[data-theme='dark'] .menu__link { 
+  color: #9ca3af !important;
+  background: transparent !important;
+}
+[data-theme='dark'] .menu__link:hover { 
+  color: #e5e7eb !important;
+  background: transparent !important;
+}
+[data-theme='dark'] .menu__link--active { 
+  color: #e5e7eb !important;
+  background: transparent !important;
+}
+
+/* Category Headers (Collapsible Groups) */
+.menu__list-item-collapsible {
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0 !important;
+}
+
+.menu__list-item-collapsible > .menu__link,
+.menu__list-item-collapsible .menu__link--sublist {
+  font-size: 0.9rem !important; /* Matches menu link size */
+  font-weight: 400 !important;
+  color: #4b5563 !important;
+  background: transparent !important;
+  padding: 0.3rem 0.5rem !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* Hover for top-level categories: bold only, no background */
+.menu__list-item-collapsible > .menu__link:hover,
+.menu__list-item-collapsible .menu__link--sublist:hover {
+  background: transparent !important;
+  color: #374151 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='dark'] .menu__list-item-collapsible > .menu__link:hover,
+[data-theme='dark'] .menu__list-item-collapsible .menu__link--sublist:hover {
+  background: transparent !important;
+  color: #e5e7eb !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='dark'] .menu__list-item-collapsible .menu__link {
+  color: #9ca3af !important;
+}
+
+/* Home/Overview Menu Item (First Item) */
+.theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link {
+  font-weight: 500 !important; /* Normal weight by default */
+  color: #374151 !important;
+  background: transparent !important; /* Force transparent background initially */
+  display: inline-block !important; /* Allow width to fit content */
+  width: auto !important; /* Width fits content */
+  border-radius: 6px !important;
+  font-size: 0.85rem !important; /* Slightly smaller for top menu */
+}
+
+/* Remove dot for the first item */
+.theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link::before {
+  display: none !important;
+}
+
+/* Hover Effect ONLY for First Item */
+.theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link:hover {
+  background-color: transparent !important;
+  color: #374151 !important;
+  font-weight: 700 !important; /* Bold on hover */
+}
+
+/* Remove background for Active state (unless hovered) */
+.theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link--active {
+  background-color: transparent !important; 
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+
+/* Re-apply hover when active */
+.theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link--active:hover {
+  background-color: transparent !important;
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link {
+  color: #e5e7eb !important;
+  font-weight: 500 !important;
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link:hover {
+  background-color: transparent !important;
+  color: #e5e7eb !important;
+  font-weight: 700 !important; /* Bold on hover */
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link--active {
+  background-color: transparent !important;
+  color: #e5e7eb !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu > .menu__list-item:first-child:not(.menu__list-item-collapsible) > .menu__link--active:hover {
+  background-color: transparent !important;
+}
+
+/* Caret (arrow) */
+.menu__caret,
+.menu__link--sublist-caret::after {
+  opacity: 0.5 !important;
+  transform: scale(0.5) rotate(90deg) !important; /* Default: Pointing Right (>) */
+  transition: transform 0.2s linear !important;
+}
+
+/* Rotate caret when expanded - Look Down (v) */
+.menu__list-item--collapsed .menu__link--sublist-caret::after,
+.menu__list-item--collapsed .menu__caret {
+  transform: scale(0.5) rotate(0deg) !important; 
+}
+
+/* Expanded state - Look Down (v) */
+.menu__link--sublist-caret[aria-expanded="true"]::after {
+  transform: scale(0.5) rotate(180deg) !important;
+}
+
+/* Nested menu items */
+.menu__list .menu__list {
+  padding-left: 0.75rem !important;
+  margin-top: 0 !important;
+}
+
+/* =========================================
+   Content & Cards
+   ========================================= */
+/* Feature Cards matching Prelude */
+.feature-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  height: 100%;
     display: flex;
-    gap: 0.5rem;
-  }
+  flex-direction: column;
+  transition: all 0.2s ease;
+  text-decoration: none !important;
+}
 
-  /* 모바일에서 불필요한 flex-direction 제거 */
-  .navbar__inner {
-    display: flex;
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: #94a3b8;
+}
+
+.feature-card .icon-wrapper {
+  display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #0f172a;
+}
+
+[data-theme='dark'] .feature-card .icon-wrapper {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.feature-card h3 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: var(--ifm-heading-color);
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+  color: var(--ifm-font-color-base);
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+/* Card Grid Layout */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Force 2 columns */
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: 1fr; /* Stack on mobile */
   }
 }
 
-/* Admonitions */
-.admonition {
-  margin: 1.5rem 0;
+/* =========================================
+   Utilities
+   ========================================= */
+/* Remove Docusaurus default breadcrumbs divider if simpler look desired */
+.breadcrumbs {
+  margin-bottom: 1.5rem;
+}
+.breadcrumbs__item {
+  font-size: 0.85rem;
 }
 
-/* Search */
-.navbar__search-input {
-  border-radius: 4px;
+/* Callouts / Admonitions Override */
+.alert,
+.admonition {
+  border-radius: 8px !important;
+  border: 1px solid var(--card-border) !important;
+  border-left-width: 1px !important;
+  background-color: #f8fafc !important; /* Force Light Gray */
+  box-shadow: none !important;
+  margin-bottom: 1.5rem;
+  color: #334155 !important;
+}
+
+.alert--info,
+.admonition-info,
+.alert--success,
+.admonition-tip {
+  background-color: #f1f5f9 !important; /* Slate 100 */
+  border-color: #cbd5e1 !important; /* Slate 300 */
+  color: #334155 !important;
+}
+
+/* Override Icon Colors */
+.alert__icon,
+.admonition-icon,
+.admonition-icon svg {
+  fill: #64748b !important; /* Slate 500 */
+  color: #64748b !important;
+}
+
+[data-theme='dark'] .alert,
+[data-theme='dark'] .admonition {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .alert--info,
+[data-theme='dark'] .admonition-info,
+[data-theme='dark'] .alert--success,
+[data-theme='dark'] .admonition-tip {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
 }

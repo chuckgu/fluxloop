@@ -110,7 +110,7 @@ After running a test and uploading, you'll have:
 
 - **[Core Concepts](./core-concepts)** - Understand the FluxLoop philosophy
 - **[CLI Reference](/cli/)** - Explore all commands
-- **[Claude Code Integration](../../claude-code/)** - Test agents directly in your IDE
+- **[Claude Code Integration](/claude-code/)** - Test agents directly in your IDE
 - **[Web Platform Guide](../platform/platform-overview)** - Learn about cloud features
 
 ---

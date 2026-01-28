@@ -35,7 +35,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/chuckgu/fluxloop/tree/main/packages/website/',
-          routeBasePath: 'docs',
+          routeBasePath: '/',
           path: 'docs',
         },
         blog: {
@@ -98,8 +98,8 @@ const config: Config = {
       title: 'FluxLoop',
       logo: {
         alt: 'FluxLoop Logo',
-        src: 'img/logo.png',
-        srcDark: 'img/logo.png',
+        src: 'img/fluxloop_logo_black.png',
+        srcDark: 'img/fluxloop_logo_white.png',
         width: 32,
         height: 32,
       },
@@ -126,11 +126,6 @@ const config: Config = {
           position: 'left',
         },
         {
-          to: '/blog',
-          label: 'Blog',
-          position: 'left'
-        },
-        {
           type: 'localeDropdown',
           position: 'right',
         },
@@ -149,7 +144,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/',
+              to: '/',
             },
             {
               label: 'Claude Code Plugin',
@@ -182,10 +177,6 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
               label: 'GitHub',
               href: 'https://github.com/chuckgu/fluxloop',
             },
@@ -198,6 +189,10 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
       additionalLanguages: ['bash', 'python', 'typescript', 'yaml', 'json'],
+    },
+    tableOfContents: {
+      minHeadingLevel: 2,
+      maxHeadingLevel: 3,
     },
     algolia: {
       // Algolia search integration (optional, can be added later)

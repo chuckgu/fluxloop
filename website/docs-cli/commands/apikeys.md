@@ -559,6 +559,6 @@ Solution:
 
 ## See Also
 
-- [API Keys (Web Platform)](/docs/platform/api-keys): Managing API keys in the web platform
+- [API Keys (Web Platform)](/platform/api-keys): Managing API keys in the web platform
 - [Authentication](../configuration/authentication): Authentication guide
 - [Security Best Practices](../guides/security): Security guidelines

@@ -480,6 +480,6 @@ fluxloop projects select
 
 ## See Also
 
-- [Projects and Scenarios](/docs/platform/projects-and-scenarios): Managing projects on the web platform
+- [Projects and Scenarios](/platform/projects-and-scenarios): Managing projects on the web platform
 - [Project Configuration](../configuration/project-config): Configuring project settings
 - [Team Collaboration](../workflows/team-collaboration): Working with teams

@@ -159,5 +159,5 @@ You've successfully:
 
 - **[Installation Guide](./installation)** - Detailed setup for various environments
 - **[CLI Reference](../commands/test)** - Full command documentation
-- **[Web Platform Guide](/docs/platform/platform-overview)** - Learn about cloud features
+- **[Web Platform Guide](/platform/platform-overview)** - Learn about cloud features
 - **[Claude Code Integration](/claude-code/)** - Test agents directly in your IDE

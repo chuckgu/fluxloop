@@ -237,7 +237,7 @@ fluxloop results compare --baseline last-week
 
 - [Criteria Command](../commands/criteria) - View evaluation criteria
 - [Test Command](../commands/test) - Run evaluated tests
-- [Viewing Results](/docs/platform/viewing-results) - Web Platform analysis
+- [Viewing Results](/platform/viewing-results) - Web Platform analysis
 
 ## Next Steps
 

@@ -316,6 +316,6 @@ export HTTPS_PROXY=http://proxy.example.com:8080
 
 ## See Also
 
-- [Web Platform - API Keys](/docs/platform/api-keys): Managing API keys in the web platform
+- [Web Platform - API Keys](/platform/api-keys): Managing API keys in the web platform
 - [Authentication Guide](../configuration/authentication): Detailed authentication guide
 - [CI/CD Integration](../workflows/ci-cd-integration): Using FluxLoop in CI/CD

@@ -213,7 +213,7 @@ After uploading, you'll get a URL to view results:
 [INFO] View results at: https://results.fluxloop.ai/run/run_20241101_143022
 ```
 
-See [Viewing Results](/docs/platform/viewing-results) for details.
+See [Viewing Results](/platform/viewing-results) for details.
 
 ## Error Handling
 
