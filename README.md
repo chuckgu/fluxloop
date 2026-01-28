@@ -155,6 +155,29 @@ Run experiments locally with full control. No cloud dependency for testing.
 
 ---
 
+## ☁️ Seamless Web Integration
+
+FluxLoop combines local execution with cloud intelligence for a powerful testing workflow.
+
+### 1. Cloud-Powered Synthesis
+When you say *"generate edge cases"*, FluxLoop Web synthesizes realistic, diverse test data using advanced LLMs. This data is instantly synced to your local environment for testing.
+
+### 2. Deep Evaluation & Analysis
+Test results are automatically uploaded to [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai) for deep inspection:
+
+- 🕵️ **Trace Analysis**: Step-by-step debugging of agent conversations
+- 📈 **Performance Metrics**: Success rates, latency, token usage trends
+- ⚖️ **Comparison**: Side-by-side view of how recent changes affected behavior
+
+### 3. The Perfect Loop
+1. **You**: "Test my agent" (Claude Code)
+2. **Web**: Generates test scenarios (Cloud)
+3. **CLI**: Runs tests locally (Local)
+4. **Web**: Analyzes results (Cloud)
+5. **You**: Review summary in IDE & detailed report on Web
+
+---
+
 ## What You Can Do
 
 | Capability | How |
