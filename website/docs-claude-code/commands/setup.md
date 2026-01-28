@@ -2,13 +2,13 @@
 sidebar_position: 2
 ---
 
-# /fluxloop setup
+# /fluxloop:setup
 
 Initial configuration and authentication for FluxLoop.
 
 ## Overview
 
-The `/fluxloop setup` command guides you through:
+The `/fluxloop:setup` command guides you through:
 1. Authentication with FluxLoop Web
 2. Project selection or creation
 3. Local configuration
@@ -18,7 +18,7 @@ Run this once per project to get started.
 ## Basic Usage
 
 ```bash
-/fluxloop setup
+/fluxloop:setup
 ```
 
 ## What It Does
@@ -69,8 +69,8 @@ Creates local configuration:
 🎉 Setup complete! Ready to test.
 
 Next steps:
-  Run tests: /fluxloop test
-  Check status: /fluxloop status
+  Run tests: /fluxloop:test
+  Check status: /fluxloop:status
 ```
 
 ## Options
@@ -80,7 +80,7 @@ Next steps:
 Force re-authentication even if already logged in:
 
 ```bash
-/fluxloop setup --force-login
+/fluxloop:setup --force-login
 ```
 
 Useful when:
@@ -93,13 +93,13 @@ Useful when:
 Skip project selection and specify project:
 
 ```bash
-/fluxloop setup --project customer-support-agent
+/fluxloop:setup --project customer-support-agent
 ```
 
 Or using project ID:
 
 ```bash
-/fluxloop setup --project proj_abc123
+/fluxloop:setup --project proj_abc123
 ```
 
 ### --non-interactive
@@ -111,7 +111,7 @@ For CI/CD environments:
 export FLUXLOOP_API_KEY=your-api-key
 export FLUXLOOP_PROJECT_ID=proj_abc123
 
-/fluxloop setup --non-interactive
+/fluxloop:setup --non-interactive
 ```
 
 ## Generated Files
@@ -162,7 +162,7 @@ defaults:
 
 ```bash
 # 1. Run setup
-/fluxloop setup
+/fluxloop:setup
 
 # Output:
 # 🔐 Checking authentication...
@@ -187,7 +187,7 @@ defaults:
 # 🎉 Setup complete!
 
 # 2. Verify setup
-/fluxloop status
+/fluxloop:status
 
 # Output:
 # ✓ Authenticated
@@ -195,7 +195,7 @@ defaults:
 # ✓ Scenarios: 3 available
 
 # 3. Run first test
-/fluxloop test
+/fluxloop:test
 ```
 
 ## Team Setup
@@ -204,16 +204,16 @@ When joining a team project:
 
 ```bash
 # 1. Setup with team's project
-/fluxloop setup
+/fluxloop:setup
 
 # 2. Select the team project
 # (Choose from list)
 
 # 3. Pull team's test scenarios
-/fluxloop pull
+/fluxloop:pull
 
 # 4. Run tests
-/fluxloop test
+/fluxloop:test
 ```
 
 Everyone on the team:
@@ -228,7 +228,7 @@ Everyone on the team:
 Manually visit the URL shown:
 
 ```bash
-/fluxloop setup
+/fluxloop:setup
 
 # Copy the URL from output:
 # https://app.fluxloop.ai/cli-login?token=abc123
@@ -253,7 +253,7 @@ Reset configuration:
 rm -rf .fluxloop/
 
 # Re-run setup
-/fluxloop setup
+/fluxloop:setup
 ```
 
 ### Multiple Projects
@@ -262,10 +262,10 @@ Switch between projects:
 
 ```bash
 # Setup for different project
-/fluxloop setup --project other-project
+/fluxloop:setup --project other-project
 
 # Or re-run setup and select different project
-/fluxloop setup
+/fluxloop:setup
 ```
 
 ## CI/CD Setup
@@ -314,7 +314,7 @@ test:
 
 ```bash
 # Re-run setup
-/fluxloop setup
+/fluxloop:setup
 
 # Select different project
 ```
@@ -323,14 +323,14 @@ test:
 
 ```bash
 # Force new login
-/fluxloop setup --force-login
+/fluxloop:setup --force-login
 ```
 
 ### View Current Configuration
 
 ```bash
 # Check status
-/fluxloop status
+/fluxloop:status
 
 # View config file
 cat .fluxloop/config.yaml
@@ -362,14 +362,14 @@ The setup command automatically creates this.
 Share safely:
 - Commit `.fluxloop/config.yaml` (no secrets)
 - Don't commit `.fluxloop/auth.json`
-- Each team member runs `/fluxloop setup`
+- Each team member runs `/fluxloop:setup`
 - Each gets their own auth token
 
 ## Related Commands
 
-- [`/fluxloop status`](./status) - Check setup status
-- [`/fluxloop test`](./test) - Run tests
-- [`/fluxloop apikeys`](./apikeys) - Manage API keys
+- [`/fluxloop:status`](./status) - Check setup status
+- [`/fluxloop:test`](./test) - Run tests
+- [`/fluxloop:apikeys`](./apikeys) - Manage API keys
 
 ## See Also
 

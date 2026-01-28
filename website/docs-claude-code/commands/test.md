@@ -2,13 +2,13 @@
 sidebar_position: 1
 ---
 
-# /fluxloop test
+# /fluxloop:test
 
 Run agent tests with scenarios from FluxLoop Web.
 
 ## Overview
 
-The `/fluxloop test` command:
+The `/fluxloop:test` command:
 1. Pulls test scenarios from FluxLoop Web (if needed)
 2. Runs your instrumented agent with synthetic inputs
 3. Captures traces and results
@@ -18,7 +18,7 @@ The `/fluxloop test` command:
 ## Basic Usage
 
 ```bash
-/fluxloop test
+/fluxloop:test
 ```
 
 This runs the full test suite for the current scenario.
@@ -30,7 +30,7 @@ This runs the full test suite for the current scenario.
 Specify which scenario to test:
 
 ```bash
-/fluxloop test --scenario customer-onboarding
+/fluxloop:test --scenario customer-onboarding
 ```
 
 ### --skip-upload
@@ -38,7 +38,7 @@ Specify which scenario to test:
 Run tests locally without uploading results:
 
 ```bash
-/fluxloop test --skip-upload
+/fluxloop:test --skip-upload
 ```
 
 Useful for:
@@ -51,7 +51,7 @@ Useful for:
 Run a quick smoke test (subset of inputs):
 
 ```bash
-/fluxloop test --smoke
+/fluxloop:test --smoke
 ```
 
 Typically tests 5-10 inputs for rapid feedback.
@@ -61,7 +61,7 @@ Typically tests 5-10 inputs for rapid feedback.
 Run comprehensive test with all iterations:
 
 ```bash
-/fluxloop test --full
+/fluxloop:test --full
 ```
 
 ### --quiet
@@ -69,21 +69,21 @@ Run comprehensive test with all iterations:
 Minimize output for CI/CD:
 
 ```bash
-/fluxloop test --quiet
+/fluxloop:test --quiet
 ```
 
 ## Prerequisites
 
 Before running tests, ensure:
 
-1. **Authenticated**: Run `/fluxloop setup` first
+1. **Authenticated**: Run `/fluxloop:setup` first
 2. **Project selected**: Current project configured
 3. **Inputs available**: Scenarios pulled from Web
 
 Check status:
 
 ```bash
-/fluxloop status
+/fluxloop:status
 ```
 
 ## How It Works
@@ -136,28 +136,28 @@ https://app.fluxloop.ai/projects/abc123/results/xyz789
 
 ```bash
 # Fast feedback during development
-/fluxloop test --smoke
+/fluxloop:test --smoke
 ```
 
 ### Pre-Commit Validation
 
 ```bash
 # Full test before committing
-/fluxloop test
+/fluxloop:test
 ```
 
 ### Local Testing Only
 
 ```bash
 # Test without uploading
-/fluxloop test --skip-upload
+/fluxloop:test --skip-upload
 ```
 
 ### Specific Scenario
 
 ```bash
 # Test specific workflow
-/fluxloop test --scenario error-handling
+/fluxloop:test --scenario error-handling
 ```
 
 ## Workflow Integration
@@ -167,20 +167,20 @@ https://app.fluxloop.ai/projects/abc123/results/xyz789
 ```
 1. Make changes to agent code
    ↓
-2. Run: /fluxloop test --smoke
+2. Run: /fluxloop:test --smoke
    ↓
 3. Review results
    ↓
 4. Iterate
    ↓
-5. Before commit: /fluxloop test
+5. Before commit: /fluxloop:test
 ```
 
 ### Before Deployment
 
 ```bash
 # Comprehensive testing
-/fluxloop test --full
+/fluxloop:test --full
 
 # Review in Web
 # Check all scenarios passed
@@ -230,13 +230,13 @@ https://app.fluxloop.ai/projects/abc123/results/xyz789
 
 ```bash
 # List available scenarios
-/fluxloop status
+/fluxloop:status
 
 # Pull specific scenario
-/fluxloop pull --scenario <name>
+/fluxloop:pull --scenario <name>
 
 # Retry test
-/fluxloop test --scenario <name>
+/fluxloop:test --scenario <name>
 ```
 
 ### "No inputs found"
@@ -245,10 +245,10 @@ Scenarios haven't been pulled yet:
 
 ```bash
 # Pull from Web
-/fluxloop pull
+/fluxloop:pull
 
 # Then test
-/fluxloop test
+/fluxloop:test
 ```
 
 ### "Authentication error"
@@ -256,7 +256,8 @@ Scenarios haven't been pulled yet:
 Re-authenticate:
 
 ```bash
-/fluxloop setup --force-login
+# Re-authenticate
+/fluxloop:setup --force-login
 ```
 
 ### "Agent not instrumented"
@@ -291,10 +292,10 @@ Override simulation config:
 
 ```bash
 # Specify custom runner
-/fluxloop test --runner custom_module:custom_function
+/fluxloop:test --runner custom_module:custom_function
 
 # Increase timeout
-/fluxloop test --timeout 60
+/fluxloop:test --timeout 60
 ```
 
 ### Multiple Scenarios
@@ -303,11 +304,11 @@ Test all scenarios in a project:
 
 ```bash
 # List scenarios
-/fluxloop status
+/fluxloop:status
 
 # Test each one
-/fluxloop test --scenario scenario1
-/fluxloop test --scenario scenario2
+/fluxloop:test --scenario scenario1
+/fluxloop:test --scenario scenario2
 ```
 
 ## Exit Codes
@@ -321,10 +322,10 @@ Test all scenarios in a project:
 
 ## Related Commands
 
-- [`/fluxloop pull`](./pull) - Pull test scenarios
-- [`/fluxloop upload`](./status) - Upload results manually
-- [`/fluxloop status`](./status) - Check project status
-- [`/fluxloop criteria`](./criteria) - View success criteria
+- [`/fluxloop:pull`](./pull) - Pull test scenarios
+- [`/fluxloop:upload`](./status) - Upload results manually
+- [`/fluxloop:status`](./status) - Check project status
+- [`/fluxloop:criteria`](./criteria) - View success criteria
 
 ## See Also
 

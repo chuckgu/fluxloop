@@ -5,6 +5,13 @@ const sidebars: SidebarsConfig = {
     'intro',
     {
       type: 'category',
+      label: '⭐ Skills',
+      items: [
+        'skills/agent-test',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Getting Started',
       items: [
         'getting-started/installation',
@@ -13,7 +20,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Skills Reference',
+      label: 'Commands Reference',
       items: [
         'commands/setup',
         'commands/test',

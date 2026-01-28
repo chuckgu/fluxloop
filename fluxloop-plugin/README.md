@@ -4,23 +4,64 @@ A Claude Code plugin for automated AI agent testing and evaluation.
 
 ## 🚀 Installation
 
-### Install via Claude Code
-
 ```
 /plugin install Fluxloop-AI/fluxloop-claude-plugin
 ```
 
-Or add to marketplace:
+That's it! Now just talk to Claude naturally.
+
+---
+
+## ⭐ The Core: Agent Test Skill
+
+**The skill is everything.** Just speak naturally and FluxLoop handles the rest.
+
+### How to Use
+
+Simply ask Claude:
 
 ```
-/plugin marketplace add Fluxloop-AI/fluxloop-claude-plugin
+"test my agent"
+"generate test data for my chatbot"
+"run a simulation"
+"evaluate my agent's responses"
+"set up fluxloop for this project"
 ```
 
-### Local Installation (Development)
+The **`fluxloop-agent-test`** skill automatically:
+- ✅ Checks your current setup state
+- ✅ Guides you through installation if needed
+- ✅ Generates test data and personas
+- ✅ Runs simulations against your agent
+- ✅ Uploads results to FluxLoop Web
+- ✅ Shows you what to fix
+
+### Skill Workflow
 
 ```
-/plugin install ./path/to/fluxloop-plugin
+You: "test my agent"
+      ↓
+[Skill activates automatically]
+      ↓
+1. Check context (fluxloop context show)
+2. Summarize current state to you
+3. Present options (no auto-execution)
+4. Execute after your confirmation
+5. Show results and next steps
 ```
+
+**No commands to memorize. No manual steps. Just ask.**
+
+### Auto-Activation Keywords
+
+The skill activates when you mention:
+- `test`, `testing`, `test my agent`
+- `simulation`, `run simulation`
+- `generate test data`, `synthesize inputs`
+- `evaluate`, `agent evaluation`
+- `scenario`, `create scenario`
+
+---
 
 ## 📋 Requirements
 
@@ -28,36 +69,65 @@ Or add to marketplace:
 - **FluxLoop Account**: [https://fluxloop.app](https://fluxloop.app)
 - **Python 3.8+**
 
-## ✨ Features
+> 💡 **Tip**: Just say "set up fluxloop" and the skill will guide you through installing everything!
 
-### Slash Commands
+---
+
+## 🔧 Example Conversation
+
+```
+You: "I want to test my customer support agent"
+
+Claude: I'll help you test your agent with FluxLoop.
+
+Let me check your current setup...
+
+📊 Current State:
+- FluxLoop CLI: ✓ Installed
+- Authentication: ✓ Logged in  
+- Project: customer-support (proj_abc123)
+- Scenario: support-bot
+- Bundle: v3 (50 inputs, 2 days ago)
+
+Would you like to:
+1. Run tests with existing bundle (v3)
+2. Generate new test data
+3. Create a new scenario
+
+You: "1"
+
+Claude: Running tests with bundle v3...
+[Executes: fluxloop sync pull + fluxloop test]
+
+✓ Test completed! 47/50 passed (94%)
+⚠️ 3 warnings detected
+
+View detailed results: https://app.fluxloop.ai/...
+
+Would you like me to analyze the failures?
+```
+
+---
+
+## 📁 Slash Commands (Manual Alternative)
+
+For when you need direct control:
 
 | Command | Description |
 |---------|-------------|
-| `/fluxloop:setup` | First-time installation and setup guide |
-| `/fluxloop:test` | Run full test cycle (pull → run → upload) |
+| `/fluxloop:setup` | First-time setup guide |
+| `/fluxloop:test` | Run tests |
 | `/fluxloop:smoke` | Quick smoke test |
-| `/fluxloop:pull` | Pull scenarios and test inputs from Web |
-| `/fluxloop:upload` | Upload test results |
-| `/fluxloop:criteria` | Display evaluation criteria |
+| `/fluxloop:pull` | Pull test data from Web |
 | `/fluxloop:status` | Check current status |
-| `/fluxloop:apikeys` | Manage API keys |
-| `/fluxloop:synthesis` | Generate test data automatically |
 
-### Skills
+> 💡 **Recommendation**: Use natural language with the skill instead. It's smarter and handles edge cases automatically.
 
-| Skill | Description |
-|-------|-------------|
-| `fluxloop-agent-test` | Manages the complete AI agent test cycle |
+---
 
-Auto-activates on natural language requests like:
-- "test my agent"
-- "generate test data"
-- "run simulation"
+## 🪝 Hooks (Optional)
 
-### Hooks (Optional)
-
-Automatically run smoke tests after file modifications:
+Auto-run smoke tests after file edits:
 
 ```json
 {
@@ -69,42 +139,6 @@ Automatically run smoke tests after file modifications:
     }
   ]
 }
-```
-
-## 🔧 Quick Start
-
-### 1. Install CLI and Login
-
-```bash
-# Install CLI
-uv tool install fluxloop-cli
-
-# Login
-fluxloop auth login
-```
-
-### 2. Project Setup
-
-```bash
-# Select or create project
-fluxloop projects list
-fluxloop projects select <project_id>
-
-# Initialize scenario
-fluxloop init scenario my-test
-
-# Create API key
-fluxloop apikeys create
-```
-
-### 3. Run Tests
-
-```bash
-# Pull test data
-fluxloop sync pull --bundle-version-id <id>
-
-# Run test
-fluxloop test --scenario my-test
 ```
 
 ## 📁 Project Structure
@@ -124,38 +158,11 @@ your-project/
 └── fluxloop.yaml             # Project settings
 ```
 
-## 📖 Workflow
-
-```
-[Claude Code] "run tests"
-      ↓
-[FluxLoop Plugin] /fluxloop:test
-      ↓
-[FluxLoop CLI] fluxloop test
-      ├─ (1) sync pull (fetch data from Web)
-      ├─ (2) run (execute tests)
-      ├─ (3) sync upload (upload results)
-      └─ (4) output results + evaluation criteria
-      ↓
-[Claude Code] Review results and make decisions
-```
-
 ## 🔗 Links
 
 - **FluxLoop Web**: [https://fluxloop.app](https://fluxloop.app)
-- **FluxLoop CLI Docs**: [https://fluxloop.app/docs/cli](https://fluxloop.app/docs/cli)
-- **FluxLoop SDK**: [https://fluxloop.app/docs/sdk](https://fluxloop.app/docs/sdk)
+- **FluxLoop Docs**: [https://fluxloop.app/docs](https://fluxloop.app/docs)
 
 ## 📄 License
 
 MIT License
-
-## 🤝 Contributing
-
-Issues and PRs are welcome!
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request

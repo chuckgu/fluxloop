@@ -2,7 +2,7 @@
 sidebar_position: 6
 ---
 
-# /fluxloop apikeys
+# /fluxloop:apikeys
 
 Manage FluxLoop API keys.
 
@@ -10,8 +10,8 @@ Manage FluxLoop API keys.
 
 ```bash
 # Check API key status
-/fluxloop apikeys check
+/fluxloop:apikeys check
 
 # Create new API key
-/fluxloop apikeys create
+/fluxloop:apikeys create
 ```

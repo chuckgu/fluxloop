@@ -2,14 +2,14 @@
 sidebar_position: 3
 ---
 
-# /fluxloop status
+# /fluxloop:status
 
 Check project and authentication status.
 
 ## Usage
 
 ```bash
-/fluxloop status
+/fluxloop:status
 ```
 
 ## Output

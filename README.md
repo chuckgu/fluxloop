@@ -34,7 +34,7 @@ Capture your implicit decision criteria. Turn intuition into automated evaluatio
 ### Core Philosophy
 
 - **Agentic Testing**: Let your coding agent handle the entire test workflow through conversation
-- **Zero Config**: Claude Code plugin auto-detects your setup and guides you through integration
+- **Zero Config**: Agent auto-detects setup and configures environments without visiting the Web Dashboard
 - **Local-first**: Run experiments on your machine with full control and reproducibility
 - **Framework-agnostic**: Works with any agent framework (LangGraph, LangChain, custom)
 
@@ -95,7 +95,7 @@ The primary way to use FluxLoop. Your coding agent orchestrates the entire testi
 ### 2. CLI
 **Command-line orchestration tool** for managing experiments end-to-end.
 
-For power users and CI/CD pipelines. Initialize projects, generate test inputs, run batch simulations, and parse results.
+For power users and CI/CD pipelines. Initialize projects, synthesize test inputs, run full test cycles, and manage results.
 
 📖 **Documentation**: [https://docs.fluxloop.ai/cli/](https://docs.fluxloop.ai/cli/)  
 📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
@@ -135,10 +135,10 @@ Claude Code will:
 pip install fluxloop fluxloop-cli
 
 # Quick workflow
-fluxloop init project --name my-agent
-fluxloop generate inputs --limit 50
-fluxloop run experiment
-fluxloop parse experiment experiments/<experiment_dir>
+fluxloop projects create --name my-agent
+fluxloop init scenario --name my-scenario --create-remote
+fluxloop inputs synthesize --total-count 10
+fluxloop test
 ```
 
 📖 **Documentation**: [SDK](https://docs.fluxloop.ai/sdk/) | [CLI](https://docs.fluxloop.ai/cli/)

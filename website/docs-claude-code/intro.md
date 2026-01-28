@@ -5,17 +5,30 @@ slug: /
 
 # FluxLoop for Claude Code
 
-Test AI agents directly from your IDE with FluxLoop's Claude Code plugin.
+Test AI agents directly from your IDE. **Just talk naturally—FluxLoop handles the rest.**
 
-## What is FluxLoop for Claude Code?
+---
 
-FluxLoop for Claude Code brings agent testing directly into your development workflow. Instead of switching between tools, you can test your AI agents right where you build them—inside Claude Code.
+## ⭐ The Core: Agent Test Skill
 
-**Perfect for:**
-- Rapid iteration during development
-- Quick validation before deployment
-- Exploring test scenarios interactively
-- Getting immediate feedback on agent changes
+**Forget commands. Just ask Claude.**
+
+```
+"test my agent"
+"generate test data"
+"run a simulation"
+"set up fluxloop"
+```
+
+The **Agent Test Skill** automatically:
+- ✅ Checks your setup state
+- ✅ Guides you through installation
+- ✅ Generates test data and personas
+- ✅ Runs tests against your agent
+- ✅ Uploads results to the cloud
+- ✅ Shows you what to fix
+
+**No commands to memorize. No manual steps.**
 
 ---
 
@@ -23,387 +36,229 @@ FluxLoop for Claude Code brings agent testing directly into your development wor
 
 ### 1. Install the Plugin
 
-```bash
-claude code plugin install fluxloop
+```
+/plugin install Fluxloop-AI/fluxloop-claude-plugin
 ```
 
-### 2. Set Up Your Project
+### 2. Just Talk
 
-```bash
-/fluxloop setup
+```
+You: "I want to test my customer support agent"
 ```
 
-This guides you through:
-- Authenticating with FluxLoop
-- Selecting or creating a project
-- Configuring your agent
-
-### 3. Run a Test
-
-```bash
-/fluxloop test
-```
-
-The plugin will:
-1. Pull test scenarios from FluxLoop Web
-2. Run your agent with synthetic inputs
-3. Upload results to the cloud
-4. Show you a summary
+That's it. The skill takes over and guides you through everything.
 
 ---
 
-## Key Features
+## How the Skill Works
 
-### 🎯 Slash Commands
-Run FluxLoop operations with simple `/` commands:
-- `/fluxloop setup` - Configure your project
-- `/fluxloop test` - Run tests
-- `/fluxloop status` - Check project status
-- `/fluxloop criteria` - View success criteria
+### Context-First Workflow
 
-### 🔄 Cloud Sync
-- Pull test scenarios from FluxLoop Web
-- Upload results automatically
-- Access your test data anywhere
+```
+You: "test my agent"
+      ↓
+[Skill checks your state]
+      ↓
+Claude: "Here's your current setup:
+         - CLI: ✓ Installed
+         - Auth: ✓ Logged in
+         - Project: customer-support
+         - Bundle: v3 (50 inputs)
+         
+         Would you like to run tests now?"
+      ↓
+You: "yes"
+      ↓
+[Skill runs tests, shows results]
+```
 
-### 📊 Instant Feedback
-- See test results immediately in Claude Code
-- Get links to detailed analysis in FluxLoop Web
-- Track agent performance over time
+**You're always in control.** Nothing runs without your approval.
 
-### 🚀 Zero Configuration
-- No local test data management
-- No manual setup of test scenarios
-- Works with your existing FluxLoop projects
+### Auto-Activation Keywords
+
+The skill activates when you mention:
+
+| What You Say | What Happens |
+|--------------|--------------|
+| "test my agent" | Run tests |
+| "generate test data" | Create synthetic inputs |
+| "run simulation" | Execute agent simulation |
+| "set up fluxloop" | Full installation guide |
+| "evaluate responses" | Analyze agent quality |
 
 ---
 
-## How It Works
-
-### Development Workflow
+## Example Conversation
 
 ```
-1. Code your agent
-   ↓
-2. Run /fluxloop test
-   ↓
-3. Review results in IDE
-   ↓
-4. Open detailed analysis in Web
-   ↓
-5. Iterate and improve
-```
+You: "test my chatbot with difficult customers"
 
-### Architecture
+Claude: I'll help you test your agent.
 
-```
-┌─────────────────┐
-│  Claude Code    │
-│  (Your IDE)     │
-└────────┬────────┘
-         │
-         │ FluxLoop CLI Plugin
-         │
-┌────────▼────────┐
-│  FluxLoop CLI   │
-│  (Local)        │
-└────────┬────────┘
-         │
-         │ API Sync
-         │
-┌────────▼────────┐
-│  FluxLoop Web   │
-│  (Cloud)        │
-└─────────────────┘
+📊 Current State:
+- Project: customer-support
+- Scenario: support-bot  
+- Available bundles:
+  1. v3 (stress-test, 50 inputs)
+  2. v2 (basic, 10 inputs)
+
+Which bundle would you like to use, or should I generate new test data 
+with difficult customer personas?
+
+You: "generate new with difficult customers"
+
+Claude: Creating personas focused on difficult customers...
+
+[Executes: fluxloop personas suggest]
+
+✓ Generated 5 personas:
+- angry_customer
+- confused_user
+- demanding_professional
+- impatient_caller
+- skeptical_buyer
+
+Now synthesizing test inputs...
+
+[Executes: fluxloop inputs synthesize]
+
+✓ 30 test inputs created!
+✓ Published as bundle v4
+
+Running tests...
+
+[Executes: fluxloop sync pull + fluxloop test]
+
+📊 Results: 25/30 passed (83%)
+⚠️ 5 failures detected
+
+Would you like me to analyze the failures?
 ```
 
 ---
 
-## Available Commands
+## Why Skill > Commands?
 
-### Setup & Configuration
+| Approach | Experience |
+|----------|------------|
+| **Skill** | "test my agent" → Everything automatic |
+| Commands | `/fluxloop:pull` → `/fluxloop:test` → manual steps |
+
+The skill is:
+- **Smarter**: Knows your context, adapts to your state
+- **Safer**: Always asks before executing
+- **Simpler**: No syntax to remember
+
+---
+
+## Slash Commands (Manual Alternative)
+
+For when you need direct control:
 
 | Command | Description |
 |---------|-------------|
-| `/fluxloop setup` | First-time setup and authentication |
-| `/fluxloop status` | Check project and authentication status |
+| `/fluxloop:setup` | First-time setup |
+| `/fluxloop:test` | Run tests |
+| `/fluxloop:smoke` | Quick smoke test |
+| `/fluxloop:pull` | Pull test data |
+| `/fluxloop:status` | Check status |
 
-### Testing
-
-| Command | Description |
-|---------|-------------|
-| `/fluxloop test` | Run full test suite |
-| `/fluxloop smoke` | Run quick smoke test |
-
-### Data Management
-
-| Command | Description |
-|---------|-------------|
-| `/fluxloop pull` | Pull latest test data from Web |
-| `/fluxloop upload` | Upload results to Web |
-| `/fluxloop criteria` | View evaluation criteria |
-
-### Project Management
-
-| Command | Description |
-|---------|-------------|
-| `/fluxloop apikeys` | Manage API keys |
-
-For detailed command documentation, see [Commands Reference](/claude-code/commands/test).
+> 💡 **Recommendation**: Use natural language instead. The skill handles edge cases automatically.
 
 ---
 
-## Prerequisites
+## Requirements
 
-### 1. Claude Code CLI
-FluxLoop plugin requires Claude Code CLI:
+- **FluxLoop CLI**: `pip install fluxloop-cli`
+- **FluxLoop Account**: [fluxloop.app](https://fluxloop.app)
 
-```bash
-# Check if installed
-claude code --version
-```
-
-If not installed, follow the [Claude Code installation guide](https://docs.anthropic.com/claude/docs/claude-cli).
-
-### 2. FluxLoop CLI
-The plugin uses FluxLoop CLI under the hood:
-
-```bash
-# Install
-pip install fluxloop-cli fluxloop
-
-# Verify
-fluxloop --version
-```
-
-### 3. FluxLoop Account
-You'll need a FluxLoop account to sync test data:
-- Sign up at [app.fluxloop.ai](https://app.fluxloop.ai)
-- Create a project
-- Generate an API key
+> 💡 **Tip**: Just say "set up fluxloop" and the skill guides you through everything!
 
 ---
 
-## Installation
-
-### Install Plugin
-
-```bash
-claude code plugin install fluxloop
-```
-
-### Verify Installation
-
-```bash
-# List installed plugins
-claude code plugin list
-
-# Should show:
-# fluxloop - Test AI agents with synthetic data
-```
-
-### Update Plugin
-
-```bash
-# Update to latest version
-claude code plugin update fluxloop
-
-# Or reinstall
-claude code plugin uninstall fluxloop
-claude code plugin install fluxloop
-```
-
----
-
-## First Test
-
-Let's run your first test with the FluxLoop plugin.
-
-### Step 1: Authenticate
-
-```bash
-/fluxloop setup
-```
-
-The plugin will:
-1. Check if you're logged in to FluxLoop
-2. If not, provide a login URL
-3. Save your authentication token
-
-### Step 2: Select Project
-
-The setup wizard will show your FluxLoop projects:
+## Architecture
 
 ```
-Select a project:
-1. customer-support-agent
-2. sales-assistant
-3. Create new project
-
-Enter number:
-```
-
-Choose an existing project or create a new one.
-
-### Step 3: Run Test
-
-```bash
-/fluxloop test
-```
-
-Expected output:
-
-```
-🔄 Pulling test scenarios from FluxLoop Web...
-✓ Pulled 50 test inputs
-
-🧪 Running tests...
-▓▓▓▓▓▓▓▓▓▓ 50/50 (100%)
-
-📊 Results:
-- Total: 50 traces
-- Success: 47 (94%)
-- Failed: 3 (6%)
-
-📤 Uploading results to FluxLoop Web...
-✓ Results uploaded successfully
-
-🌐 View detailed analysis:
-https://app.fluxloop.ai/projects/abc123/results/xyz789
-```
-
-### Step 4: View Details
-
-Click the link to open detailed results in FluxLoop Web:
-- Per-trace analysis
-- Performance metrics
-- Failure insights
-- Comparison with previous runs
-
----
-
-## Configuration
-
-### Project Context
-
-The plugin stores project context in `.fluxloop/`:
-
-```
-.fluxloop/
-├── config.yaml           # Project configuration
-├── auth.json            # Authentication token (gitignored)
-├── projects/            # Project metadata
-└── scenarios/           # Downloaded test scenarios
-```
-
-### Authentication
-
-Authentication is handled automatically by the plugin. Your auth token is stored in `.fluxloop/auth.json` (which should be gitignored).
-
-To re-authenticate:
-
-```bash
-/fluxloop setup --force-login
+┌─────────────────────────────────────┐
+│  You: "test my agent"               │
+└────────────────┬────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│  Agent Test Skill                   │
+│  (Context-aware, guides workflow)   │
+└────────────────┬────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│  FluxLoop CLI                       │
+│  (Executes commands)                │
+└────────────────┬────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────┐
+│  FluxLoop Web                       │
+│  (Cloud storage & analysis)         │
+└─────────────────────────────────────┘
 ```
 
 ---
 
 ## Best Practices
 
-### During Development
+### Let the Skill Guide You
 
-```bash
-# Quick smoke test for rapid iteration
-/fluxloop smoke
-
-# Full test before committing
-/fluxloop test
+```
+Good: "I want to test edge cases"
+Less helpful: "/fluxloop:synthesis" (manual)
 ```
 
-### Before Deployment
+### Be Specific About Goals
 
-```bash
-# Run comprehensive tests
-/fluxloop test --full
-
-# Check results in Web
-/fluxloop status
+```
+Good: "test my order cancellation flow with angry customers"
+Less helpful: "test it"
 ```
 
-### Team Collaboration
+### Ask for Analysis
 
-1. Share your project in FluxLoop Web
-2. Team members run `/fluxloop setup` and select the shared project
-3. Everyone tests against the same scenarios
-4. Compare results in the Web dashboard
+```
+"Why did these tests fail?"
+"What patterns do you see?"
+"How can I improve my agent?"
+```
 
 ---
 
 ## Troubleshooting
 
-### "Not authenticated"
+### Skill Not Activating?
 
-```bash
-# Re-run setup
-/fluxloop setup
+Include activation keywords:
+
+```
+✗ "check this"
+✓ "test this agent"
 ```
 
-### "No test scenarios found"
+### Need Manual Control?
 
-```bash
-# Pull scenarios from Web
-/fluxloop pull
+Use slash commands:
 
-# Then retry test
-/fluxloop test
 ```
-
-### "API key not configured"
-
-```bash
-# Check API keys
-/fluxloop apikeys check
-
-# Create new key if needed
-/fluxloop apikeys create
+/fluxloop:status
+/fluxloop:test --smoke
 ```
-
-### Plugin Not Found
-
-```bash
-# Verify installation
-claude code plugin list
-
-# Reinstall if needed
-claude code plugin install fluxloop
-```
-
----
-
-## Comparison: Plugin vs CLI
-
-| Feature | Claude Code Plugin | Standalone CLI |
-|---------|-------------------|----------------|
-| **Use Case** | Development workflow | CI/CD, automation |
-| **Interface** | Slash commands in IDE | Terminal commands |
-| **Test Data** | Synced from cloud | Local or synced |
-| **Results** | IDE + Web | Local + optional sync |
-| **Setup** | One-time in IDE | Per project |
-| **Best For** | Rapid iteration | Production testing |
-
-**Use both:**
-- Plugin for development
-- CLI for CI/CD and automation
 
 ---
 
 ## What's Next?
 
-- **[Commands Reference](/claude-code/commands/test)** - Full command documentation
-- **[Integration Guide](/claude-code/integration/workflow)** - Integrate into your workflow
-- **[FluxLoop Web](https://app.fluxloop.ai)** - Cloud dashboard
-- **[CLI Documentation](/cli/)** - Standalone CLI reference
+- **[Agent Test Skill](/claude-code/skills/agent-test)** ⭐ - Full skill documentation
+- **[Commands Reference](/claude-code/commands/test)** - Manual commands
+- **[Installation](/claude-code/getting-started/installation)** - Setup details
+- **[FluxLoop Web](https://fluxloop.app)** - Cloud dashboard
 
 ---
 
-Need help? Check [FluxLoop GitHub Issues](https://github.com/chuckgu/fluxloop/issues) or visit [docs.fluxloop.ai](https://docs.fluxloop.ai).
+Need help? Just ask: "help me with fluxloop" — the skill will guide you!

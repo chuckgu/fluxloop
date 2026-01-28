@@ -4,37 +4,97 @@ sidebar_position: 1
 
 # Installation
 
-Install the FluxLoop plugin for Claude Code.
-
-## Prerequisites
-
-- Claude Code CLI installed
-- Python 3.8 or higher
-- FluxLoop CLI (`pip install fluxloop-cli fluxloop`)
+Install the FluxLoop plugin for Claude Code in one command.
 
 ## Install Plugin
 
 ```bash
-claude code plugin install fluxloop
+/plugin install Fluxloop-AI/fluxloop-claude-plugin
 ```
+
+**Done!** Now just talk to Claude naturally.
+
+---
+
+## What's Included
+
+The plugin includes:
+
+| Component | Description |
+|-----------|-------------|
+| **Agent Test Skill** ⭐ | Auto-activates on "test my agent", handles everything |
+| Slash Commands | Manual commands like `/fluxloop:test` |
+| Hooks | Optional auto-testing on file changes |
+
+---
+
+## After Installation
+
+### Recommended: Use the Skill
+
+Just say:
+
+```
+"set up fluxloop for my project"
+```
+
+or
+
+```
+"test my agent"
+```
+
+The skill will guide you through:
+- Installing FluxLoop CLI (if needed)
+- Authentication
+- Project setup
+- Running tests
+
+### Alternative: Manual Setup
+
+```bash
+# 1. Install CLI
+pip install fluxloop-cli
+
+# 2. Run setup
+/fluxloop:setup
+```
+
+---
 
 ## Verify Installation
 
 ```bash
-# List plugins
-claude code plugin list
-
-# Should show:
-# fluxloop - Test AI agents with synthetic data
+/plugin list
 ```
+
+Should show `fluxloop` in the list.
+
+---
 
 ## Update Plugin
 
 ```bash
-claude code plugin update fluxloop
+/plugin install Fluxloop-AI/fluxloop-claude-plugin
 ```
+
+Reinstalling always gets the latest version.
+
+---
+
+## Requirements
+
+| Requirement | Notes |
+|-------------|-------|
+| Claude Code | Must be installed |
+| Python 3.8+ | For FluxLoop CLI |
+| FluxLoop Account | Free at [fluxloop.app](https://fluxloop.app) |
+
+> 💡 **Tip**: The skill can install FluxLoop CLI for you. Just say "set up fluxloop"!
+
+---
 
 ## Next Steps
 
-- [First Test](./first-test) - Run your first test
-- [Commands](/claude-code/commands/test) - Available commands
+- **[Your First Test](./first-test)** - Run a test (just by talking!)
+- **[Agent Test Skill](/claude-code/skills/agent-test)** ⭐ - Full skill documentation
