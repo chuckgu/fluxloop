@@ -31,7 +31,7 @@ Checks if you're logged in:
 🔐 Checking authentication...
 ✗ Not authenticated
 
-Please visit: https://app.fluxloop.ai/cli-login?token=abc123
+Please visit: https://alpha.app.fluxloop.ai/cli-login?token=abc123
 After login, press Enter to continue...
 ```
 
@@ -168,7 +168,7 @@ defaults:
 # 🔐 Checking authentication...
 # ✗ Not authenticated
 #
-# Please visit: https://app.fluxloop.ai/cli-login
+# Please visit: https://alpha.app.fluxloop.ai/cli-login
 # After login, press Enter to continue...
 
 # (Browser opens, you log in)
@@ -231,7 +231,7 @@ Manually visit the URL shown:
 /fluxloop:setup
 
 # Copy the URL from output:
-# https://app.fluxloop.ai/cli-login?token=abc123
+# https://alpha.app.fluxloop.ai/cli-login?token=abc123
 
 # Paste in browser, log in
 # Press Enter in terminal

@@ -127,7 +127,7 @@ Displays test summary and link to detailed analysis:
 - Avg Duration: 2.3s
 
 🌐 View detailed analysis:
-https://app.fluxloop.ai/projects/abc123/results/xyz789
+https://alpha.app.fluxloop.ai/projects/abc123/results/xyz789
 ```
 
 ## Examples
@@ -205,7 +205,7 @@ https://app.fluxloop.ai/projects/abc123/results/xyz789
 - Personas: 5/5 tested
 - Scenarios: customer-support
 
-🔗 Details: https://app.fluxloop.ai/projects/.../results/...
+🔗 Details: https://alpha.app.fluxloop.ai/projects/.../results/...
 ```
 
 ### Failure Details

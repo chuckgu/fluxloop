@@ -52,11 +52,13 @@ The skill will guide you through:
 
 ### Alternative: Manual Setup
 
+If you prefer to install manually:
+
 ```bash
-# 1. Install CLI
+# 1. Install CLI (the skill does this automatically)
 pip install fluxloop-cli
 
-# 2. Run setup
+# 2. Run setup command
 /fluxloop:setup
 ```
 
@@ -88,9 +90,9 @@ Reinstalling always gets the latest version.
 |-------------|-------|
 | Claude Code | Must be installed |
 | Python 3.8+ | For FluxLoop CLI |
-| FluxLoop Account | Free at [fluxloop.app](https://fluxloop.app) |
+| FluxLoop Account | Free at [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai) |
 
-> 💡 **Tip**: The skill can install FluxLoop CLI for you. Just say "set up fluxloop"!
+> 💡 **The skill installs everything!** Just say "set up fluxloop" and it handles CLI installation, login, and project setup automatically.
 
 ---
 

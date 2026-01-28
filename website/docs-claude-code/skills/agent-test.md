@@ -194,7 +194,7 @@ The skill adapts to your current state:
 
 | Your State | Skill Response |
 |------------|----------------|
-| No CLI installed | Guides through installation |
+| No CLI installed | **Installs CLI automatically** |
 | Not logged in | Helps with authentication |
 | No project | Lists projects or creates new |
 | No scenario | Creates local scenario folder |
@@ -314,3 +314,4 @@ But 99% of the time, just talk naturally!
 - [Installation](../getting-started/installation) - Plugin setup
 - [Commands Reference](../commands/test) - Manual commands
 - [Workflow Integration](../integration/workflow) - Development workflow
+- [FluxLoop Web](https://alpha.app.fluxloop.ai) - Cloud dashboard

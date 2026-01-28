@@ -14,7 +14,7 @@
 ## Agentic Testing for AI Agents
 
 > **"Hey, test my agent for order cancellation with angry customers"**  
-> → FluxLoop handles the rest: setup, synthesis, execution, and analysis.
+> → FluxLoop handles the rest: setup, CLI install, synthesis, execution, and analysis.
 
 ### 🤖 Agent-First Workflow
 Your coding agent (Claude Code) orchestrates the entire testing flow. Just describe what you want to test—FluxLoop does the heavy lifting.
@@ -27,151 +27,176 @@ Capture your implicit decision criteria. Turn intuition into automated evaluatio
 
 ---
 
-## Simulate, Evaluate, and Trust Your AI Agents
+## Getting Started
 
-**FluxLoop is an open-source toolkit for agentic testing of AI agents.** Integrated with Claude Code, it enables your coding agent to autonomously set up test environments, synthesize inputs, run simulations, and analyze results—all through natural conversation.
+### ⭐ Claude Code Plugin (Recommended)
 
-### Core Philosophy
+**Install the plugin, then just talk.**
 
-- **Agentic Testing**: Let your coding agent handle the entire test workflow through conversation
-- **Zero Config**: Agent auto-detects setup and configures environments without visiting the Web Dashboard
-- **Local-first**: Run experiments on your machine with full control and reproducibility
-- **Framework-agnostic**: Works with any agent framework (LangGraph, LangChain, custom)
+```bash
+/plugin install Fluxloop-AI/fluxloop-claude-plugin
+```
 
-Stop configuring, start conversing.
+That's it. Now say:
+
+```
+"test my agent for refund scenarios"
+```
+
+The **Agent Test Skill** handles everything:
+- ✅ Installs FluxLoop CLI (if needed)
+- ✅ Logs you in
+- ✅ Creates project/scenario
+- ✅ Synthesizes test inputs
+- ✅ Runs simulations
+- ✅ Analyzes results and suggests fixes
+
+**No commands to memorize. No manual setup. Just ask.**
+
+#### Example Conversation
+
+```
+User: "Test my chatbot for refund scenarios with frustrated customers"
+
+Agent: Let me set up FluxLoop and run tests...
+
+       ✓ FluxLoop CLI installed
+       ✓ Logged in
+       ✓ Project created
+       ✓ 10 test inputs synthesized (40% hard cases)
+       ✓ Running simulation...
+       
+       📊 Results: 8/10 passed (80%)
+       ⚠️ Failed on edge case: customer requesting partial refund
+       
+       💡 Suggested fix: Add handling for partial refund requests
+       
+       Would you like me to analyze the failures in detail?
+```
+
+📖 **Documentation**: [docs.fluxloop.ai/claude-code](https://docs.fluxloop.ai/claude-code)
+
+---
+
+## 📦 Packages
+
+### 1. Claude Code Plugin ⭐
+**The primary way to use FluxLoop.** Your coding agent orchestrates the entire testing workflow through natural conversation.
+
+| Feature | Description |
+|---------|-------------|
+| **Agent Test Skill** | Auto-activates on "test my agent", handles everything |
+| **Zero Config** | Skill installs CLI, logs in, creates projects automatically |
+| **Context-Aware** | Knows your setup state, guides you through missing steps |
+
+📖 **Location**: `packages/fluxloop-plugin/`  
+📖 **Docs**: [docs.fluxloop.ai/claude-code](https://docs.fluxloop.ai/claude-code)
+
+### 2. CLI
+**For power users and CI/CD pipelines.** Direct command-line control when you need it.
+
+```bash
+pip install fluxloop-cli
+fluxloop test --scenario my-test
+```
+
+📖 **Docs**: [docs.fluxloop.ai/cli](https://docs.fluxloop.ai/cli)  
+📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
+
+### 3. SDK (Python 3.11+)
+**Core instrumentation library.** Add `@fluxloop.agent()` decorator to trace agent execution.
+
+```python
+import fluxloop
+
+@fluxloop.agent()
+def my_agent(input: str) -> str:
+    # Your agent logic
+    return response
+```
+
+📖 **Docs**: [docs.fluxloop.ai/sdk](https://docs.fluxloop.ai/sdk)  
+📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
 
 ---
 
 ## Key Features
 
 ### 🤖 Agentic Testing with Claude Code
-Your coding agent becomes your test engineer. Just tell it what to test:
+
+Just talk naturally:
 
 ```
-User: "Test my chatbot for refund scenarios with frustrated customers"
-
-Agent: Setting up environment...
-       ✓ Project created
-       ✓ 10 test inputs synthesized (40% hard cases)
-       ✓ Running simulation...
-       
-       ✅ 8/10 passed (80%)
-       ⚠️ Failed on edge case: customer requesting partial refund
-       
-       💡 Suggested fix: Add handling for partial refund requests
+"Test my order-bot for cancellation scenarios"
+"Generate edge cases for payment failures"
+"Why did the last test fail?"
 ```
 
-**Slash Commands:**
-- `/fluxloop:test` — Full test cycle (pull → run → upload)
-- `/fluxloop:synthesis` — Generate test inputs from intent
-- `/fluxloop:status` — Check current configuration
+The skill understands context and adapts to your state.
 
-### 🎯 Simple Decorator-Based Instrumentation
-Instrument existing agent code with minimal changes—just add `@fluxloop.agent()` and you're tracing. Works with any Python-based agent framework.
+### 🎯 Simple Instrumentation
+
+Works with any Python agent framework:
+
+```python
+@fluxloop.agent()
+def my_agent(input: str) -> str:
+    # LangChain, LlamaIndex, custom—anything works
+    return response
+```
 
 ### 📊 Evaluation-First Testing
-Rigorously test your agents with reproducible experiments and structured evaluation. Define rule-based and LLM-based evaluators, set success criteria, and generate comprehensive reports.
+
+Define criteria, run reproducible experiments, get actionable insights.
 
 ### 🧪 Offline-First Simulation
-Run experiments on your machine without cloud dependencies. Full control over your testing environment with reproducible, auditable results.
 
-### 🚀 Powerful CLI
-Complete command-line control for advanced workflows. Initialize projects, generate test inputs with LLM, run batch experiments, and parse results—all from your terminal.
+Run experiments locally with full control. No cloud dependency for testing.
 
 ---
 
-## 📦 Packages
+## What You Can Do
 
-FluxLoop consists of multiple integrated packages:
-
-### 1. Claude Code Plugin ⭐
-**Agentic testing interface** for Claude Code.
-
-The primary way to use FluxLoop. Your coding agent orchestrates the entire testing workflow through natural conversation and slash commands.
-
-📖 **Location**: `packages/fluxloop-plugin/`  
-✨ **Commands**: `/fluxloop:test`, `/fluxloop:synthesis`, `/fluxloop:status`
-
-### 2. CLI
-**Command-line orchestration tool** for managing experiments end-to-end.
-
-For power users and CI/CD pipelines. Initialize projects, synthesize test inputs, run full test cycles, and manage results.
-
-📖 **Documentation**: [https://docs.fluxloop.ai/cli/](https://docs.fluxloop.ai/cli/)  
-📦 **PyPI**: [fluxloop-cli](https://pypi.org/project/fluxloop-cli/)
-
-### 3. SDK (Python 3.11+)
-**Core instrumentation library** for tracing and recording agent execution.
-
-Add `@fluxloop.agent()` decorator to your code to capture traces and execution context.
-
-📖 **Documentation**: [https://docs.fluxloop.ai/sdk/](https://docs.fluxloop.ai/sdk/)  
-📦 **PyPI**: [fluxloop](https://pypi.org/project/fluxloop/)
+| Capability | How |
+|------------|-----|
+| **🤖 Conversational Testing** | "test my agent with angry customers" |
+| **🎯 Instrument Agents** | `@fluxloop.agent()` decorator |
+| **📝 Synthesize Inputs** | Skill generates realistic test data |
+| **🧪 Run Simulations** | Batch experiments with parallel execution |
+| **💬 Multi-Turn Conversations** | Auto-extend into dialogues |
+| **📊 Analyze Results** | Get insights and fix suggestions |
 
 ---
 
-## Getting Started
+## Links
 
-### Option 1: Claude Code (Recommended)
-
-1. **Install the plugin** — Add `packages/fluxloop-plugin` to your Claude Code plugins
-2. **Login** — `fluxloop login` (one-time browser auth)
-3. **Start testing** — Just tell Claude Code what to test:
-
-```
-"Test my order-bot agent for cancellation scenarios"
-```
-
-Claude Code will:
-- Create project/scenario if needed
-- Synthesize test inputs based on your intent
-- Set up the agent loader
-- Run tests and analyze results
-
-### Option 2: CLI
-
-```bash
-# Install Python packages (Python 3.11+)
-pip install fluxloop fluxloop-cli
-
-# Quick workflow
-fluxloop projects create --name my-agent
-fluxloop init scenario --name my-scenario --create-remote
-fluxloop inputs synthesize --total-count 10
-fluxloop test
-```
-
-📖 **Documentation**: [SDK](https://docs.fluxloop.ai/sdk/) | [CLI](https://docs.fluxloop.ai/cli/)
-
-### What You Can Do
-
-- **🤖 Conversational Testing**: Describe what to test in natural language
-- **🎯 Instrument Agents**: Add `@fluxloop.agent()` decorator to trace execution
-- **📝 Intent-Based Synthesis**: Generate test inputs from high-level descriptions
-- **🧪 Run Simulations**: Execute batch experiments with different configurations
-- **💬 Multi-Turn Conversations**: Automatically extend into multi-turn dialogues
-- **📊 Analyze Results**: Get actionable insights and improvement suggestions
+| Resource | URL |
+|----------|-----|
+| **FluxLoop Web** | [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai) |
+| **Documentation** | [docs.fluxloop.ai](https://docs.fluxloop.ai) |
+| **Claude Code Plugin** | [docs.fluxloop.ai/claude-code](https://docs.fluxloop.ai/claude-code) |
+| **CLI Docs** | [docs.fluxloop.ai/cli](https://docs.fluxloop.ai/cli) |
+| **SDK Docs** | [docs.fluxloop.ai/sdk](https://docs.fluxloop.ai/sdk) |
 
 ---
 
 ## 🤝 Why Contribute?
 
-We're building the future of AI agent testing—where your coding agent tests your AI agents. There's much to do:
+We're building the future of AI agent testing—where your coding agent tests your AI agents.
 
-- **Improve agentic workflows**: Make the Claude Code integration smarter and more autonomous
-- **Build framework adapters**: LangChain, LlamaIndex, CrewAI, and more
+- **Improve agentic workflows**: Make the Claude Code skill smarter
+- **Build framework adapters**: LangChain, LlamaIndex, CrewAI
 - **Enhance synthesis**: Better intent-to-input generation
-- **Develop evaluation methods**: Novel ways of measuring agent performance
+- **Develop evaluation methods**: Novel agent performance metrics
 
-Early-stage project with massive impact potential.
-
-Check out our [contribution guide](CONTRIBUTING.md) and open issues to get started.
+Check out our [contribution guide](CONTRIBUTING.md) and open issues.
 
 ---
 
 ## 🚨 Community & Support
 
-- **Issues**: Report bugs or suggest features on [GitHub](https://github.com/chuckgu/fluxloop/issues)
+- **Issues**: [GitHub Issues](https://github.com/chuckgu/fluxloop/issues)
+- **Docs**: [docs.fluxloop.ai](https://docs.fluxloop.ai)
 
 ---
 

@@ -65,11 +65,10 @@ The skill activates when you mention:
 
 ## 📋 Requirements
 
-- **FluxLoop CLI**: `pip install fluxloop-cli` or `uv tool install fluxloop-cli`
-- **FluxLoop Account**: [https://fluxloop.app](https://fluxloop.app)
+- **FluxLoop Account**: [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai)
 - **Python 3.8+**
 
-> 💡 **Tip**: Just say "set up fluxloop" and the skill will guide you through installing everything!
+> 💡 **The skill installs FluxLoop CLI for you!** Just say "set up fluxloop" and everything gets configured automatically.
 
 ---
 
@@ -102,7 +101,7 @@ Claude: Running tests with bundle v3...
 ✓ Test completed! 47/50 passed (94%)
 ⚠️ 3 warnings detected
 
-View detailed results: https://app.fluxloop.ai/...
+View detailed results: https://alpha.app.fluxloop.ai/...
 
 Would you like me to analyze the failures?
 ```
@@ -160,8 +159,8 @@ your-project/
 
 ## 🔗 Links
 
-- **FluxLoop Web**: [https://fluxloop.app](https://fluxloop.app)
-- **FluxLoop Docs**: [https://fluxloop.app/docs](https://fluxloop.app/docs)
+- **FluxLoop Web**: [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai)
+- **Documentation**: [docs.fluxloop.ai](https://docs.fluxloop.ai)
 
 ## 📄 License
 

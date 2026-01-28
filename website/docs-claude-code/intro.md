@@ -169,10 +169,10 @@ For when you need direct control:
 
 ## Requirements
 
-- **FluxLoop CLI**: `pip install fluxloop-cli`
-- **FluxLoop Account**: [fluxloop.app](https://fluxloop.app)
+- **FluxLoop Account**: [alpha.app.fluxloop.ai](https://alpha.app.fluxloop.ai)
+- **Python 3.8+**
 
-> 💡 **Tip**: Just say "set up fluxloop" and the skill guides you through everything!
+> 💡 **The skill installs everything for you!** Just say "set up fluxloop" and it handles CLI installation, login, and project setup automatically.
 
 ---
 
@@ -257,7 +257,7 @@ Use slash commands:
 - **[Agent Test Skill](/claude-code/skills/agent-test)** ⭐ - Full skill documentation
 - **[Commands Reference](/claude-code/commands/test)** - Manual commands
 - **[Installation](/claude-code/getting-started/installation)** - Setup details
-- **[FluxLoop Web](https://fluxloop.app)** - Cloud dashboard
+- **[FluxLoop Web](https://alpha.app.fluxloop.ai)** - Cloud dashboard
 
 ---
 
