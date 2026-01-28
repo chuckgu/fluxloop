@@ -4,8 +4,17 @@ A Claude Code plugin for automated AI agent testing and evaluation.
 
 ## 🚀 Installation
 
+### Option 1: Direct Install (Recommended)
+
 ```
 /plugin install Fluxloop-AI/fluxloop-claude-plugin
+```
+
+### Option 2: Via Marketplace
+
+```
+/plugin marketplace add Fluxloop-AI/fluxloop-claude-plugin
+/plugin install fluxloop@fluxloop
 ```
 
 That's it! Now just talk to Claude naturally.
