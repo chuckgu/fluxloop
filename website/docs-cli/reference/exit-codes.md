@@ -20,7 +20,7 @@ You can use these exit codes in your CI/CD pipelines:
 
 ```bash
 # Example in a shell script
-fluxloop test --yes --upload
+fluxloop test --yes --no-skip-upload
 
 if [ $? -eq 0 ]; then
   echo "Tests passed!"

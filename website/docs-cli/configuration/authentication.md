@@ -57,7 +57,7 @@ Create and use API key:
 export FLUXLOOP_API_KEY=flx_api_...
 
 # CLI automatically uses API key
-fluxloop test --upload
+fluxloop test --no-skip-upload
 ```
 
 ### 3. Service Account (Team Automation)
@@ -111,7 +111,7 @@ fluxloop auth login --profile production
 fluxloop auth login --profile staging
 
 # Use specific profile
-fluxloop test --profile staging --upload
+fluxloop test --profile staging --no-skip-upload
 
 # Set default profile
 fluxloop config set profile staging
@@ -153,7 +153,7 @@ fluxloop apikeys create --name "my-cli-key"
 
 ```bash
 export FLUXLOOP_API_KEY=flx_api_...
-fluxloop test --upload
+fluxloop test --no-skip-upload
 ```
 
 **Config File:**
@@ -167,7 +167,7 @@ api:
 **Command Line:**
 
 ```bash
-fluxloop test --api-key flx_api_... --upload
+fluxloop test --api-key flx_api_... --no-skip-upload
 ```
 
 ### Rotate API Keys
@@ -270,7 +270,7 @@ Check:
 **Solution**: Refresh token
 
 ```bash
-$ fluxloop test --upload
+$ fluxloop test --no-skip-upload
 [ERROR] Token expired
 
 # Refresh automatically
@@ -287,7 +287,7 @@ fluxloop auth login
 **Solution**: Check key format and revocation
 
 ```bash
-$ fluxloop test --upload
+$ fluxloop test --no-skip-upload
 [ERROR] Invalid API key
 
 # Check key
@@ -335,7 +335,7 @@ fluxloop apikeys create --scope read-write
     FLUXLOOP_API_KEY: ${{ secrets.FLUXLOOP_API_KEY }}
   run: |
     fluxloop sync pull --yes
-    fluxloop test --upload --yes
+    fluxloop test --no-skip-upload --yes
 ```
 
 ### GitLab CI
@@ -346,7 +346,7 @@ test:
   script:
     - export FLUXLOOP_API_KEY=$FLUXLOOP_API_KEY
     - fluxloop sync pull --yes
-    - fluxloop test --upload --yes
+    - fluxloop test --no-skip-upload --yes
   variables:
     FLUXLOOP_API_KEY: $FLUXLOOP_API_KEY_SECRET
 ```
@@ -357,7 +357,7 @@ test:
 // Jenkinsfile
 withCredentials([string(credentialsId: 'fluxloop-api-key', variable: 'FLUXLOOP_API_KEY')]) {
     sh 'fluxloop sync pull --yes'
-    sh 'fluxloop test --upload --yes'
+    sh 'fluxloop test --no-skip-upload --yes'
 }
 ```
 

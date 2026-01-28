@@ -86,7 +86,7 @@ fluxloop test
 ### Options:
 - `--iterations 5`: Run each input 5 times to test for non-determinism.
 - `--parallel 4`: Run 4 tests in parallel to speed up execution.
-- `--upload`: Automatically upload results after the test completes.
+- `--skip-upload`: Skip automatic upload after the test completes.
 
 ---
 
@@ -95,8 +95,8 @@ fluxloop test
 While results are saved locally in the `results/` directory, the most effective way to analyze them is using the Web Platform.
 
 ```bash
-# Upload the latest results
-fluxloop upload results
+# Upload the latest results (if you skipped auto upload)
+fluxloop sync upload
 ```
 
 Open the generated link to [results.fluxloop.ai](https://results.fluxloop.ai) to:
@@ -112,10 +112,10 @@ FluxLoop enables a "Cloud-First" workflow where scenarios are managed centrally.
 
 ```bash
 # Pull team scenarios from the Web Platform
-fluxloop pull scenarios
+fluxloop sync pull
 
 # Test against team scenarios
-fluxloop test --scenario team-regression-v1 --upload
+fluxloop test --scenario team-regression-v1
 ```
 
 ---

@@ -119,7 +119,7 @@ Use sanitization:
 
 ```bash
 # Sanitize before upload
-fluxloop test --sanitize --upload
+fluxloop test --sanitize --no-skip-upload
 ```
 
 ```yaml
@@ -149,7 +149,7 @@ Keep sensitive tests local:
 
 ```bash
 # Test locally without upload
-fluxloop test --no-upload
+fluxloop test --skip-upload
 
 # Results stay on your machine
 ```
@@ -230,7 +230,7 @@ For sensitive environments:
 vpn connect company-network
 
 # Then use FluxLoop
-fluxloop test --upload
+fluxloop test --no-skip-upload
 ```
 
 ## CI/CD Security
@@ -246,7 +246,7 @@ Use CI/CD secret management:
 - name: Run Tests
   env:
     FLUXLOOP_API_KEY: ${{ secrets.FLUXLOOP_API_KEY }}
-  run: fluxloop test --upload
+  run: fluxloop test --no-skip-upload
 ```
 
 **GitLab CI:**
@@ -255,7 +255,7 @@ Use CI/CD secret management:
 # .gitlab-ci.yml
 test:
   script:
-    - fluxloop test --upload
+    - fluxloop test --no-skip-upload
   variables:
     FLUXLOOP_API_KEY: $FLUXLOOP_API_KEY_SECRET
 ```

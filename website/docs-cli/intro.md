@@ -49,8 +49,8 @@ fluxloop sync upload
 
 ### Authentication & Sync
 `fluxloop auth` - Manage authentication with the Web Platform.
-`fluxloop pull` - Download scenarios, criteria, and bundles from the cloud.
-`fluxloop upload` - Upload results, local scenarios, and bundles to the cloud.
+`fluxloop sync pull` - Download scenarios, criteria, and bundles from the cloud.
+`fluxloop sync upload` - Upload results, local scenarios, and bundles to the cloud.
 
 ### Testing Workflow
 `fluxloop generate` - Generate synthetic test inputs.

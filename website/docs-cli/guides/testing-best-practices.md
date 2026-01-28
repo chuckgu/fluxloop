@@ -37,7 +37,7 @@ Integrate testing into your workflow:
 
 ```bash
 # CI/CD pipeline
-fluxloop test --yes --upload
+fluxloop test --yes --no-skip-upload
 ```
 
 ### 4. Track Changes Over Time
@@ -240,7 +240,7 @@ schedule:
 on: [pull_request]
 
 steps:
-  - run: fluxloop test --scenario regression --upload
+  - run: fluxloop test --scenario regression --no-skip-upload
 ```
 
 ## Performance Testing
@@ -366,10 +366,10 @@ Test relevant scenarios:
 
 ```bash
 # Changed authentication code?
-fluxloop test --scenario auth --upload
+fluxloop test --scenario auth --no-skip-upload
 
 # Changed everything?
-fluxloop test --all-scenarios --upload
+fluxloop test --all-scenarios --no-skip-upload
 ```
 
 ### Caching

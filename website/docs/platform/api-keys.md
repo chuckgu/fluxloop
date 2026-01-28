@@ -192,9 +192,9 @@ jobs:
         env:
           FLUXLOOP_API_KEY: ${{ secrets.FLUXLOOP_API_KEY }}
         run: |
-          fluxloop pull
+          fluxloop sync pull
           fluxloop test
-          fluxloop upload
+          fluxloop sync upload
 ```
 
 **Setting the Secret:**
@@ -213,9 +213,9 @@ fluxloop-test:
   image: python:3.11
   script:
     - pip install fluxloop
-    - fluxloop pull
+    - fluxloop sync pull
     - fluxloop test
-    - fluxloop upload
+    - fluxloop sync upload
   variables:
     FLUXLOOP_API_KEY: $FLUXLOOP_API_KEY
 ```
@@ -246,9 +246,9 @@ jobs:
       - run:
           name: Run Tests
           command: |
-            fluxloop pull
+            fluxloop sync pull
             fluxloop test
-            fluxloop upload
+            fluxloop sync upload
           environment:
             FLUXLOOP_API_KEY: ${FLUXLOOP_API_KEY}
 ```

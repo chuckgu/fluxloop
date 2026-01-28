@@ -22,7 +22,7 @@ fluxloop test [OPTIONS]
 | `--config`, `-c` | Path to configuration file | `fluxloop.yaml` |
 | `--output-dir` | Output directory for results | `./fluxloop/results` |
 | `--yes`, `-y` | Skip confirmation prompt | `false` |
-| `--upload` | Upload results to Web Platform | `false` |
+| `--skip-upload/--no-skip-upload` | Skip or force upload after test | `auto_upload` (default: true) |
 
 ## Examples
 
@@ -69,7 +69,7 @@ fluxloop test --no-skip-upload
 Skip confirmation prompts for automation:
 
 ```bash
-fluxloop test --yes --upload
+fluxloop test --yes --no-skip-upload
 ```
 
 ## How It Works
@@ -191,10 +191,10 @@ Results are automatically evaluated on the Web Platform.
 
 ### Upload Results
 
-Upload test results to view on the Web Platform:
+Upload test results to view on the Web Platform (uploads are automatic by default):
 
 ```bash
-fluxloop test --upload
+fluxloop test --no-skip-upload
 ```
 
 This enables:
@@ -281,7 +281,7 @@ Pull and test against scenarios regularly:
 ```bash
 # In CI/CD pipeline
 fluxloop scenarios pull production
-fluxloop test --scenario production --yes --upload
+fluxloop test --scenario production --yes --no-skip-upload
 ```
 
 ### 3. Automatic Upload

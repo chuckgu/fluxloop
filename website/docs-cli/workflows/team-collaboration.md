@@ -77,7 +77,7 @@ fluxloop test --scenario edge-cases
 
 ```bash
 # Run test
-fluxloop test --scenario production-regression --upload
+fluxloop test --scenario production-regression --no-skip-upload
 
 # Results automatically uploaded
 # Team can view at: https://results.fluxloop.ai/run/run_123
@@ -133,10 +133,10 @@ Use descriptive names for scenarios:
 
 ### 3. Upload Results
 
-Always upload test results:
+Always upload test results (uploads are automatic by default):
 
 ```bash
-fluxloop test --upload
+fluxloop test --no-skip-upload
 ```
 
 Benefits:
@@ -277,7 +277,7 @@ jobs:
         run: fluxloop sync pull --yes
 
       - name: Run Tests
-        run: fluxloop test --scenario production --yes --upload
+        run: fluxloop test --scenario production --yes --no-skip-upload
 
       - name: Check Results
         run: fluxloop results check --fail-on-regression
@@ -324,7 +324,7 @@ fluxloop test --scenario production
 fluxloop results show
 
 # 4. If pass, upload results
-fluxloop test --scenario production --upload
+fluxloop sync upload --scenario production
 
 # 5. Team reviews on Web Platform
 # 6. Approve deployment
@@ -341,7 +341,7 @@ fluxloop sync upload --scenario new-feature-tests
 
 # Developer B: Test feature
 fluxloop sync pull --scenario new-feature-tests
-fluxloop test --scenario new-feature-tests --upload
+fluxloop test --scenario new-feature-tests --no-skip-upload
 
 # Team: Review results
 # app.fluxloop.ai/run/run_123
@@ -355,7 +355,7 @@ fluxloop test --scenario new-feature-tests --upload
 fluxloop sync pull --yes
 
 # 2. Run all tests
-fluxloop test --all-scenarios --upload
+fluxloop test --all-scenarios --no-skip-upload
 
 # 3. Compare with baseline
 fluxloop results compare --baseline last-week

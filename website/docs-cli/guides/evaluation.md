@@ -19,7 +19,7 @@ FluxLoop evaluates agent test results using:
 ### 1. Run Tests
 
 ```bash
-fluxloop test --scenario production --upload
+fluxloop test --scenario production --no-skip-upload
 ```
 
 ### 2. Automatic Evaluation
@@ -222,7 +222,7 @@ Evaluate frequently:
 
 ```bash
 # Daily in CI
-fluxloop test --scenario regression --upload
+fluxloop test --scenario regression --no-skip-upload
 ```
 
 ### 4. Track Trends

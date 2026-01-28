@@ -36,8 +36,8 @@ fluxloop test --scenario <scenario_name>
 ## Description
 
 1. Load inputs from `inputs/` (must be pulled first)
-2. Run agent
-3. Upload results to Web
+2. Run agent and record results
+3. Results are uploaded automatically when upload is enabled
 
 ## Options
 

@@ -108,9 +108,9 @@ Running tests...
 Local results: ./results/run_20250128_120000/
 ```
 
-## Step 6: Upload Results
+## Step 6: Upload Results (Optional)
 
-Upload your results to the Web Platform for visualization and analysis:
+Upload your results to the Web Platform for visualization and analysis. If you kept automatic upload enabled, you can skip this step:
 
 ```bash
 fluxloop sync upload
@@ -139,10 +139,10 @@ Try pulling a curated scenario from the Web Platform and testing against it:
 fluxloop sync pull --scenario onboarding-tests
 
 # Run test against the scenario
-fluxloop test --scenario onboarding-tests --upload
+fluxloop test --scenario onboarding-tests
 ```
 
-The `--upload` flag automatically uploads results after the test completes.
+Uploads are automatic by default. Use `--skip-upload` to disable, or `--no-skip-upload` to override config.
 
 ## Congratulations! 🎉
 
