@@ -1,0 +1,14 @@
+{
+  "name": "fluxloop",
+  "owner": {
+    "name": "FluxLoop Team",
+    "email": "admin@fluxloop.ai"
+  },
+  "plugins": [
+    {
+      "name": "fluxloop",
+      "source": "./",
+      "description": "FluxLoop AI agent testing with automated data synthesis, simulation, and evaluation"
+    }
+  ]
+}
